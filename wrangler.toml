@@ -1,0 +1,12 @@
+name = "cia-console-cloud"
+compatibility_date = "2026-01-11"
+
+# Bindings (preencha os IDs depois de criar no Cloudflare)
+[[d1_databases]]
+binding = "DB"
+database_name = "cia_prod"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cia-uploads"

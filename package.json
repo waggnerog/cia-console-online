@@ -1,0 +1,8 @@
+{
+  "name": "cia-console-cloud",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.6.9"
+  }
+}
