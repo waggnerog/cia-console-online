@@ -6566,6 +6566,9 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
     }, 500);
   });
 
+window.CIA_BUILD = "2025-02-17T03-834b921";
+console.log("%c[CIA] Build: " + window.CIA_BUILD, "color:#0af;font-weight:bold;font-size:14px");
+
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
