@@ -6420,7 +6420,23 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
 
           if(!__CIA_IS_FILE__){
             try{
-              const m = await CIA_CLOUD.me();
+              let m = await CIA_CLOUD.me();
+              // Se não tem sessão Supabase, autenticar com as mesmas credenciais
+              if(!m){
+                console.log("[CIA][AUTH] Sessão Supabase ausente, tentando signInWithPassword...");
+                const c = CIA_CLOUD.client ? CIA_CLOUD.client() : null;
+                if(c){
+                  try{
+                    const { data: signData, error: signErr } = await c.auth.signInWithPassword({ email, password: code });
+                    if(signErr) console.warn("[CIA][AUTH] signInWithPassword falhou:", signErr.message);
+                    if(signData && signData.user){
+                      console.log("[CIA][AUTH] Supabase autenticado com sucesso.");
+                      CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
+                      m = await CIA_CLOUD.me();
+                    }
+                  }catch(_se){ console.warn("[CIA][AUTH] signIn error:", _se); }
+                }
+              }
               if(m) await CIA_CLOUD.afterLogin();
               try{ await dmRefreshWeeks(); }catch(_e){}
               // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
@@ -6431,7 +6447,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
                   await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
                 }
               }catch(_e){}
-            }catch(_e){}
+            }catch(_e){ console.warn("[CIA][AUTH] cloud init failed:", _e); }
           }
           return;
         }
@@ -6499,18 +6515,42 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
 
         if(!__CIA_IS_FILE__){
           try{
-            const m = await CIA_CLOUD.me();
-            if(m) await CIA_CLOUD.afterLogin();
+            console.log("[CIA][BOOT] isAuthed=true, tentando restaurar sessão Supabase...");
+            let m = await CIA_CLOUD.me();
+            if(!m){
+              console.warn("[CIA][BOOT] Sessão Supabase expirada/ausente no reload. Tentando getSession...");
+              // Supabase persistSession deveria restaurar automaticamente;
+              // se não restaurou, a sessão expirou — o user precisará re-logar para cloud ops
+              const c = CIA_CLOUD.client ? CIA_CLOUD.client() : null;
+              if(c){
+                try{
+                  const { data: sess } = await c.auth.getSession();
+                  if(sess && sess.session){
+                    console.log("[CIA][BOOT] Sessão restaurada via getSession.");
+                    CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
+                    m = await CIA_CLOUD.me();
+                  }else{
+                    console.warn("[CIA][BOOT] Nenhuma sessão Supabase disponível. Cloud ops desabilitadas até novo login.");
+                  }
+                }catch(_se){ console.warn("[CIA][BOOT] getSession error:", _se); }
+              }
+            }
+            if(m){
+              console.log("[CIA][BOOT] Supabase user OK, chamando afterLogin...");
+              await CIA_CLOUD.afterLogin();
+            }else{
+              console.warn("[CIA][BOOT] Sem sessão Supabase. Upload/download cloud não vão funcionar.");
+            }
             try{ await dmRefreshWeeks(); }catch(_e){}
             // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
             try{
-              if(CIA_CLOUD.weekActive){
+              if(CIA_CLOUD.weekActive && m){
                 const wSel = document.getElementById("dmCloudWeekSelect");
                 if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
                 await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
               }
             }catch(_e){}
-          }catch(_e){}
+          }catch(_e){ console.warn("[CIA][BOOT] cloud restore failed:", _e); }
         }
         return;
       }
@@ -6566,7 +6606,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
     }, 500);
   });
 
-window.CIA_BUILD = "2025-02-17T03-834b921";
+window.CIA_BUILD = "2025-02-17T04-fix-supabase-auth";
 console.log("%c[CIA] Build: " + window.CIA_BUILD, "color:#0af;font-weight:bold;font-size:14px");
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
