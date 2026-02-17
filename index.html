@@ -6516,24 +6516,50 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
                 console.log("[CIA][AUTH] Sessão Supabase ausente. Tentando signInWithPassword...");
                 const c = CIA_CLOUD.client ? CIA_CLOUD.client() : null;
                 if(c){
-                  // 1) Tentar login
                   try{
+                    // 1) Tentar login
                     const { data: signData, error: signErr } = await c.auth.signInWithPassword({ email, password: code });
                     if(!signErr && signData && signData.user){
                       console.log("[CIA][AUTH] Supabase login OK.");
                       CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
                       m = await CIA_CLOUD.me();
                     }else{
-                      console.warn("[CIA][AUTH] signIn falhou:", signErr ? signErr.message : "sem user");
-                      // 2) User não existe → criar via signUp
-                      console.log("[CIA][AUTH] Tentando signUp para criar user no Supabase...");
-                      const { data: upData, error: upErr } = await c.auth.signUp({ email, password: code });
-                      if(!upErr && upData && upData.user){
-                        console.log("[CIA][AUTH] signUp OK, user criado:", upData.user.id);
-                        CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
-                        m = await CIA_CLOUD.me();
+                      const errMsg = signErr ? signErr.message : "sem user";
+                      console.warn("[CIA][AUTH] signIn falhou:", errMsg);
+
+                      // 2) Se "Email not confirmed" → tentar signUp que pode auto-confirmar
+                      //    Se user não existe → criar via signUp
+                      console.log("[CIA][AUTH] Tentando signUp...");
+                      const { data: upData, error: upErr } = await c.auth.signUp({
+                        email, password: code,
+                        options: { data: { full_name: email } }
+                      });
+
+                      if(!upErr && upData){
+                        // signUp pode retornar sessão (se auto-confirm habilitado) ou não
+                        if(upData.session){
+                          console.log("[CIA][AUTH] signUp retornou sessão. Auto-confirm ativo.");
+                          CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
+                          m = await CIA_CLOUD.me();
+                        }else if(upData.user){
+                          console.log("[CIA][AUTH] signUp criou user:", upData.user.id, "mas SEM sessão (email confirmation requerida).");
+                          // Tentar signIn novamente (caso signUp tenha auto-confirmado)
+                          try{
+                            const { data: retryData, error: retryErr } = await c.auth.signInWithPassword({ email, password: code });
+                            if(!retryErr && retryData && retryData.user){
+                              console.log("[CIA][AUTH] signIn retry OK após signUp!");
+                              CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
+                              m = await CIA_CLOUD.me();
+                            }else{
+                              console.error("[CIA][AUTH] ⚠️ Email confirmation está HABILITADO no Supabase.");
+                              console.error("[CIA][AUTH] → Vá em Supabase Dashboard → Auth → Providers → Email → desabilite 'Confirm email'");
+                              console.error("[CIA][AUTH] → Ou confirme o email na caixa de entrada de:", email);
+                              try{ toast("⚠️ Supabase requer confirmação de email. Verifique sua caixa de entrada ou desabilite no Supabase Dashboard."); }catch(_t){}
+                            }
+                          }catch(_re){}
+                        }
                       }else{
-                        console.warn("[CIA][AUTH] signUp também falhou:", upErr ? upErr.message : "sem user");
+                        console.warn("[CIA][AUTH] signUp falhou:", upErr ? upErr.message : "sem data");
                       }
                     }
                   }catch(_se){ console.warn("[CIA][AUTH] auth error:", _se); }
@@ -6708,7 +6734,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
     }, 500);
   });
 
-window.CIA_BUILD = "2025-02-17T05-auto-bootstrap";
+window.CIA_BUILD = "2025-02-17T06-email-confirm-fix";
 console.log("%c[CIA] Build: " + window.CIA_BUILD, "color:#0af;font-weight:bold;font-size:14px");
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
