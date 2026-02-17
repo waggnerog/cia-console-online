@@ -5258,8 +5258,7 @@ function ensureLoaded(page){
     if(!f) return;
 
     store.sist = f;
-        try{ CIA_CLOUD.mirrorUpload('sist', f); }catch(e){}
-store.sistWeek = detectWeekNumber(f.name);
+    store.sistWeek = detectWeekNumber(f.name);
 
     // Se não achar a Week no nome, pede uma vez (fallback)
     if(!store.sistWeek){
@@ -5271,6 +5270,10 @@ Digite o número da WEEK (ex: 50):`, '');
       if(resp && /^\d{1,3}$/.test(resp.trim())) store.sistWeek = resp.trim();
     }
 
+    // Setar week ativa ANTES do upload cloud
+    if(store.sistWeek){ try{ CIA_CLOUD.setWeek(store.sistWeek); }catch(_e){} }
+    try{ CIA_CLOUD.mirrorUpload('sist', f); }catch(e){}
+
     toast(store.sistWeek ? `Sistemática selecionada (Week ${store.sistWeek}).` : 'Sistemática selecionada.');
     distribute('sist');
     if(store.efet) scheduleEfetAuto();
@@ -5281,8 +5284,8 @@ Digite o número da WEEK (ex: 50):`, '');
     e.target.value = '';
     if(!f) return;
     store.base = f;
-        try{ CIA_CLOUD.mirrorUpload('base', f); }catch(e){}
-toast('Base selecionada.');
+    toast('Base selecionada.');
+    try{ CIA_CLOUD.mirrorUpload('base', f); }catch(e){}
     distribute('base');
     if(store.efet) scheduleEfetAuto();
   });
@@ -5292,8 +5295,8 @@ toast('Base selecionada.');
     e.target.value = '';
     if(!f) return;
     store.fotos = f;
-        try{ CIA_CLOUD.mirrorUpload('fotos', f); }catch(e){}
-toast('Relatório de Fotos selecionado.');
+    toast('Relatório de Fotos selecionado.');
+    try{ CIA_CLOUD.mirrorUpload('fotos', f); }catch(e){}
     try{ setPill(document.getElementById('photosStatusOuter'),'warn','Fotos: processando'); }catch(_e){}
     try{ watchFotosLed(); }catch(_e){}
     distribute('fotos');
@@ -5304,12 +5307,12 @@ toast('Relatório de Fotos selecionado.');
     e.target.value = '';
     if(!f) return;
     store.efet = f;
-        try{ CIA_CLOUD.mirrorUpload('efet', f); }catch(e){}
-if(!store.sist || !store.base){
+    if(!store.sist || !store.base){
       toast('Efetividade: para processar, carregue também a Sistemática e a Base de Telefones.');
     }else{
       toast('Relatório de Efetividade selecionado.');
     }
+    try{ CIA_CLOUD.mirrorUpload('efet', f); }catch(e){}
     distribute('efet');
     scheduleEfetAuto();
   });
@@ -5320,8 +5323,7 @@ if(!store.sist || !store.base){
     if(!f) return;
 
     store.pesq = f;
-        try{ CIA_CLOUD.mirrorUpload('pesq', f); }catch(e){}
-try{ setPill(document.getElementById('pesqStatusOuter'),'warn','Tracking de Pesquisa: processando'); }catch(_e){}
+    try{ setPill(document.getElementById('pesqStatusOuter'),'warn','Tracking de Pesquisa: processando'); }catch(_e){}
     try{ watchPesqLed(); }catch(_e){}
     store.pesqWeekLabel = detectWeekLabel(f.name);
 
@@ -5335,6 +5337,13 @@ Digite o rótulo (ex: Week 47):`, '');
       if(resp && resp.trim()) store.pesqWeekLabel = resp.trim();
     }
 
+    // Setar week se detectada (e upload cloud)
+    if(store.pesqWeekLabel){
+      const wn = String(store.pesqWeekLabel).replace(/\D/g,'');
+      if(wn){ try{ CIA_CLOUD.setWeek(wn); }catch(_e){} }
+    }
+    try{ CIA_CLOUD.mirrorUpload('pesq', f); }catch(e){}
+
     toast(store.pesqWeekLabel ? `Relatório de Pesquisa selecionado (${store.pesqWeekLabel}).` : 'Relatório de Pesquisa selecionado.');
     distribute('pesq');
   });
@@ -5345,12 +5354,12 @@ Digite o rótulo (ex: Week 47):`, '');
     if(!f) return;
 
     store.datacrit = f;
-        try{ CIA_CLOUD.mirrorUpload('datacrit', f); }catch(e){}
-if(!store.sist){
+    if(!store.sist){
       toast('Data Crítica: recomendado carregar também a Sistemática para calcular visitas/semana.');
     }else{
       toast('Relatório de Data Crítica selecionado.');
     }
+    try{ CIA_CLOUD.mirrorUpload('datacrit', f); }catch(e){}
     distribute('datacrit');
   });
 
@@ -6038,6 +6047,10 @@ const AUTH_KEY = "cia_auth_v1";
       if(exists) workspaceActive = exists.id;
       else workspaceActive = (ctx.workspaces[0] && ctx.workspaces[0].id) ? ctx.workspaces[0].id : null;
 
+      // 10b. Week ativa (restaurar do localStorage)
+      const storedWeek = localStorage.getItem("CIA_ACTIVE_WEEK") || "";
+      if(storedWeek) weekActive = storedWeek;
+
       window.CIA_CTX = { ...ctx, weekActive, workspaceActive };
 
       applyAccessControlUI();
@@ -6230,7 +6243,6 @@ const AUTH_KEY = "cia_auth_v1";
     async function afterLogin(){
       await loadContext();
       // Força a tela inicial após login (evita tela branca)
-// FIX: Força inicialização direta
       if(typeof setScreen === 'function') {
         setScreen('dash');
       } else if(typeof window.setScreen === 'function') {
@@ -6322,7 +6334,7 @@ return {
       get workspaceActive(){ return workspaceActive; },
       setWorkspace,
       get weekActive(){ return weekActive; },
-      setWeek(w){ weekActive = w; window.CIA_CTX = { ...window.CIA_CTX, weekActive }; }
+      setWeek(w){ weekActive = w; try{ localStorage.setItem("CIA_ACTIVE_WEEK", w || ""); }catch(_e){} window.CIA_CTX = { ...window.CIA_CTX, weekActive }; }
     };
   })();;
 function boot(){
@@ -6388,6 +6400,14 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
               const m = await CIA_CLOUD.me();
               if(m) await CIA_CLOUD.afterLogin();
               try{ await dmRefreshWeeks(); }catch(_e){}
+              // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
+              try{
+                if(CIA_CLOUD.weekActive){
+                  const wSel = document.getElementById("dmCloudWeekSelect");
+                  if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
+                  await dmLoadWeekFromCloud();
+                }
+              }catch(_e){}
             }catch(_e){}
           }
           return;
@@ -6411,6 +6431,14 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
           hideLogin();
           try{ await CIA_CLOUD.afterLogin(); }catch(_e){}
           try{ await dmRefreshWeeks(); }catch(_e){}
+          // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
+          try{
+            if(CIA_CLOUD.weekActive){
+              const wSel = document.getElementById("dmCloudWeekSelect");
+              if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
+              await dmLoadWeekFromCloud();
+            }
+          }catch(_e){}
           return;
         }
 
@@ -6450,6 +6478,9 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
           try{
             const m = await CIA_CLOUD.me();
             if(m) await CIA_CLOUD.afterLogin();
+            try{ await dmRefreshWeeks(); }catch(_e){}
+            // Auto-restore: se week ativa, carregar dados do cloud
+            try{ if(CIA_CLOUD.weekActive) await dmLoadWeekFromCloud(); }catch(_e){}
           }catch(_e){}
         }
         return;
@@ -6476,6 +6507,15 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
       setAuthed();
       hideLogin();
       try{ await CIA_CLOUD.afterLogin(); }catch(_e){}
+      try{ await dmRefreshWeeks(); }catch(_e){}
+      // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
+      try{
+        if(CIA_CLOUD.weekActive){
+          const wSel = document.getElementById("dmCloudWeekSelect");
+          if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
+          await dmLoadWeekFromCloud();
+        }
+      }catch(_e){}
     })();
   }
 
