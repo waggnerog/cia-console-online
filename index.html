@@ -4185,11 +4185,22 @@ function ensureLoaded(page){
     }
   }
 
-  async function dmLoadWeekFromCloud(){
+  async function dmLoadWeekFromCloud(weekOverride){
     try{
-      if(!dmCloudWeekSelect) return;
-      const week = (dmCloudWeekSelect.value || "").trim();
+      const week = weekOverride || (dmCloudWeekSelect ? (dmCloudWeekSelect.value || "").trim() : "");
       if(!week){ toast("Selecione uma WEEK para carregar."); return; }
+
+      // Garante que o dropdown tenha essa opção e esteja selecionada
+      if(dmCloudWeekSelect && week){
+        const exists = Array.from(dmCloudWeekSelect.options).some(o => o.value === String(week));
+        if(!exists){
+          const o = document.createElement("option");
+          o.value = String(week);
+          o.textContent = "WEEK " + String(week);
+          dmCloudWeekSelect.appendChild(o);
+        }
+        dmCloudWeekSelect.value = String(week);
+      }
 
       // Atualiza contexto
       try{ CIA_CLOUD.setWeek(week); }catch(_e){}
@@ -6189,6 +6200,18 @@ const AUTH_KEY = "cia_auth_v1";
         console.warn("[CIA][UPLOAD] file_uploads upsert failed", meta.error);
       }
 
+      // 3. Garantir que a week exista na tabela 'weeks' (para listWeeks/dropdown)
+      try{
+        await c.from("weeks").upsert({
+          workspace_id: wsId,
+          week_number: parseInt(weekNum, 10),
+          year: year,
+          is_active: true
+        }, { onConflict: "workspace_id,week_number,year" });
+      }catch(_e){
+        console.warn("[CIA][UPLOAD] weeks upsert failed (non-blocking)", _e);
+      }
+
       console.log("[CIA][UPLOAD] OK:", path);
       return true;
     }
@@ -6405,7 +6428,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
                 if(CIA_CLOUD.weekActive){
                   const wSel = document.getElementById("dmCloudWeekSelect");
                   if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
-                  await dmLoadWeekFromCloud();
+                  await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
                 }
               }catch(_e){}
             }catch(_e){}
@@ -6436,7 +6459,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
             if(CIA_CLOUD.weekActive){
               const wSel = document.getElementById("dmCloudWeekSelect");
               if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
-              await dmLoadWeekFromCloud();
+              await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
             }
           }catch(_e){}
           return;
@@ -6479,8 +6502,14 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
             const m = await CIA_CLOUD.me();
             if(m) await CIA_CLOUD.afterLogin();
             try{ await dmRefreshWeeks(); }catch(_e){}
-            // Auto-restore: se week ativa, carregar dados do cloud
-            try{ if(CIA_CLOUD.weekActive) await dmLoadWeekFromCloud(); }catch(_e){}
+            // Auto-restore: se week ativa, pré-selecionar dropdown e carregar do cloud
+            try{
+              if(CIA_CLOUD.weekActive){
+                const wSel = document.getElementById("dmCloudWeekSelect");
+                if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
+                await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
+              }
+            }catch(_e){}
           }catch(_e){}
         }
         return;
@@ -6513,7 +6542,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
         if(CIA_CLOUD.weekActive){
           const wSel = document.getElementById("dmCloudWeekSelect");
           if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
-          await dmLoadWeekFromCloud();
+          await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
         }
       }catch(_e){}
     })();
