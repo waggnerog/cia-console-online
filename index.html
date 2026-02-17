@@ -6122,9 +6122,13 @@ const AUTH_KEY = "cia_auth_v1";
         if(key) ctx.features.user[key] = !!r.is_enabled;
       });
 
-      // 9. Compute effective features — se catálogo vazio, habilitar tudo como fallback
+      // 9. Compute effective features
       const effective = {};
-      if(ctx.features.catalog.length > 0){
+      const orgEntKeys = Object.keys(ctx.features.org || {});
+      const hasOrgEntitlements = orgEntKeys.length > 0;
+
+      if(ctx.features.catalog.length > 0 && hasOrgEntitlements){
+        // Modo restritivo: só habilita features que estão em org_entitlements
         ctx.features.catalog.forEach(it=>{
           const k = it.key;
           const orgOn = !!ctx.features.org[k];
@@ -6135,8 +6139,13 @@ const AUTH_KEY = "cia_auth_v1";
           effective[k] = true;
         });
       }else{
-        // Fallback: habilitar todas as features conhecidas
+        // Modo permissivo: sem org_entitlements ou sem catálogo → tudo habilitado
+        // (sem restrição configurada = acesso total)
         ["mapa","mapa_operacao","fotos","efetividade","tracking","tracking_pesquisa","data_critica","gestao_dados","base_telefones"].forEach(k=>{ effective[k] = true; });
+        if(ctx.features.catalog.length > 0){
+          ctx.features.catalog.forEach(it=>{ effective[it.key] = true; });
+        }
+        console.log("[CIA][CTX] Modo permissivo: sem org_entitlements configuradas, todas features habilitadas.");
       }
       effective["base_telefones"] = true;
       ctx.features.effective = effective;
@@ -6165,16 +6174,17 @@ const AUTH_KEY = "cia_auth_v1";
 
     function applyAccessControlUI(){
       const f = (ctx && ctx.features && ctx.features.effective) ? ctx.features.effective : {};
+      const role = (ctx.profile && ctx.profile.role) ? ctx.profile.role : null;
+      const isMasterOrAdmin = ["master","global_admin"].includes(role);
       const show = (id, on) => { const el = document.getElementById(id); if(!el) return; el.style.display = on ? "" : "none"; };
 
-      show("navSist", !!f["mapa"] || !!f["mapa_operacao"]);
-      show("navFotos", !!f["fotos"]);
-      show("navEfet", !!f["efetividade"]);
-      show("navPesq", !!f["tracking"] || !!f["tracking_pesquisa"]);
-      show("navDataCrit", !!f["data_critica"]);
-      show("navDataMgr", !!f["gestao_dados"]);
-
-      const role = (ctx.profile && ctx.profile.role) ? ctx.profile.role : null;
+      // Masters/admins veem tudo; demais dependem de features
+      show("navSist", isMasterOrAdmin || !!f["mapa"] || !!f["mapa_operacao"]);
+      show("navFotos", isMasterOrAdmin || !!f["fotos"]);
+      show("navEfet", isMasterOrAdmin || !!f["efetividade"]);
+      show("navPesq", isMasterOrAdmin || !!f["tracking"] || !!f["tracking_pesquisa"]);
+      show("navDataCrit", isMasterOrAdmin || !!f["data_critica"]);
+      show("navDataMgr", isMasterOrAdmin || !!f["gestao_dados"]);
       const isAdmin = ["master","global_admin"].includes(role);
       show("navAdmin", isAdmin);
       show("btnExportReportFotos", !!f["fotos"]);
@@ -6734,7 +6744,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
     }, 500);
   });
 
-window.CIA_BUILD = "2025-02-17T06-email-confirm-fix";
+window.CIA_BUILD = "2025-02-17T07-fix-sidebar-features";
 console.log("%c[CIA] Build: " + window.CIA_BUILD, "color:#0af;font-weight:bold;font-size:14px");
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
