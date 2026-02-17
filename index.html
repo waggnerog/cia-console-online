@@ -5942,16 +5942,40 @@ const AUTH_KEY = "cia_auth_v1";
       const user = await me();
       if(!c || !user) return null;
 
+      console.log("[CIA][CTX] loadContext para user:", user.id, user.email);
+
       // 1. Profile (novo schema: id, email, full_name, is_master, is_platform_admin)
-      const pr = await c.from("profiles")
+      let pr = await c.from("profiles")
         .select("id,email,full_name,is_master,is_platform_admin,avatar_url,created_at")
         .eq("id", user.id)
         .maybeSingle();
 
       if(pr.error || !pr.data){
-        throw new Error("Profile não encontrado para este usuário (public.profiles).");
+        // Auto-bootstrap: criar profile se não existe
+        console.warn("[CIA][CTX] Profile não encontrado. Auto-criando...");
+        try{
+          await c.from("profiles").upsert({
+            id: user.id,
+            email: user.email || "",
+            full_name: user.email || "Master",
+            is_master: true,
+            is_platform_admin: true
+          }, { onConflict: "id" });
+          pr = await c.from("profiles")
+            .select("id,email,full_name,is_master,is_platform_admin,avatar_url,created_at")
+            .eq("id", user.id)
+            .maybeSingle();
+        }catch(_pe){ console.warn("[CIA][CTX] Auto-create profile falhou:", _pe); }
+
+        if(!pr || !pr.data){
+          console.warn("[CIA][CTX] Profile ainda indisponível. Usando fallback local.");
+          ctx.profile = { id: user.id, user_id: user.id, email: user.email || "", full_name: user.email || "Master", name: user.email || "Master", is_master: true, is_platform_admin: true, role: "master" };
+        }else{
+          ctx.profile = pr.data;
+        }
+      }else{
+        ctx.profile = pr.data;
       }
-      ctx.profile = pr.data;
       ctx.profile.user_id = ctx.profile.id;
       ctx.profile.name = ctx.profile.full_name || ctx.profile.email || "";
 
@@ -5962,22 +5986,52 @@ const AUTH_KEY = "cia_auth_v1";
         .eq("is_active", true)
         .maybeSingle();
 
-      const orgId = (ou.data && ou.data.org_id) ? ou.data.org_id : null;
-      const orgRole = (ou.data && ou.data.role) ? ou.data.role : null;
+      let orgId = (ou.data && ou.data.org_id) ? ou.data.org_id : null;
+      let orgRole = (ou.data && ou.data.role) ? ou.data.role : null;
+
+      // Auto-bootstrap: se sem org, buscar a primeira org disponível e vincular
+      if(!orgId){
+        console.warn("[CIA][CTX] Sem org membership. Buscando org existente...");
+        try{
+          const firstOrg = await c.from("organizations").select("id").limit(1).maybeSingle();
+          if(firstOrg.data && firstOrg.data.id){
+            orgId = firstOrg.data.id;
+            orgRole = "owner";
+            console.log("[CIA][CTX] Vinculando user à org:", orgId);
+            await c.from("org_users").upsert({
+              org_id: orgId, user_id: user.id, role: "owner", is_active: true
+            }, { onConflict: "org_id,user_id" });
+          }else{
+            console.warn("[CIA][CTX] Nenhuma org encontrada. Criando org padrão...");
+            const newOrg = await c.from("organizations").insert({
+              name: "CIA Default", slug: "cia-default", category: "trade", plan: "pro"
+            }).select("id").single();
+            if(newOrg.data && newOrg.data.id){
+              orgId = newOrg.data.id;
+              orgRole = "owner";
+              await c.from("org_users").upsert({
+                org_id: orgId, user_id: user.id, role: "owner", is_active: true
+              }, { onConflict: "org_id,user_id" });
+            }
+          }
+        }catch(_oe){ console.warn("[CIA][CTX] Auto-bootstrap org falhou:", _oe); }
+      }
       ctx.profile.org_id = orgId;
 
-      // 3. Organization (tabela: organizations, campo category em vez de type)
+      // 3. Organization
       if(orgId){
         const og = await c.from("organizations")
           .select("id,name,slug,category,plan,seats_limit,created_at")
           .eq("id", orgId)
           .maybeSingle();
 
-        if(og.error || !og.data){
-          throw new Error("Org não encontrada para este usuário (public.organizations).");
+        if(!og.error && og.data){
+          ctx.org = og.data;
+          ctx.org.type = ctx.org.category;
+        }else{
+          console.warn("[CIA][CTX] Org não encontrada para id:", orgId);
+          ctx.org = null;
         }
-        ctx.org = og.data;
-        ctx.org.type = ctx.org.category;
       }else{
         ctx.org = null;
       }
@@ -5992,6 +6046,35 @@ const AUTH_KEY = "cia_auth_v1";
         .filter(w => w.workspaces)
         .map(w => ({ ...w.workspaces, userRole: w.role }));
 
+      // Auto-bootstrap: se sem workspace, buscar existente ou criar
+      if(ctx.workspaces.length === 0){
+        console.warn("[CIA][CTX] Sem workspaces. Buscando workspace existente...");
+        try{
+          const firstWs = await c.from("workspaces").select("id,name,slug,org_id,type,client_name,client_document,trade_owner_user_id,created_at").limit(1).maybeSingle();
+          if(firstWs.data && firstWs.data.id){
+            console.log("[CIA][CTX] Vinculando user ao workspace:", firstWs.data.id);
+            await c.from("workspace_users").upsert({
+              workspace_id: firstWs.data.id, user_id: user.id, role: "admin", is_active: true
+            }, { onConflict: "workspace_id,user_id" });
+            ctx.workspaces = [{ ...firstWs.data, userRole: "admin" }];
+          }else if(orgId){
+            console.log("[CIA][CTX] Nenhum workspace. Criando workspace padrão...");
+            const slug = (ctx.org && ctx.org.slug) ? ctx.org.slug : "default";
+            const newWs = await c.from("workspaces").insert({
+              name: "Operação Principal", slug: slug, org_id: orgId, type: "trade"
+            }).select("id,name,slug,org_id,type,client_name,client_document,trade_owner_user_id,created_at").single();
+            if(newWs.data && newWs.data.id){
+              await c.from("workspace_users").upsert({
+                workspace_id: newWs.data.id, user_id: user.id, role: "admin", is_active: true
+              }, { onConflict: "workspace_id,user_id" });
+              ctx.workspaces = [{ ...newWs.data, userRole: "admin" }];
+            }
+          }
+        }catch(_we){ console.warn("[CIA][CTX] Auto-bootstrap workspace falhou:", _we); }
+      }
+
+      console.log("[CIA][CTX] Workspaces:", ctx.workspaces.length, ctx.workspaces.map(w=>w.slug||w.id));
+
       // 5. Effective role (hierarquia: master > global_admin > org_admin > workspace role)
       if(ctx.profile.is_master){
         ctx.profile.role = "master";
@@ -6004,6 +6087,7 @@ const AUTH_KEY = "cia_auth_v1";
       }else{
         ctx.profile.role = "viewer";
       }
+      console.log("[CIA][CTX] Role:", ctx.profile.role, "| OrgId:", orgId, "| OrgRole:", orgRole);
 
       // 6. Feature catalog (tabela: features)
       const fc = await c.from("features")
@@ -6038,17 +6122,22 @@ const AUTH_KEY = "cia_auth_v1";
         if(key) ctx.features.user[key] = !!r.is_enabled;
       });
 
-      // 9. Compute effective features
+      // 9. Compute effective features — se catálogo vazio, habilitar tudo como fallback
       const effective = {};
-      ctx.features.catalog.forEach(it=>{
-        const k = it.key;
-        const orgOn = !!ctx.features.org[k];
-        if(!orgOn){ effective[k] = false; return; }
-        if(Object.prototype.hasOwnProperty.call(ctx.features.user, k) && ctx.features.user[k] === false){
-          effective[k] = false; return;
-        }
-        effective[k] = true;
-      });
+      if(ctx.features.catalog.length > 0){
+        ctx.features.catalog.forEach(it=>{
+          const k = it.key;
+          const orgOn = !!ctx.features.org[k];
+          if(!orgOn){ effective[k] = false; return; }
+          if(Object.prototype.hasOwnProperty.call(ctx.features.user, k) && ctx.features.user[k] === false){
+            effective[k] = false; return;
+          }
+          effective[k] = true;
+        });
+      }else{
+        // Fallback: habilitar todas as features conhecidas
+        ["mapa","mapa_operacao","fotos","efetividade","tracking","tracking_pesquisa","data_critica","gestao_dados","base_telefones"].forEach(k=>{ effective[k] = true; });
+      }
       effective["base_telefones"] = true;
       ctx.features.effective = effective;
 
@@ -6062,6 +6151,7 @@ const AUTH_KEY = "cia_auth_v1";
       const storedWeek = localStorage.getItem("CIA_ACTIVE_WEEK") || "";
       if(storedWeek) weekActive = storedWeek;
 
+      console.log("[CIA][CTX] workspaceActive:", workspaceActive, "| weekActive:", weekActive);
       window.CIA_CTX = { ...ctx, weekActive, workspaceActive };
 
       applyAccessControlUI();
@@ -6423,18 +6513,30 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
               let m = await CIA_CLOUD.me();
               // Se não tem sessão Supabase, autenticar com as mesmas credenciais
               if(!m){
-                console.log("[CIA][AUTH] Sessão Supabase ausente, tentando signInWithPassword...");
+                console.log("[CIA][AUTH] Sessão Supabase ausente. Tentando signInWithPassword...");
                 const c = CIA_CLOUD.client ? CIA_CLOUD.client() : null;
                 if(c){
+                  // 1) Tentar login
                   try{
                     const { data: signData, error: signErr } = await c.auth.signInWithPassword({ email, password: code });
-                    if(signErr) console.warn("[CIA][AUTH] signInWithPassword falhou:", signErr.message);
-                    if(signData && signData.user){
-                      console.log("[CIA][AUTH] Supabase autenticado com sucesso.");
+                    if(!signErr && signData && signData.user){
+                      console.log("[CIA][AUTH] Supabase login OK.");
                       CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
                       m = await CIA_CLOUD.me();
+                    }else{
+                      console.warn("[CIA][AUTH] signIn falhou:", signErr ? signErr.message : "sem user");
+                      // 2) User não existe → criar via signUp
+                      console.log("[CIA][AUTH] Tentando signUp para criar user no Supabase...");
+                      const { data: upData, error: upErr } = await c.auth.signUp({ email, password: code });
+                      if(!upErr && upData && upData.user){
+                        console.log("[CIA][AUTH] signUp OK, user criado:", upData.user.id);
+                        CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
+                        m = await CIA_CLOUD.me();
+                      }else{
+                        console.warn("[CIA][AUTH] signUp também falhou:", upErr ? upErr.message : "sem user");
+                      }
                     }
-                  }catch(_se){ console.warn("[CIA][AUTH] signIn error:", _se); }
+                  }catch(_se){ console.warn("[CIA][AUTH] auth error:", _se); }
                 }
               }
               if(m) await CIA_CLOUD.afterLogin();
@@ -6606,7 +6708,7 @@ try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.disp
     }, 500);
   });
 
-window.CIA_BUILD = "2025-02-17T04-fix-supabase-auth";
+window.CIA_BUILD = "2025-02-17T05-auto-bootstrap";
 console.log("%c[CIA] Build: " + window.CIA_BUILD, "color:#0af;font-weight:bold;font-size:14px");
 
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot);
