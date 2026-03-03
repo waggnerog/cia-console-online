@@ -1,0 +1,17 @@
+{
+  "name": "cia-console-online",
+  "version": "2.0.0",
+  "description": "CIA — Console Integrado de Análise (Cloud Edition, Supabase)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
