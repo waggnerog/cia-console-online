@@ -1,0 +1,72 @@
+/**
+ * src/styles/tokens.css
+ * ─────────────────────────────────────────────────────────────────────
+ * CIA Console — Design Tokens (single source of truth for all styling)
+ *
+ * Typography:  IBM Plex Sans (body/UI) · IBM Plex Mono (data/code)
+ * Accent:      CIA Green (#1A7A3A) — the official brand green
+ * Neutrals:    Premium dark navy + icy off-white
+ * ─────────────────────────────────────────────────────────────────────
+ */
+
+/* ── Google Fonts: IBM Plex Sans + IBM Plex Mono ─────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+/* ── Root tokens ─────────────────────────────────────────────────── */
+:root {
+  /* ─ Typography ──────────────────────────────────────────────────── */
+  --font-sans:  'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --font-mono:  'IBM Plex Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+
+  /* ─ CIA Brand Palette ───────────────────────────────────────────── */
+  --cia-navy:       #071C46;   /* sidebar / primary background */
+  --cia-deep:       #071B42;   /* deepest background layer */
+  --cia-green:      #1A7A3A;   /* CIA accent green (official) */
+  --cia-green-mid:  #22C55E;   /* glow / highlight green */
+  --cia-green-soft: #DCFCE7;   /* light green tint for badges */
+  --cia-ice:        #FCFCFF;   /* off-white background */
+
+  /* ─ Neutral premium ─────────────────────────────────────────────── */
+  --neutral-900: #0B1220;
+  --neutral-700: rgba(15, 23, 42, 0.66);
+  --neutral-200: rgba(148, 163, 184, 0.22);
+  --neutral-100: rgba(255, 255, 255, 0.94);
+
+  /* ─ Core semantic tokens (used throughout app.css) ──────────────── */
+  --bg:       var(--cia-ice);
+  --surface:  rgba(255, 255, 255, 0.86);
+  --surface-2: rgba(255, 255, 255, 0.94);
+  --text:     var(--neutral-900);
+  --muted:    var(--neutral-700);
+  --border:   rgba(7, 27, 66, 0.12);
+  --ring:     rgba(26, 122, 58, 0.35);   /* CIA green ring */
+
+  --primary: var(--cia-deep);
+  --accent:  var(--cia-green);            /* CIA green — single accent source */
+  --accent-mid: var(--cia-green-mid);
+
+  /* ─ Radii ────────────────────────────────────────────────────────── */
+  --radius:    24px;
+  --radius-md: 18px;
+  --radius-sm: 14px;
+
+  /* ─ Shadows ─────────────────────────────────────────────────────── */
+  --shadow-lg: 0 22px 60px rgba(2, 6, 23, 0.14);
+  --shadow:    0 18px 40px rgba(2, 6, 23, 0.10);
+  --shadow-sm: 0 10px 24px rgba(2, 6, 23, 0.08);
+
+  /* ─ Gradients ────────────────────────────────────────────────────── */
+  --grad-app:
+    radial-gradient(1100px 680px at 18%  0%, rgba(26, 122, 58, 0.07), rgba(252, 252, 255, 0) 60%),
+    radial-gradient(980px  640px at 92%  8%, rgba(7,  27, 66, 0.06),  rgba(252, 252, 255, 0) 58%),
+    linear-gradient(180deg, rgba(7, 27, 66, 0.04), rgba(252, 252, 255, 0) 30%),
+    var(--bg);
+
+  --grad-sidebar: var(--cia-navy);
+
+  /* ─ LED / status dot colors ──────────────────────────────────────── */
+  --led-ok:   rgba(34, 197, 94, 0.95);
+  --led-warn: rgba(245, 158, 11, 0.96);
+  --led-bad:  rgba(239, 68, 68, 0.95);
+  --led-idle: rgba(148, 163, 184, 0.55);
+}
