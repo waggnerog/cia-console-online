@@ -25,6 +25,9 @@ import './styles/app.css';
 
 // ── Supabase npm package ─────────────────────────────────────────────
 import { createClient } from '@supabase/supabase-js';
+import { initHc } from './modules/hc.js';
+import { initPdvs } from './modules/pdvs.js';
+import { initProducts } from './modules/products.js';
 
 // ── Validate config eagerly (fail loudly if env is not set) ─────────
 {
@@ -2321,7 +2324,10 @@ ciaObsWrite(key, obj);
     fotos: document.getElementById('frameFotos'),
     efet: document.getElementById('frameEfet'),
     pesq: document.getElementById('framePesq'),
-    datacrit: document.getElementById('frameDataCrit')
+    datacrit: document.getElementById('frameDataCrit'),
+    hc: document.getElementById('frameHc'),
+    pdvs: document.getElementById('framePdvs'),
+    products: document.getElementById('frameProducts')
   };
 
   // ===== CIA â€” SistemÃ¡tica Meta Relay (para Tracking de Pesquisa) =====
@@ -2380,6 +2386,18 @@ ciaObsWrite(key, obj);
       return false;
     }
     try{
+      if (frameKey === 'hc') {
+        initHc(fr);
+        return true;
+      }
+      if (frameKey === 'pdvs') {
+        initPdvs(fr);
+        return true;
+      }
+      if (frameKey === 'products') {
+        initProducts(fr);
+        return true;
+      }
       const decoded = decodeB64(B64[frameKey]);
       fr.srcdoc = injectOverrides(decoded, frameKey);
       return true;
@@ -2605,6 +2623,9 @@ function ensureLoaded(page){
     pesq: document.getElementById('navPesq'),
     datacrit: document.getElementById('navDataCrit'),
     datamgr: document.getElementById('navDataMgr'),
+    hc: document.getElementById('navHc'),
+    pdvs: document.getElementById('navPdvs'),
+    products: document.getElementById('navProducts'),
     admin: document.getElementById('navAdmin')
   };
 
@@ -2859,7 +2880,7 @@ function ensureLoaded(page){
       }
     }catch(_e){}
 
-    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr' };
+    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr', hc:'hc', pdvs:'pdvs', products:'products' };
     const btnKey = navMap[page];
     try{
       if(btnKey && navButtons && navButtons[btnKey] && navButtons[btnKey].classList){
@@ -2898,6 +2919,9 @@ function ensureLoaded(page){
 
   if(navButtons.datacrit) navButtons.datacrit.addEventListener('click', ()=>setActive('datacrit'));
   if(navButtons.datamgr) navButtons.datamgr.addEventListener('click', ()=>setActive('datamgr'));
+  if(navButtons.hc) navButtons.hc.addEventListener('click', ()=>setActive('hc'));
+  if(navButtons.pdvs) navButtons.pdvs.addEventListener('click', ()=>setActive('pdvs'));
+  if(navButtons.products) navButtons.products.addEventListener('click', ()=>setActive('products'));
   // ===== SAFE BOOT (nÃ£o trava se um mÃ³dulo falhar) =====
   (function __ciaSafeBootFrames(){
     const keys = Object.keys(frames||{});
@@ -4254,6 +4278,7 @@ const AUTH_KEY = "cia_auth_v1";
       sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
       });
+      window.CIA_SUPABASE = sb;
       return sb;
     }
 
@@ -4630,6 +4655,9 @@ const AUTH_KEY = "cia_auth_v1";
       show("navPesq", isMasterOrAdmin || !!f["tracking"] || !!f["tracking_pesquisa"]);
       show("navDataCrit", isMasterOrAdmin || !!f["data_critica"]);
       show("navDataMgr", isMasterOrAdmin || !!f["gestao_dados"]);
+      show("navHc", true);
+      show("navPdvs", true);
+      show("navProducts", true);
       const isAdmin = ["master","global_admin"].includes(role);
       show("navAdmin", isAdmin);
       show("btnExportReportFotos", !!f["fotos"]);

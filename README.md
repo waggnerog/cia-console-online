@@ -58,6 +58,11 @@ cia-console-online/
 │   ├── main.js                 # JavaScript completo da aplicação (IIFE principal + Auth Gate)
 │   ├── lib/
 │   │   └── supabaseClient.js   # Cliente Supabase único (env vars Vite)
+│   ├── modules/
+│   │   ├── hc.js               # Tela de Headcount (Pessoas e Alocações)
+│   │   ├── pdvs.js             # Tela de PDVs (Lojas e Time/Mix)
+│   │   └── products.js         # Tela de Produtos (SKUs)
+│   ├── migrations/             # Scripts SQL (ex: 001_hc_pdv_products.sql)
 │   └── styles/
 │       ├── tokens.css          # Design tokens CIA (CIA Green, IBM Plex Sans)
 │       └── app.css             # Todos os estilos de componentes
@@ -85,6 +90,13 @@ cia-console-online/
 | `/api/auth/logout` fallback | Apenas `supabase.auth.signOut()` |
 | Teal/Plum como cores de acento UI | CIA Green `#1A7A3A` é o único acento |
 | Inter / Manrope / Sora / Plus Jakarta Sans | IBM Plex Sans + IBM Plex Mono (CIA branding) |
+
+---
+
+## Módulos de Cadastros (HC, PDVs, Produtos)
+
+As tabelas de negócio do console (`people`, `pdvs`, `products`, `assignments`, `pdv_products`) foram construídas com arquitetura multi-tenant (`workspace_id`).
+Cada tela escuta o evento de sincronização `CIA_ACTIVE_WORKSPACE` disparado pelo console principal e recarrega os dados instantaneamente para o contexto ativo, com segurança RLS aplicada no backend. Para as views em SQL correspondentes, verificar o diretório `src/migrations/`.
 
 ---
 
