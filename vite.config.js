@@ -5,8 +5,13 @@ export default defineConfig(({ mode }) => {
   return {
     // Vite uses index.html at root as entry point
     publicDir: 'public',
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
     build: {
       outDir: 'dist',
+      minify: 'esbuild',
+      sourcemap: false,
       // Warn if single chunk is very large (B64 module data is intentionally large)
       chunkSizeWarningLimit: 4000,
     },
