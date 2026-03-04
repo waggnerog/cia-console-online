@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vite cache
+.vite/
+
+# Environment files — NEVER commit actual .env files
+.env.local
+.env.*.local
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+*.swp
+
+# Legacy artifacts (kept for reference)
+# legacy/
