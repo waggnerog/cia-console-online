@@ -4664,6 +4664,7 @@ const AUTH_KEY = "cia_auth_v1";
       show("navPesq", isMasterOrAdmin || !!f["tracking"] || !!f["tracking_pesquisa"]);
       show("navDataCrit", isMasterOrAdmin || !!f["data_critica"]);
       show("navDataMgr", isMasterOrAdmin || !!f["gestao_dados"]);
+      // Cadastros buttons are always visible for now unless role restricts it later
       show("navHc", true);
       show("navPdvs", true);
       show("navProducts", true);
