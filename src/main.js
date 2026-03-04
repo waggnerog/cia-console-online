@@ -2861,10 +2861,8 @@ function ensureLoaded(page){
     if(page === 'dashboard' || page === 'dash') page = 'sist';
     if(page === 'data_critica' || page === 'dataCrit' || page === 'data-critica') page = 'datacrit';
 
-    // Admin desativado neste build (Operador)
-    if(page === 'admin') page = 'sist';
-
     const isDataMgr = (page === 'datamgr');
+    const isAdminScreen = (page === 'admin');
 
     // iframes
     try{
@@ -2872,13 +2870,13 @@ function ensureLoaded(page){
       for(const k of keys){
         const fr = frames[k];
         if(!fr || !fr.classList) continue;
-        fr.classList.toggle('is-active', (!isDataMgr && k === page));
+        fr.classList.toggle('is-active', (!isDataMgr && !isAdminScreen && k === page));
       }
     }catch(_e){}
 
     // telas host
     try{ if(dataManagerScreen && dataManagerScreen.classList) dataManagerScreen.classList.toggle('is-active', isDataMgr); }catch(_e){}
-    try{ if(adminScreen && adminScreen.classList) adminScreen.classList.remove('is-active'); }catch(_e){}
+    try{ if(adminScreen && adminScreen.classList) adminScreen.classList.toggle('is-active', isAdminScreen); }catch(_e){}
 
     // navegaÃ§Ã£o
     try{
@@ -2892,7 +2890,7 @@ function ensureLoaded(page){
       }
     }catch(_e){}
 
-    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr', hc:'hc', pdvs:'pdvs', products:'products' };
+    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr', hc:'hc', pdvs:'pdvs', products:'products', admin:'admin' };
     const btnKey = navMap[page];
     try{
       if(btnKey && navButtons && navButtons[btnKey] && navButtons[btnKey].classList){
@@ -2915,6 +2913,12 @@ function ensureLoaded(page){
       return;
     }
 
+    if(isAdminScreen){
+      // Admin é tela host; não carrega iframe nem resize
+      try{ if(window.CIA_ADMIN && typeof window.CIA_ADMIN.refresh === 'function') window.CIA_ADMIN.refresh(); }catch(_e){}
+      return;
+    }
+
     try{ scheduleResize(page); }catch(_e){}
     try{ ensureLoaded(page); }catch(_e){}
     try{ if(page === 'efet') scheduleEfetAuto(); }catch(_e){}
@@ -2934,6 +2938,7 @@ function ensureLoaded(page){
   if(navButtons.hc) navButtons.hc.addEventListener('click', ()=>setActive('hc'));
   if(navButtons.pdvs) navButtons.pdvs.addEventListener('click', ()=>setActive('pdvs'));
   if(navButtons.products) navButtons.products.addEventListener('click', ()=>setActive('products'));
+  if(navButtons.admin) navButtons.admin.addEventListener('click', ()=>setActive('admin'));
   // Data Manager navigation buttons
   const btnOpenHc = document.getElementById('btnOpenHc');
   const btnOpenPdvs = document.getElementById('btnOpenPdvs');
@@ -2966,7 +2971,7 @@ function ensureLoaded(page){
     window.setActive = window.setActive || setActive;
   }catch(_e){}
 
-  // Admin desativado neste build (Operador)
+  // Admin: visível para master/global_admin via applyAccessControlUI() após loadContext()
   // Inicial: adiado para o window.load (evita tela branca se algo carregar antes do DOM)
 
   // ===== GestÃ£o de Dados (centraliza uploads/aÃ§Ãµes fora da sidebar) =====
