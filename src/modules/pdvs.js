@@ -211,6 +211,11 @@ export function initPdvs(frame) {
         window.addEventListener("message", (ev) => {
           // hardening: only accept messages from the parent host
           if(!ev || ev.source !== window.parent) return;
+          if(ev && ev.data && ev.data.type === "CIA_POST_LOGIN") {
+            // re-run init after login; discovers workspace via Supabase auth (handles wsId=null case)
+            if(ev.data.workspace_id) currentWorkspaceId = ev.data.workspace_id;
+            init();
+          }
           if(ev && ev.data && ev.data.type === "CIA_ACTIVE_WORKSPACE" && ev.data.workspace_id) {
             currentWorkspaceId = ev.data.workspace_id;
             loadPdvs();

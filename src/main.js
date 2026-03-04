@@ -4668,6 +4668,8 @@ const AUTH_KEY = "cia_auth_v1";
     function applyAccessControlUI(){
       const f = (ctx && ctx.features && ctx.features.effective) ? ctx.features.effective : {};
       const role = (ctx.profile && ctx.profile.role) ? ctx.profile.role : null;
+      // expose to window so Playwright / debug can verify state
+      window.applyAccessControlUI = applyAccessControlUI;
       const isMasterOrAdmin = ["master","global_admin"].includes(role);
       const show = (id, on) => { const el = document.getElementById(id); if(!el) return; el.style.display = on ? "" : "none"; };
 
@@ -4870,16 +4872,22 @@ const AUTH_KEY = "cia_auth_v1";
       } else {
         console.error("CRITICAL: setScreen not defined");
       }
-      // fix: broadcast workspace to all iframes so that HC/PDVs/Products refresh
-      // (root cause: modules call init() on load when user is not yet authed;
-      //  after login we must notify them of the active workspace so they reload)
+      // fix: broadcast CIA_POST_LOGIN to ALL iframes unconditionally after login
+      // (root cause: modules captured CIA_SUPABASE=null at parse time; after login
+      //  they must re-run init() to discover the workspace and load data)
+      // CIA_ACTIVE_WORKSPACE is kept for workspace switches; CIA_POST_LOGIN triggers init()
       try{
         const wsId = workspaceActive;
-        if(wsId){
-          document.querySelectorAll("iframe").forEach(function(fr){
-            try{ if(fr.contentWindow) fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: wsId }, "*"); }catch(_e){}
-          });
-        }
+        document.querySelectorAll("iframe").forEach(function(fr){
+          try{
+            if(fr.contentWindow){
+              // always send CIA_POST_LOGIN (triggers init() even when wsId is null)
+              fr.contentWindow.postMessage({ type:"CIA_POST_LOGIN", workspace_id: wsId || null }, "*");
+              // also send CIA_ACTIVE_WORKSPACE if workspace is known
+              if(wsId) fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: wsId }, "*");
+            }
+          }catch(_e){}
+        });
       }catch(_e){}
       return true;
     }
