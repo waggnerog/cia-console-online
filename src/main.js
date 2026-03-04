@@ -2922,6 +2922,15 @@ function ensureLoaded(page){
   if(navButtons.hc) navButtons.hc.addEventListener('click', ()=>setActive('hc'));
   if(navButtons.pdvs) navButtons.pdvs.addEventListener('click', ()=>setActive('pdvs'));
   if(navButtons.products) navButtons.products.addEventListener('click', ()=>setActive('products'));
+
+  // Data Manager navigation buttons
+  const btnOpenHc = document.getElementById('btnOpenHc');
+  const btnOpenPdvs = document.getElementById('btnOpenPdvs');
+  const btnOpenProducts = document.getElementById('btnOpenProducts');
+  if(btnOpenHc) btnOpenHc.addEventListener('click', () => setActive('hc'));
+  if(btnOpenPdvs) btnOpenPdvs.addEventListener('click', () => setActive('pdvs'));
+  if(btnOpenProducts) btnOpenProducts.addEventListener('click', () => setActive('products'));
+
   // ===== SAFE BOOT (nÃ£o trava se um mÃ³dulo falhar) =====
   (function __ciaSafeBootFrames(){
     const keys = Object.keys(frames||{});
