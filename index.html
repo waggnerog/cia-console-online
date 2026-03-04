@@ -34,6 +34,9 @@
           <button class="nav-item" id="navPesq" type="button"><span>Tracking de Pesquisa</span><span>○</span></button>
           <button class="nav-item" id="navDataCrit" type="button"><span>Data Crítica</span><span>○</span></button>
           <button class="nav-item" id="navDataMgr" type="button"><span>Gestão de Dados</span><span>○</span></button>
+          <button class="nav-item" id="navHc" type="button" style="display:none"><span>Headcount (People)</span><span>○</span></button>
+          <button class="nav-item" id="navPdvs" type="button" style="display:none"><span>PDVs</span><span>○</span></button>
+          <button class="nav-item" id="navProducts" type="button" style="display:none"><span>Produtos</span><span>○</span></button>
           <button class="nav-item" id="navAdmin" type="button" style="display:none"><span>Admin</span><span>○</span></button>
         </div>
       </div>
@@ -78,6 +81,9 @@
         <iframe id="frameEfet" title="Tela Efetividade"></iframe>
         <iframe id="framePesq" title="Tela Tracking de Pesquisa"></iframe>
         <iframe id="frameDataCrit" title="Tela Data Crítica"></iframe>
+        <iframe id="frameHc" title="Tela Headcount"></iframe>
+        <iframe id="framePdvs" title="Tela PDVs"></iframe>
+        <iframe id="frameProducts" title="Tela Produtos"></iframe>
 
         <div id="dataManagerScreen" class="data-manager">
           <div class="data-mgr-title">Gestão de Dados</div>
@@ -110,6 +116,16 @@
             <div class="data-mgr-card half">
               <h3>Ações</h3>
               <div id="dmActionsSlot"></div>
+            </div>
+
+            <div class="data-mgr-card">
+              <h3>Cadastros (Multi-tenant)</h3>
+              <div class="dm-hint">Acessos rápidos para telas de gestão de pessoas, lojas e produtos.</div>
+              <div style="display:flex; flex-direction:row; gap:10px;">
+                <button class="nav-item" id="btnOpenHc" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>HC (People)</span><span>✖</span></button>
+                <button class="nav-item" id="btnOpenPdvs" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>PDVs</span><span>✖</span></button>
+                <button class="nav-item" id="btnOpenProducts" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>Produtos</span><span>✖</span></button>
+              </div>
             </div>
 
             <div class="data-mgr-card">
