@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/main.js
  * ─────────────────────────────────────────────────────────────────────
  * CIA Console — Main Application Bundle
@@ -2330,6 +2330,26 @@ ciaObsWrite(key, obj);
     products: document.getElementById('frameProducts')
   };
 
+  // ── hardening: postMessage origin + source validation ──────────────
+  // Srcdoc iframes have origin "null"; we validate ev.source instead.
+  const _CIA_PROD_ORIGIN = "https://app.usecia.com";
+  const _CIA_DEV_ORIGINS = ["http://localhost:5173","http://localhost:4173","http://localhost:3000"];
+  function _ciaIsTrustedSource(ev){
+    const src = ev && ev.source;
+    if(!src) return false;
+    if(src === window) return true;
+    const allFrames = document.querySelectorAll('iframe');
+    for(let i=0;i<allFrames.length;i++){
+      try{ if(allFrames[i].contentWindow === src) return true; }catch(_){}
+    }
+    const o = ev.origin || "";
+    if(o === window.location.origin) return true;
+    if(o === _CIA_PROD_ORIGIN) return true;
+    if(_CIA_DEV_ORIGINS.indexOf(o) !== -1) return true;
+    return false;
+  }
+  // ───────────────────────────────────────────────────────────────────
+
   // ===== CIA â€” SistemÃ¡tica Meta Relay (para Tracking de Pesquisa) =====
   // Cacheia totais deduplicados por CodLoja e disponibiliza via postMessage.
   const CIA_SIST_META_KEY = "CIA_SIST_META";
@@ -2358,6 +2378,7 @@ ciaObsWrite(key, obj);
   }
 
   window.addEventListener("message", (ev)=>{
+    if(!_ciaIsTrustedSource(ev)) return; // hardening: origin validation
     const d = ev?.data;
     if(!d || typeof d !== "object") return;
 
@@ -4117,6 +4138,7 @@ Digite o rÃ³tulo (ex: Week 47):`, '');
   }
 
   window.addEventListener('message', (ev)=>{
+    if(!_ciaIsTrustedSource(ev)) return; // hardening: origin validation
     const d = ev && ev.data;
     if(!d || d.__mococa !== 1) return;
     if(d.type === 'REQUEST_CLEAR_PAGE'){
@@ -4179,10 +4201,7 @@ const AUTH_KEY = "cia_auth_v1";
   const LEGACY_AUTH_KEY = "spotlight_auth_v1";
   const LEGACY_AUTH_TS  = "spotlight_auth_ts_v1";
 
-  // Credenciais (conforme solicitado)
-  const ALLOWED_USER = "luiswagnercosta@icloud.com";
-  const ALLOWED_PASS = "375510";
-
+  // Autenticação 100% via Supabase (credenciais hardcoded removidas — security: remove hardcoded credentials)
   const $ = (id)=>document.getElementById(id);
   ensureLegalFooters();
 
@@ -4422,12 +4441,12 @@ const AUTH_KEY = "cia_auth_v1";
         // Auto-bootstrap: criar profile se nÃ£o existe
         console.warn("[CIA][CTX] Profile nÃ£o encontrado. Auto-criando...");
         try{
+          // security: auto-bootstrap SEM flags de acesso elevado (is_master/is_platform_admin)
+          // Promoção a master deve ser feita manualmente no Supabase Dashboard
           await c.from("profiles").upsert({
             id: user.id,
             email: user.email || "",
-            full_name: user.email || "Master",
-            is_master: true,
-            is_platform_admin: true
+            full_name: user.email || user.id
           }, { onConflict: "id" });
           pr = await c.from("profiles")
             .select("id,email,full_name,is_master,is_platform_admin,avatar_url,created_at")
@@ -4436,8 +4455,9 @@ const AUTH_KEY = "cia_auth_v1";
         }catch(_pe){ console.warn("[CIA][CTX] Auto-create profile falhou:", _pe); }
 
         if(!pr || !pr.data){
-          console.warn("[CIA][CTX] Profile ainda indisponÃ­vel. Usando fallback local.");
-          ctx.profile = { id: user.id, user_id: user.id, email: user.email || "", full_name: user.email || "Master", name: user.email || "Master", is_master: true, is_platform_admin: true, role: "master" };
+          // security: fallback sem escalar privilégios — profile deve ser criado pelo admin
+          console.warn("[CIA][CTX] Profile indisponível. Fallback seguro (viewer).");
+          ctx.profile = { id: user.id, user_id: user.id, email: user.email || "", full_name: user.email || user.id, name: user.email || user.id, is_master: false, is_platform_admin: false, role: "viewer" };
         }else{
           ctx.profile = pr.data;
         }
@@ -4827,6 +4847,7 @@ const AUTH_KEY = "cia_auth_v1";
 
     // Listener opcional: iframes podem solicitar log de mensagem via postMessage
     window.addEventListener("message", (ev)=>{
+      if(!_ciaIsTrustedSource(ev)) return; // hardening: origin validation
       const d = ev && ev.data;
       if(!d || typeof d !== "object") return;
       if(d.type === "CIA_MESSAGE_SEND" && d.payload){
@@ -4836,7 +4857,7 @@ const AUTH_KEY = "cia_auth_v1";
 
     async function afterLogin(){
       await loadContext();
-      // ForÃ§a a tela inicial apÃ³s login (evita tela branca)
+      // Força a tela inicial após login (evita tela branca)
       if(typeof setScreen === 'function') {
         setScreen('dash');
       } else if(typeof window.setScreen === 'function') {
@@ -4844,6 +4865,17 @@ const AUTH_KEY = "cia_auth_v1";
       } else {
         console.error("CRITICAL: setScreen not defined");
       }
+      // fix: broadcast workspace to all iframes so that HC/PDVs/Products refresh
+      // (root cause: modules call init() on load when user is not yet authed;
+      //  after login we must notify them of the active workspace so they reload)
+      try{
+        const wsId = workspaceActive;
+        if(wsId){
+          document.querySelectorAll("iframe").forEach(function(fr){
+            try{ if(fr.contentWindow) fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: wsId }, "*"); }catch(_e){}
+          });
+        }
+      }catch(_e){}
       return true;
     }
 
@@ -4972,99 +5004,7 @@ function boot(){
           return;
         }
 
-        // Master local auth â€” offline-first
-        if(email === ALLOWED_USER && code === ALLOWED_PASS){
-          setAuthed();
-          hideLogin();
-          // ForÃ§a a tela inicial apÃ³s login (evita tela branca)
-          // FIX: ForÃ§a inicializaÃ§Ã£o direta
-          if(typeof setScreen === 'function') {
-            setScreen('dash');
-          } else if(typeof window.setScreen === 'function') {
-            window.setScreen('dash');
-          } else {
-            console.error("CRITICAL: setScreen not defined");
-          }
-
-          // offline master: Admin desativado neste build (Operador).
-try{ const b=document.getElementById('btnExportReportFotos'); if(b) b.style.display=''; }catch(_e){}
-
-          if(!__CIA_IS_FILE__){
-            try{
-              let m = await CIA_CLOUD.me();
-              // Se nÃ£o tem sessÃ£o Supabase, autenticar com as mesmas credenciais
-              if(!m){
-                console.log("[CIA][AUTH] SessÃ£o Supabase ausente. Tentando signInWithPassword...");
-                const c = CIA_CLOUD.client ? CIA_CLOUD.client() : null;
-                if(c){
-                  try{
-                    // 1) Tentar login
-                    const { data: signData, error: signErr } = await c.auth.signInWithPassword({ email, password: code });
-                    if(!signErr && signData && signData.user){
-                      console.log("[CIA][AUTH] Supabase login OK.");
-                      CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
-                      m = await CIA_CLOUD.me();
-                    }else{
-                      const errMsg = signErr ? signErr.message : "sem user";
-                      console.warn("[CIA][AUTH] signIn falhou:", errMsg);
-
-                      // 2) Se "Email not confirmed" â†’ tentar signUp que pode auto-confirmar
-                      //    Se user nÃ£o existe â†’ criar via signUp
-                      console.log("[CIA][AUTH] Tentando signUp...");
-                      const { data: upData, error: upErr } = await c.auth.signUp({
-                        email, password: code,
-                        options: { data: { full_name: email } }
-                      });
-
-                      if(!upErr && upData){
-                        // signUp pode retornar sessÃ£o (se auto-confirm habilitado) ou nÃ£o
-                        if(upData.session){
-                          console.log("[CIA][AUTH] signUp retornou sessÃ£o. Auto-confirm ativo.");
-                          CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
-                          m = await CIA_CLOUD.me();
-                        }else if(upData.user){
-                          console.log("[CIA][AUTH] signUp criou user:", upData.user.id, "mas SEM sessÃ£o (email confirmation requerida).");
-                          // Tentar signIn novamente (caso signUp tenha auto-confirmado)
-                          try{
-                            const { data: retryData, error: retryErr } = await c.auth.signInWithPassword({ email, password: code });
-                            if(!retryErr && retryData && retryData.user){
-                              console.log("[CIA][AUTH] signIn retry OK apÃ³s signUp!");
-                              CIA_CLOUD.clearMe && CIA_CLOUD.clearMe();
-                              m = await CIA_CLOUD.me();
-                            }else{
-                              console.error("[CIA][AUTH] âš ï¸ Email confirmation estÃ¡ HABILITADO no Supabase.");
-                              console.error("[CIA][AUTH] â†’ VÃ¡ em Supabase Dashboard â†’ Auth â†’ Providers â†’ Email â†’ desabilite 'Confirm email'");
-                              console.error("[CIA][AUTH] â†’ Ou confirme o email na caixa de entrada de:", email);
-                              try{ toast("âš ï¸ Supabase requer confirmaÃ§Ã£o de email. Verifique sua caixa de entrada ou desabilite no Supabase Dashboard."); }catch(_t){}
-                            }
-                          }catch(_re){}
-                        }
-                      }else{
-                        console.warn("[CIA][AUTH] signUp falhou:", upErr ? upErr.message : "sem data");
-                      }
-                    }
-                  }catch(_se){ console.warn("[CIA][AUTH] auth error:", _se); }
-                }
-              }
-              if(m) await CIA_CLOUD.afterLogin();
-              try{ await dmRefreshWeeks(); }catch(_e){}
-              // Auto-restore: se week ativa, prÃ©-selecionar dropdown e carregar do cloud
-              try{
-                if(CIA_CLOUD.weekActive){
-                  const wSel = document.getElementById("dmCloudWeekSelect");
-                  if(wSel) wSel.value = String(CIA_CLOUD.weekActive);
-                  await dmLoadWeekFromCloud(String(CIA_CLOUD.weekActive));
-                }
-              }catch(_e){}
-            }catch(_e){ console.warn("[CIA][AUTH] cloud init failed:", _e); }
-          }
-          return;
-        }
-
-        if(__CIA_IS_FILE__){
-          setErr("Credenciais invÃ¡lidas.");
-          return;
-        }
+        // security: master local auth bypass REMOVIDO (credenciais hardcoded). Somente Supabase.
 
         // Cloud verify (Supabase)
         if(CIA_CLOUD && CIA_CLOUD.client && CIA_CLOUD.client()){

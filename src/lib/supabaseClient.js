@@ -46,4 +46,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-export { SUPABASE_URL, SUPABASE_ANON_KEY };
+// Note: SUPABASE_ANON_KEY is a PUBLIC key by design (Supabase Row Level Security
+// must be configured to restrict access; the anon key alone grants no privilege).
+// DO NOT export SUPABASE_URL or SUPABASE_ANON_KEY — access via env vars only.
+// export { SUPABASE_URL, SUPABASE_ANON_KEY }; <-- intentionally removed

@@ -5,6 +5,37 @@
   <title>CIA — Console Integrado de Analise</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- hardening: frame-ancestors — blocks embedding in third-party iframes (clickjacking) -->
+  <!-- Note: meta CSP frame-ancestors is NOT enforced by all browsers; real protection comes
+       from the frame-buster script below + server headers (add X-Frame-Options on your CDN) -->
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'" />
+
+  <!-- hardening: frame-buster script (defense-in-depth; runs before body renders) -->
+  <script>
+    (function(){
+      try{
+        if(window.top !== window.self){
+          // Disable UI and show a safety message — no infinite redirect loop
+          document.write('<style>body{display:none!important}</style>');
+          // Show a minimal warning overlay after document is ready
+          window.addEventListener('DOMContentLoaded', function(){
+            document.body.style.display = 'block';
+            document.body.innerHTML =
+              '<div style="display:flex;align-items:center;justify-content:center;height:100vh;' +
+              'font:16px/1.5 system-ui,sans-serif;background:#0f172a;color:#f1f5f9;text-align:center;padding:2rem">' +
+              '<div><h2 style="margin:0 0 .5rem">CIA — Acesso bloqueado</h2>' +
+              '<p style="margin:0;color:#94a3b8">Esta aplicação não pode ser incorporada em páginas de terceiros.</p>' +
+              '<p style="margin:.5rem 0 0;font-size:13px;color:#475569">Para acessar, abra diretamente em ' +
+              '<a href="https://app.usecia.com" style="color:#4ade80">app.usecia.com</a></p></div></div>';
+          });
+        }
+      }catch(e){
+        // cross-origin top access throws — app IS framed, block it
+        document.write('<style>body{display:none!important}</style>');
+      }
+    })();
+  </script>
+
   <!-- IBM Plex Sans + IBM Plex Mono (CIA typography) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -329,6 +360,21 @@
 
           <div class="login-hint">
             Use seu e-mail e senha para entrar. Se você tiver mais de um workspace, poderá selecionar após o login.
+          </div>
+
+          <!-- Cadastro por convite (invite-only) — visível mas explicitamente bloqueado -->
+          <div class="login-invite-section" style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(148,163,184,0.2);">
+            <div style="font-size:13px; color:rgba(148,163,184,0.9); margin-bottom:8px; font-weight:500;">Novo usuário?</div>
+            <button type="button" id="btnSignupDisabled" class="btn-secondary"
+              style="width:100%; opacity:0.55; cursor:not-allowed; border:1px solid rgba(148,163,184,0.3);"
+              aria-disabled="true"
+              title="Cadastro apenas por convite — solicite acesso ao administrador"
+              onclick="document.getElementById('loginError').textContent='Cadastro apenas por convite. Solicite acesso ao administrador da sua organização.'">
+              Criar conta
+            </button>
+            <div style="font-size:11px; color:rgba(148,163,184,0.7); margin-top:6px; text-align:center;">
+              Cadastro apenas por convite do administrador.
+            </div>
           </div>
         </form>
         <div class="login-legal" id="loginLegalFooter"></div>

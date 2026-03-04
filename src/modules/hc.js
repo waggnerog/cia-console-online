@@ -169,6 +169,8 @@ export function initHc(frame) {
         }
 
         window.addEventListener("message", (ev) => {
+          // hardening: only accept messages from the parent host
+          if(!ev || ev.source !== window.parent) return;
           if(ev && ev.data && ev.data.type === "CIA_ACTIVE_WORKSPACE" && ev.data.workspace_id) {
             currentWorkspaceId = ev.data.workspace_id;
             loadPeople();
