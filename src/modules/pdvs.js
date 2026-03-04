@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+﻿import { supabase } from '../lib/supabaseClient';
 
 export function initPdvs(frame) {
   const html = `
@@ -189,7 +189,8 @@ export function initPdvs(frame) {
       </div>
 
       <script>
-        const supabase = parent.window.CIA_SUPABASE;
+        // lazy getter: CIA_SUPABASE is set only after login
+        const getSupabase = () => parent.window.CIA_SUPABASE;
 
         let allPdvs = [];
         let currentWorkspaceId = null;
@@ -197,9 +198,9 @@ export function initPdvs(frame) {
 
         async function init() {
           try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getSupabase().auth.getUser();
             if(!user) return;
-            const { data: wusers } = await supabase.from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
+            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
               await loadPdvs();
@@ -227,11 +228,11 @@ export function initPdvs(frame) {
           // e depois buscar os pdvs que estão em assignments.
           let pdvsIdsResp = null;
           if (resp) {
-             const { data: aData } = await supabase.from('assignments').select('pdv_id').eq('workspace_id', currentWorkspaceId).eq('person_id', resp);
+             const { data: aData } = await getSupabase().from('assignments').select('pdv_id').eq('workspace_id', currentWorkspaceId).eq('person_id', resp);
              if (aData) pdvsIdsResp = aData.map(a => a.pdv_id);
           }
 
-          let query = supabase.from('pdvs').select('*').eq('workspace_id', currentWorkspaceId).order('name');
+          let query = getSupabase().from('pdvs').select('*').eq('workspace_id', currentWorkspaceId).order('name');
           if(uf) query = query.eq('uf', uf);
 
           if (pdvsIdsResp !== null) {
@@ -315,7 +316,7 @@ export function initPdvs(frame) {
         async function loadAssignments(pdvId) {
           const list = document.getElementById('assignmentsList');
           list.innerHTML = 'Carregando...';
-          const { data, error } = await supabase.from('assignments').select('*, people(name)').eq('pdv_id', pdvId);
+          const { data, error } = await getSupabase().from('assignments').select('*, people(name)').eq('pdv_id', pdvId);
           if(error) { list.innerHTML = 'Erro ao carregar'; return; }
 
           if(!data || data.length === 0) { list.innerHTML = 'Sem alocações.'; return; }
@@ -333,7 +334,7 @@ export function initPdvs(frame) {
 
         window.removeAssignment = async (id) => {
           if(!confirm('Remover alocação?')) return;
-          await supabase.from('assignments').delete().eq('id', id);
+          await getSupabase().from('assignments').delete().eq('id', id);
           if(currentPdvId) await loadAssignments(currentPdvId);
         };
 
@@ -347,7 +348,7 @@ export function initPdvs(frame) {
             assignment_role: document.getElementById('aRole').value,
             is_primary: document.getElementById('aPrimary').checked
           };
-          const { error } = await supabase.from('assignments').insert([payload]);
+          const { error } = await getSupabase().from('assignments').insert([payload]);
           if(error) alert('Erro: ' + error.message);
           else {
             document.getElementById('aPersonId').value = '';
@@ -359,7 +360,7 @@ export function initPdvs(frame) {
         async function loadPdvProducts(pdvId) {
           const list = document.getElementById('productsList');
           list.innerHTML = 'Carregando...';
-          const { data, error } = await supabase.from('pdv_products').select('*, products(name, sku_code)').eq('pdv_id', pdvId);
+          const { data, error } = await getSupabase().from('pdv_products').select('*, products(name, sku_code)').eq('pdv_id', pdvId);
           if(error) { list.innerHTML = 'Erro ao carregar'; return; }
 
           if(!data || data.length === 0) { list.innerHTML = 'Nenhum produto listado.'; return; }
@@ -377,7 +378,7 @@ export function initPdvs(frame) {
 
         window.removePdvProduct = async (id) => {
           if(!confirm('Remover produto do PDV?')) return;
-          await supabase.from('pdv_products').delete().eq('id', id);
+          await getSupabase().from('pdv_products').delete().eq('id', id);
           if(currentPdvId) await loadPdvProducts(currentPdvId);
         };
 
@@ -391,7 +392,7 @@ export function initPdvs(frame) {
             is_listed: document.getElementById('ppListed').checked,
             priority: parseInt(document.getElementById('ppPriority').value) || 0
           };
-          const { error } = await supabase.from('pdv_products').insert([payload]);
+          const { error } = await getSupabase().from('pdv_products').insert([payload]);
           if(error) alert('Erro: ' + error.message);
           else {
             document.getElementById('ppProductId').value = '';
@@ -429,9 +430,9 @@ export function initPdvs(frame) {
 
           let res;
           if(id) {
-            res = await supabase.from('pdvs').update(payload).eq('id', id);
+            res = await getSupabase().from('pdvs').update(payload).eq('id', id);
           } else {
-            res = await supabase.from('pdvs').insert([payload]);
+            res = await getSupabase().from('pdvs').insert([payload]);
           }
 
           if(res.error) {

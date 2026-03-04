@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+﻿import { supabase } from '../lib/supabaseClient';
 
 export function initProducts(frame) {
   const html = `
@@ -136,7 +136,8 @@ export function initProducts(frame) {
       </div>
 
       <script>
-        const supabase = parent.window.CIA_SUPABASE;
+        // lazy getter: CIA_SUPABASE is set only after login
+        const getSupabase = () => parent.window.CIA_SUPABASE;
 
         let allProducts = [];
         let currentWorkspaceId = null;
@@ -144,9 +145,9 @@ export function initProducts(frame) {
 
         async function init() {
           try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getSupabase().auth.getUser();
             if(!user) return;
-            const { data: wusers } = await supabase.from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
+            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
               await loadProducts();
@@ -168,7 +169,7 @@ export function initProducts(frame) {
           const brand = document.getElementById('filterBrand').value.trim();
           const category = document.getElementById('filterCategory').value.trim();
 
-          let query = supabase.from('products').select('*').eq('workspace_id', currentWorkspaceId).order('name');
+          let query = getSupabase().from('products').select('*').eq('workspace_id', currentWorkspaceId).order('name');
 
           if(brand) query = query.ilike('brand', '%' + brand + '%');
           if(category) query = query.ilike('category', '%' + category + '%');
@@ -243,7 +244,7 @@ export function initProducts(frame) {
         async function loadPdvProducts(productId) {
           const list = document.getElementById('pdvsList');
           list.innerHTML = 'Carregando...';
-          const { data, error } = await supabase.from('pdv_products').select('*, pdvs(name, pdv_code)').eq('product_id', productId);
+          const { data, error } = await getSupabase().from('pdv_products').select('*, pdvs(name, pdv_code)').eq('product_id', productId);
           if(error) { list.innerHTML = 'Erro ao carregar'; return; }
 
           if(!data || data.length === 0) { list.innerHTML = 'Nenhum PDV listado.'; return; }
@@ -284,9 +285,9 @@ export function initProducts(frame) {
 
           let res;
           if(id) {
-            res = await supabase.from('products').update(payload).eq('id', id);
+            res = await getSupabase().from('products').update(payload).eq('id', id);
           } else {
-            res = await supabase.from('products').insert([payload]);
+            res = await getSupabase().from('products').insert([payload]);
           }
 
           if(res.error) {

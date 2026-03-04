@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabaseClient';
+﻿import { supabase } from '../lib/supabaseClient';
 
 export function initHc(frame) {
   const html = `
@@ -150,7 +150,8 @@ export function initHc(frame) {
       </div>
 
       <script>
-        const supabase = parent.window.CIA_SUPABASE;
+        // lazy getter: CIA_SUPABASE is set only after login
+        const getSupabase = () => parent.window.CIA_SUPABASE;
 
         let allPeople = [];
         let currentWorkspaceId = null;
@@ -158,9 +159,9 @@ export function initHc(frame) {
 
         async function init() {
           try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getSupabase().auth.getUser();
             if(!user) return;
-            const { data: wusers } = await supabase.from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
+            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
               await loadPeople();
@@ -182,7 +183,7 @@ export function initHc(frame) {
           const role = document.getElementById('filterRole').value;
           const managerId = document.getElementById('filterManager').value.trim();
 
-          let query = supabase.from('people').select('*').eq('workspace_id', currentWorkspaceId).order('name');
+          let query = getSupabase().from('people').select('*').eq('workspace_id', currentWorkspaceId).order('name');
           if(role) query = query.eq('role', role);
           if(managerId) query = query.eq('manager_id', managerId);
 
@@ -247,7 +248,7 @@ export function initHc(frame) {
         async function loadAssignments(personId) {
           const list = document.getElementById('assignmentsList');
           list.innerHTML = 'Carregando...';
-          const { data, error } = await supabase.from('assignments').select('*, pdvs(name)').eq('person_id', personId);
+          const { data, error } = await getSupabase().from('assignments').select('*, pdvs(name)').eq('person_id', personId);
           if(error) { list.innerHTML = 'Erro ao carregar'; return; }
 
           if(!data || data.length === 0) {
@@ -268,7 +269,7 @@ export function initHc(frame) {
 
         window.removeAssignment = async (id) => {
           if(!confirm('Remover alocação?')) return;
-          await supabase.from('assignments').delete().eq('id', id);
+          await getSupabase().from('assignments').delete().eq('id', id);
           if(currentPersonId) await loadAssignments(currentPersonId);
         };
 
@@ -282,7 +283,7 @@ export function initHc(frame) {
             assignment_role: document.getElementById('aRole').value,
             is_primary: document.getElementById('aPrimary').checked
           };
-          const { error } = await supabase.from('assignments').insert([payload]);
+          const { error } = await getSupabase().from('assignments').insert([payload]);
           if(error) alert('Erro: ' + error.message);
           else {
             document.getElementById('aPdvId').value = '';
@@ -315,9 +316,9 @@ export function initHc(frame) {
 
           let res;
           if(id) {
-            res = await supabase.from('people').update(payload).eq('id', id);
+            res = await getSupabase().from('people').update(payload).eq('id', id);
           } else {
-            res = await supabase.from('people').insert([payload]);
+            res = await getSupabase().from('people').insert([payload]);
           }
 
           if(res.error) {
