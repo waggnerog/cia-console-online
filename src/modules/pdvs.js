@@ -1,5 +1,4 @@
-﻿import { supabase } from '../lib/supabaseClient';
-
+﻿// CIA Console — PDVs module (CRUD + contacts + team + products + geo + CSV import)
 export function initPdvs(frame) {
   const html = `
     <!doctype html>
@@ -51,10 +50,16 @@ export function initPdvs(frame) {
           <select id="filterUf">
             <option value="">Todos UF</option>
             <option value="SP">SP</option><option value="RJ">RJ</option><option value="MG">MG</option><option value="BA">BA</option><option value="RS">RS</option>
-            <!-- Outros UFs podem ser adicionados... -->
+            <option value="PR">PR</option><option value="SC">SC</option><option value="PE">PE</option><option value="CE">CE</option><option value="GO">GO</option>
+            <option value="DF">DF</option><option value="AM">AM</option><option value="PA">PA</option><option value="MT">MT</option><option value="MS">MS</option>
           </select>
-          <input type="text" id="filterResp" placeholder="Responsável (UUID Pessoa)">
+          <select id="filterStatus">
+            <option value="">Status: Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
           <button id="btnSearch">Filtrar</button>
+          <button id="btnOpenImportPdv" style="background:#ede9fe;color:#7c3aed;">&#8593; Importar CSV</button>
           <button id="btnNew" style="margin-left: auto;">+ Novo PDV</button>
         </div>
 
@@ -85,6 +90,7 @@ export function initPdvs(frame) {
 
           <div class="tabs">
             <div class="tab active" data-target="tabDados">Dados</div>
+            <div class="tab" id="tabContatosTrigger" data-target="tabContatos" style="display:none;">Contatos</div>
             <div class="tab" id="tabTimeTrigger" data-target="tabTime" style="display:none;">Time</div>
             <div class="tab" id="tabProdutosTrigger" data-target="tabProdutos" style="display:none;">Produtos</div>
           </div>
@@ -138,8 +144,32 @@ export function initPdvs(frame) {
 
               <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
                 <button type="button" class="btn-secondary" id="btnCancel">Cancelar</button>
-                <button type="submit">Salvar</button>
+                <button type="submit" id="btnSavePdv">Salvar</button>
               </div>
+              <div id="geoWarning" style="display:none;background:#fef3c7;color:#92400e;border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px;"></div>
+            </form>
+          </div>
+
+          <!-- Tab: Contatos do PDV -->
+          <div id="tabContatos" class="tab-content">
+            <div style="margin-bottom:10px; font-size:13px; color:#475569;">Contatos desta loja (gerente, encarregado…):</div>
+            <div id="contactsList">Carregando...</div>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin:15px 0;">
+            <form id="formContact">
+              <label>Nome do Contato *</label>
+              <input type="text" id="cName" placeholder="Nome completo" required>
+              <label>Cargo</label>
+              <select id="cRole">
+                <option value="gerente">Gerente</option>
+                <option value="encarregado">Encarregado</option>
+                <option value="subgerente">Subgerente</option>
+                <option value="repositor">Repositor</option>
+                <option value="outro">Outro</option>
+              </select>
+              <label>WhatsApp</label>
+              <input type="tel" id="cPhone" placeholder="55 11 99999-9999">
+              <div id="cPhoneDisplay" style="font-size:11px;color:#1A7A3A;font-family:'IBM Plex Mono',monospace;margin-top:2px;"></div>
+              <button type="submit" style="width:100%; margin-top:12px;">Adicionar Contato</button>
             </form>
           </div>
 
@@ -153,9 +183,9 @@ export function initPdvs(frame) {
               <label>Papel na loja *</label>
               <select id="aRole" required>
                 <option value="promotor_principal">Promotor Principal</option>
-                <option value="backup">Backup</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="coordenador">Coordenador</option>
+                <option value="promotor_backup">Promotor Backup</option>
+                <option value="supervisor_resp">Supervisor Responsável</option>
+                <option value="coord_resp">Coordenador Responsável</option>
               </select>
               <label style="display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="aPrimary" style="width:auto;"> É o principal da rota?
@@ -195,6 +225,21 @@ export function initPdvs(frame) {
         let allPdvs = [];
         let currentWorkspaceId = null;
         let currentPdvId = null;
+        let wsSettings = { require_geo_for_pdvs: false };
+        let pdvCsvRows = [];
+
+        // ── WhatsApp normalizer ─────────────────────────────────────
+        function normalizeWA(raw) {
+          if (!raw) return { digits: '', display: '' };
+          const digits = String(raw).replace(/\D/g,'');
+          if (!digits) return { digits:'', display: raw };
+          let display = digits;
+          if      (digits.length===13) display='+'+digits.slice(0,2)+' ('+digits.slice(2,4)+') '+digits.slice(4,9)+'-'+digits.slice(9);
+          else if (digits.length===12) display='+'+digits.slice(0,2)+' ('+digits.slice(2,4)+') '+digits.slice(4,8)+'-'+digits.slice(8);
+          else if (digits.length===11) display='('+digits.slice(0,2)+') '+digits.slice(2,7)+'-'+digits.slice(7);
+          else if (digits.length===10) display='('+digits.slice(0,2)+') '+digits.slice(2,6)+'-'+digits.slice(6);
+          return { digits, display };
+        }
 
         async function init() {
           try {
@@ -203,6 +248,10 @@ export function initPdvs(frame) {
             const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
+              // Load workspace settings for geo validation
+              const { data: wset } = await getSupabase().from('workspace_settings')
+                .select('require_geo_for_pdvs').eq('workspace_id', currentWorkspaceId).maybeSingle();
+              if (wset) wsSettings = wset;
               await loadPdvs();
             }
           } catch(e) { console.error(e); }
@@ -223,34 +272,20 @@ export function initPdvs(frame) {
         });
 
         async function loadPdvs() {
-          const search = document.getElementById('searchName').value.toLowerCase();
-          const uf = document.getElementById('filterUf').value;
-          const city = document.getElementById('filterCity').value.trim().toLowerCase();
-          const resp = document.getElementById('filterResp').value.trim();
-
-          // Se tiver filtro de responsável (assignment), precisamos fazer um JOIN.
-          // O mais performático no frontend seria primeiro buscar os assignments para a pessoa
-          // e depois buscar os pdvs que estão em assignments.
-          let pdvsIdsResp = null;
-          if (resp) {
-             const { data: aData } = await getSupabase().from('assignments').select('pdv_id').eq('workspace_id', currentWorkspaceId).eq('person_id', resp);
-             if (aData) pdvsIdsResp = aData.map(a => a.pdv_id);
-          }
+          const uf     = document.getElementById('filterUf').value;
+          const city   = document.getElementById('filterCity').value.trim().toLowerCase();
+          const status = document.getElementById('filterStatus').value;
 
           let query = getSupabase().from('pdvs').select('*').eq('workspace_id', currentWorkspaceId).order('name');
-          if(uf) query = query.eq('uf', uf);
-
-          if (pdvsIdsResp !== null) {
-            query = query.in('id', pdvsIdsResp);
-          }
+          if (uf)                  query = query.eq('uf', uf);
+          if (status==='active')   query = query.eq('is_active', true);
+          if (status==='inactive') query = query.eq('is_active', false);
 
           const { data, error } = await query;
           if(error) { console.error(error); return; }
 
           let result = data || [];
-          if(city) {
-            result = result.filter(p => p.city && p.city.toLowerCase().includes(city));
-          }
+          if(city) result = result.filter(p => p.city && p.city.toLowerCase().includes(city));
 
           allPdvs = result;
           renderTable();
@@ -309,15 +344,72 @@ export function initPdvs(frame) {
           document.getElementById('pActive').checked = p.is_active;
 
           document.getElementById('modalTitle').innerText = 'Editar PDV';
+          document.getElementById('tabContatosTrigger').style.display = 'block';
           document.getElementById('tabTimeTrigger').style.display = 'block';
           document.getElementById('tabProdutosTrigger').style.display = 'block';
 
           openModal();
+          await loadContacts(p.id);
           await loadAssignments(p.id);
           await loadPdvProducts(p.id);
         };
 
-        // --- Assignments (Time) ---
+        // --- Contacts del PDV ---
+        async function loadContacts(pdvId) {
+          const list = document.getElementById('contactsList');
+          if (!list) return;
+          list.innerHTML = 'Carregando...';
+          const { data, error } = await getSupabase().from('pdv_contacts')
+            .select('*').eq('pdv_id', pdvId).order('name');
+          if (error) { list.innerHTML = 'Erro ao carregar'; return; }
+          if (!data || !data.length) { list.innerHTML = '<div style="color:#94a3b8;font-size:13px;">Sem contatos cadastrados.</div>'; return; }
+          const roleLabel = { gerente:'Gerente', encarregado:'Encarregado', subgerente:'Subgerente', repositor:'Repositor', outro:'Outro' };
+          list.innerHTML = data.map(c => {
+            const wa = normalizeWA(c.phone_whatsapp);
+            const waHtml = wa.display
+              ? '<a href="https://wa.me/' + escapeHTML(wa.digits) + '" target="_blank" style="color:#1A7A3A;text-decoration:none;font-size:12px">' + escapeHTML(wa.display) + '</a>'
+              : '<span style="color:#94a3b8;font-size:12px">—</span>';
+            return \`<div class="list-item">
+              <div><strong>\${escapeHTML(c.name)}</strong> <span style="color:#94a3b8;font-size:11px">(\${escapeHTML(roleLabel[c.contact_role]||c.contact_role)})</span><br>\${waHtml}</div>
+              <button class="btn-secondary" onclick="removeContact('\${c.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+            </div>\`;
+          }).join('');
+        }
+
+        window.removeContact = async id => {
+          if (!confirm('Remover contato?')) return;
+          await getSupabase().from('pdv_contacts').delete().eq('id', id);
+          if (currentPdvId) await loadContacts(currentPdvId);
+        };
+
+        document.getElementById('formContact').addEventListener('submit', async e => {
+          e.preventDefault();
+          if (!currentPdvId) return;
+          const wa = normalizeWA(document.getElementById('cPhone').value);
+          const payload = {
+            workspace_id:  currentWorkspaceId,
+            pdv_id:        currentPdvId,
+            name:          document.getElementById('cName').value.trim(),
+            contact_role:  document.getElementById('cRole').value,
+            phone_whatsapp: wa.digits || null,
+            phone_display:  wa.display || null,
+          };
+          const { error } = await getSupabase().from('pdv_contacts').insert([payload]);
+          if (error) alert('Erro: ' + error.message);
+          else {
+            document.getElementById('formContact').reset();
+            document.getElementById('cPhoneDisplay').textContent = '';
+            await loadContacts(currentPdvId);
+          }
+        });
+
+        // Live WA display for contact form
+        const cPhoneEl = document.getElementById('cPhone');
+        if (cPhoneEl) cPhoneEl.addEventListener('input', function() {
+          const wa = normalizeWA(this.value);
+          const el = document.getElementById('cPhoneDisplay');
+          if (el) el.textContent = wa.display || '';
+        });
         async function loadAssignments(pdvId) {
           const list = document.getElementById('assignmentsList');
           list.innerHTML = 'Carregando...';
@@ -411,14 +503,25 @@ export function initPdvs(frame) {
           document.getElementById('formPdv').reset();
           document.getElementById('pdvId').value = '';
           document.getElementById('modalTitle').innerText = 'Novo PDV';
+          document.getElementById('tabContatosTrigger').style.display = 'none';
           document.getElementById('tabTimeTrigger').style.display = 'none';
           document.getElementById('tabProdutosTrigger').style.display = 'none';
           document.querySelector('[data-target="tabDados"]').click();
+          const geoW = document.getElementById('geoWarning');
+          if (geoW) geoW.style.display = 'none';
           openModal();
         });
 
         document.getElementById('formPdv').addEventListener('submit', async (e) => {
           e.preventDefault();
+          const lat = parseFloat(document.getElementById('pLat').value) || null;
+          const lng = parseFloat(document.getElementById('pLng').value) || null;
+          const geoW = document.getElementById('geoWarning');
+          if (wsSettings.require_geo_for_pdvs && (!lat || !lng)) {
+            if (geoW) { geoW.style.display = 'block'; geoW.textContent = '⚠️ Geo obrigatório: preencha Latitude e Longitude antes de salvar.'; }
+            return;
+          }
+          if (geoW) geoW.style.display = 'none';
           const id = document.getElementById('pdvId').value;
           const payload = {
             workspace_id: currentWorkspaceId,
@@ -451,7 +554,74 @@ export function initPdvs(frame) {
         document.getElementById('btnSearch').addEventListener('click', loadPdvs);
         document.getElementById('searchName').addEventListener('keyup', (e) => {
            if(e.key === 'Enter') loadPdvs();
-           else renderTable(); // live filter
+           else renderTable();
+        });
+
+        // ── CSV Import (PDVs) ──────────────────────────────────────
+        function parseCsv(text) {
+          const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+          if(!lines.length) return [];
+          const delim=lines[0].includes(';')?';':',';
+          return lines.map(l=>{
+            const cols=[];let cur='';let inQ=false;
+            for(let i=0;i<l.length;i++){const ch=l[i];if(inQ){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}else{if(ch==='"')inQ=true;else if(ch===delim){cols.push(cur.trim());cur='';}else cur+=ch;}}
+            cols.push(cur.trim());return cols;
+          });
+        }
+
+        const btnOpenImportPdv = document.getElementById('btnOpenImportPdv');
+        if (btnOpenImportPdv) btnOpenImportPdv.addEventListener('click', () => {
+          document.getElementById('pdvImportFile').value='';
+          document.getElementById('pdvPreviewSection').style.display='none';
+          document.getElementById('pdvImportProgress').style.display='none';
+          document.getElementById('pdvImportResult').style.display='none';
+          pdvCsvRows=[];
+          document.getElementById('pdvImportOverlay').style.display='flex';
+        });
+        document.getElementById('pdvCloseImport').addEventListener('click',()=>{ document.getElementById('pdvImportOverlay').style.display='none'; });
+        document.getElementById('pdvCancelImport').addEventListener('click',()=>{ document.getElementById('pdvImportOverlay').style.display='none'; });
+
+        document.getElementById('pdvImportFile').addEventListener('change', async (e) => {
+          const file=e.target.files[0]; if(!file) return;
+          const text=await file.text();
+          const raw=parseCsv(text); if(!raw.length) return;
+          const headers=raw[0];
+          pdvCsvRows=raw.slice(1).filter(r=>r.some(c=>c)).map(r=>{
+            const o={}; headers.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+          });
+          document.getElementById('pdvImportCount').textContent=pdvCsvRows.length;
+          const errCount=pdvCsvRows.filter(r=>!r.name).length;
+          document.getElementById('pdvPreviewSummary').innerHTML='<b>'+pdvCsvRows.length+' linhas</b>'+(errCount?' — <span style="color:#dc2626">'+errCount+' sem nome</span>':' — OK');
+          let th='<thead><tr>'+headers.slice(0,7).map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc">'+h+'</th>').join('')+'</tr></thead>';
+          let tb='<tbody>'+pdvCsvRows.slice(0,5).map(r=>'<tr>'+headers.slice(0,7).map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">'+(r[h.toLowerCase().trim()]||'')+'</td>').join('')+'</tr>').join('')+'</tbody>';
+          document.getElementById('pdvPreviewTable').innerHTML=th+tb;
+          document.getElementById('pdvPreviewSection').style.display='block';
+          document.getElementById('pdvImportResult').style.display='none';
+        });
+
+        document.getElementById('pdvConfirmImport').addEventListener('click', async () => {
+          if(!pdvCsvRows.length) return;
+          document.getElementById('pdvPreviewSection').style.display='none';
+          document.getElementById('pdvImportProgress').style.display='block';
+          try {
+            const { data, error } = await getSupabase().functions.invoke('csv-import',{
+              body:{ entity:'pdvs', workspace_id:currentWorkspaceId, rows:pdvCsvRows }
+            });
+            document.getElementById('pdvImportProgress').style.display='none';
+            document.getElementById('pdvImportResult').style.display='block';
+            if(error||!data){
+              document.getElementById('pdvImportResult').innerHTML='<span style="color:#dc2626">Erro: Edge Function não respondeu.</span>'; return;
+            }
+            const {inserted=0,updated=0,rejected=0,errors=[]}=data;
+            document.getElementById('pdvImportResult').innerHTML=
+              '<b style="color:#15803d">Inseridos: '+inserted+'</b>  <b>Atualizados: '+updated+'</b>  '+(rejected?'<b style="color:#dc2626">Rejeitados: '+rejected+'</b>':'')+
+              (errors.length?'<div style="color:#dc2626;font-size:11px;margin-top:6px">'+errors.slice(0,5).join('<br>')+'</div>':'');
+            loadPdvs();
+          } catch(err) {
+            document.getElementById('pdvImportProgress').style.display='none';
+            document.getElementById('pdvImportResult').style.display='block';
+            document.getElementById('pdvImportResult').innerHTML='<span style="color:#dc2626">Erro: '+String(err?.message||err)+'</span>';
+          }
         });
 
         // Tabs
@@ -471,6 +641,29 @@ export function initPdvs(frame) {
 
         init();
       </script>
+
+      <!-- ── CSV Import Overlay (PDVs) ──────────────────────────── -->
+      <div id="pdvImportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:12px;padding:24px;width:680px;max-width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h2 style="margin:0;font-size:17px;color:#071C46;">Importar CSV — PDVs</h2>
+            <button id="pdvCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:16px;">&#x2715;</button>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0 0 14px;">Colunas: <strong>pdv_code, cnpj, name, address, city, uf, lat, lng, is_active</strong>. Chave upsert: workspace_id + pdv_code.</p>
+          <input type="file" id="pdvImportFile" accept=".csv,text/csv" style="margin-bottom:14px;">
+          <div id="pdvPreviewSection" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Preview (primeiras 5 linhas)</div>
+            <div style="overflow-x:auto;"><table id="pdvPreviewTable" style="border-collapse:collapse;"></table></div>
+            <div id="pdvPreviewSummary" style="margin:8px 0;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <button id="pdvConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:9px;cursor:pointer;font-size:13px;">Importar <span id="pdvImportCount">0</span> linha(s)</button>
+              <button id="pdvCancelImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:9px 14px;cursor:pointer;font-size:13px;">Cancelar</button>
+            </div>
+          </div>
+          <div id="pdvImportProgress" style="display:none;text-align:center;padding:20px;color:#64748b;font-size:13px;">Importando…</div>
+          <div id="pdvImportResult" style="display:none;font-size:13px;padding:10px 0;"></div>
+        </div>
+      </div>
     </body>
     </html>
   `;

@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabaseClient';
+﻿// CIA Console — Products module (CRUD + PDV linking + status filter + CSV import)
 
 export function initProducts(frame) {
   const html = `
@@ -49,7 +49,13 @@ export function initProducts(frame) {
           <input type="text" id="searchName" placeholder="Buscar nome, SKU ou EAN...">
           <input type="text" id="filterBrand" placeholder="Marca...">
           <input type="text" id="filterCategory" placeholder="Categoria...">
+          <select id="filterStatus">
+            <option value="">Status: Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
           <button id="btnSearch">Filtrar</button>
+          <button id="btnOpenImportProduct" style="background:#ede9fe;color:#7c3aed;">&#8593; Importar CSV</button>
           <button id="btnNew" style="margin-left: auto;">+ Novo Produto</button>
         </div>
 
@@ -170,14 +176,15 @@ export function initProducts(frame) {
         });
 
         async function loadProducts() {
-          const search = document.getElementById('searchName').value.toLowerCase();
-          const brand = document.getElementById('filterBrand').value.trim();
+          const brand    = document.getElementById('filterBrand').value.trim();
           const category = document.getElementById('filterCategory').value.trim();
+          const status   = document.getElementById('filterStatus').value;
 
           let query = getSupabase().from('products').select('*').eq('workspace_id', currentWorkspaceId).order('name');
-
-          if(brand) query = query.ilike('brand', '%' + brand + '%');
-          if(category) query = query.ilike('category', '%' + category + '%');
+          if (brand)              query = query.ilike('brand', '%' + brand + '%');
+          if (category)           query = query.ilike('category', '%' + category + '%');
+          if (status==='active')   query = query.eq('is_active', true);
+          if (status==='inactive') query = query.eq('is_active', false);
 
           const { data, error } = await query;
           if(error) { console.error(error); return; }
@@ -285,6 +292,143 @@ export function initProducts(frame) {
             name: document.getElementById('pName').value.trim(),
             brand: document.getElementById('pBrand').value.trim() || null,
             category: document.getElementById('pCategory').value.trim() || null,
+            is_active: document.getElementById('pActive').checked
+          };
+
+          let res;
+          if(id) {
+            res = await getSupabase().from('products').update(payload).eq('id', id);
+          } else {
+            res = await getSupabase().from('products').insert([payload]);
+          }
+
+          if(res.error) {
+            alert('Erro ao salvar: ' + res.error.message);
+          } else {
+            closeModal();
+            loadProducts();
+          }
+        });
+
+        document.getElementById('btnSearch').addEventListener('click', loadProducts);
+        document.getElementById('searchName').addEventListener('keyup', (e) => {
+          if(e.key === 'Enter') loadProducts();
+          else renderTable();
+        });
+
+        // ── CSV Import (Products) ─────────────────────────────────────
+        let productCsvRows = [];
+        function parseCsv(text) {
+          const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+          if(!lines.length) return [];
+          const delim=lines[0].includes(';')?';':',';
+          return lines.map(l=>{
+            const cols=[];let cur='';let inQ=false;
+            for(let i=0;i<l.length;i++){const ch=l[i];if(inQ){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}else{if(ch==='"')inQ=true;else if(ch===delim){cols.push(cur.trim());cur='';}else cur+=ch;}}
+            cols.push(cur.trim());return cols;
+          });
+        }
+
+        const btnOpenImportProduct = document.getElementById('btnOpenImportProduct');
+        if (btnOpenImportProduct) btnOpenImportProduct.addEventListener('click', () => {
+          document.getElementById('prodImportFile').value='';
+          document.getElementById('prodPreviewSection').style.display='none';
+          document.getElementById('prodImportProgress').style.display='none';
+          document.getElementById('prodImportResult').style.display='none';
+          productCsvRows=[];
+          document.getElementById('prodImportOverlay').style.display='flex';
+        });
+        document.getElementById('prodCloseImport').addEventListener('click',()=>{ document.getElementById('prodImportOverlay').style.display='none'; });
+        document.getElementById('prodCancelImport').addEventListener('click',()=>{ document.getElementById('prodImportOverlay').style.display='none'; });
+
+        document.getElementById('prodImportFile').addEventListener('change', async (e) => {
+          const file=e.target.files[0]; if(!file) return;
+          const text=await file.text();
+          const raw=parseCsv(text); if(!raw.length) return;
+          const headers=raw[0];
+          productCsvRows=raw.slice(1).filter(r=>r.some(c=>c)).map(r=>{
+            const o={}; headers.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+          });
+          document.getElementById('prodImportCount').textContent=productCsvRows.length;
+          const errCount=productCsvRows.filter(r=>!r.name).length;
+          document.getElementById('prodPreviewSummary').innerHTML='<b>'+productCsvRows.length+' linhas</b>'+(errCount?' — <span style="color:#dc2626">'+errCount+' sem nome</span>':' — OK');
+          let th='<thead><tr>'+headers.slice(0,7).map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc">'+h+'</th>').join('')+'</tr></thead>';
+          let tb='<tbody>'+productCsvRows.slice(0,5).map(r=>'<tr>'+headers.slice(0,7).map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">'+(r[h.toLowerCase().trim()]||'')+'</td>').join('')+'</tr>').join('')+'</tbody>';
+          document.getElementById('prodPreviewTable').innerHTML=th+tb;
+          document.getElementById('prodPreviewSection').style.display='block';
+          document.getElementById('prodImportResult').style.display='none';
+        });
+
+        document.getElementById('prodConfirmImport').addEventListener('click', async () => {
+          if(!productCsvRows.length) return;
+          document.getElementById('prodPreviewSection').style.display='none';
+          document.getElementById('prodImportProgress').style.display='block';
+          try {
+            const { data, error } = await getSupabase().functions.invoke('csv-import',{
+              body:{ entity:'products', workspace_id:currentWorkspaceId, rows:productCsvRows }
+            });
+            document.getElementById('prodImportProgress').style.display='none';
+            document.getElementById('prodImportResult').style.display='block';
+            if(error||!data){
+              document.getElementById('prodImportResult').innerHTML='<span style="color:#dc2626">Erro: Edge Function não respondeu.</span>'; return;
+            }
+            const {inserted=0,updated=0,rejected=0,errors=[]}=data;
+            document.getElementById('prodImportResult').innerHTML=
+              '<b style="color:#15803d">Inseridos: '+inserted+'</b>  <b>Atualizados: '+updated+'</b>  '+(rejected?'<b style="color:#dc2626">Rejeitados: '+rejected+'</b>':'')+
+              (errors.length?'<div style="color:#dc2626;font-size:11px;margin-top:6px">'+errors.slice(0,5).join('<br>')+'</div>':'');
+            loadProducts();
+          } catch(err) {
+            document.getElementById('prodImportProgress').style.display='none';
+            document.getElementById('prodImportResult').style.display='block';
+            document.getElementById('prodImportResult').innerHTML='<span style="color:#dc2626">Erro: '+String(err?.message||err)+'</span>';
+          }
+        });
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(t => {
+          t.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            document.getElementById(t.getAttribute('data-target')).classList.add('active');
+          });
+        });
+
+        function openModal() { document.getElementById('modalProduct').classList.add('active'); }
+        function closeModal() { document.getElementById('modalProduct').classList.remove('active'); }
+        document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+
+        init();
+      </script>
+
+      <!-- ── CSV Import Overlay (Products) ─────────────────────── -->
+      <div id="prodImportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:12px;padding:24px;width:680px;max-width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h2 style="margin:0;font-size:17px;color:#071C46;">Importar CSV — Produtos</h2>
+            <button id="prodCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:16px;">&#x2715;</button>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0 0 14px;">Colunas: <strong>sku_code, ean, name, brand, category, is_active</strong>. Chave upsert: workspace_id + sku_code.</p>
+          <input type="file" id="prodImportFile" accept=".csv,text/csv" style="margin-bottom:14px;">
+          <div id="prodPreviewSection" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Preview (primeiras 5 linhas)</div>
+            <div style="overflow-x:auto;"><table id="prodPreviewTable" style="border-collapse:collapse;"></table></div>
+            <div id="prodPreviewSummary" style="margin:8px 0;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <button id="prodConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:9px;cursor:pointer;font-size:13px;">Importar <span id="prodImportCount">0</span> linha(s)</button>
+              <button id="prodCancelImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:9px 14px;cursor:pointer;font-size:13px;">Cancelar</button>
+            </div>
+          </div>
+          <div id="prodImportProgress" style="display:none;text-align:center;padding:20px;color:#64748b;font-size:13px;">Importando…</div>
+          <div id="prodImportResult" style="display:none;font-size:13px;padding:10px 0;"></div>
+        </div>
+      </div>
+    </body>
+    </html>
+  \`;
+  frame.srcdoc = html;
+}
             is_active: document.getElementById('pActive').checked
           };
 

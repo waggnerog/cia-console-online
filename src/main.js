@@ -28,6 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 import { initHc } from './modules/hc.js';
 import { initPdvs } from './modules/pdvs.js';
 import { initProducts } from './modules/products.js';
+import { initMapa } from './modules/mapa.js';
 
 // ── Validate config eagerly (fail loudly if env is not set) ─────────
 {
@@ -2407,6 +2408,7 @@ ciaObsWrite(key, obj);
       return false;
     }
     try{
+      if (frameKey === 'sist') { initMapa(fr); return true; }
       if (frameKey === 'hc') { initHc(fr); return true; }
       if (frameKey === 'pdvs') { initPdvs(fr); return true; }
       if (frameKey === 'products') { initProducts(fr); return true; }

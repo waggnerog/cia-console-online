@@ -1,5 +1,4 @@
-﻿import { supabase } from '../lib/supabaseClient';
-
+﻿// CIA Console — HC module (people/headcount CRUD + assignments/CSV import)
 export function initHc(frame) {
   const html = `
     <!doctype html>
@@ -55,8 +54,13 @@ export function initHc(frame) {
             <option value="admin">Admin</option>
             <option value="bko">BKO</option>
           </select>
-          <input type="text" id="filterManager" placeholder="Manager ID...">
+          <select id="filterStatus">
+            <option value="">Status: Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
           <button id="btnSearch">Filtrar</button>
+          <button id="btnOpenImport" style="background:#ede9fe;color:#7c3aed;">&#8593; Importar CSV</button>
           <button id="btnNew" style="margin-left: auto;">+ Nova Pessoa</button>
         </div>
 
@@ -66,13 +70,13 @@ export function initHc(frame) {
               <th>Nome</th>
               <th>Role</th>
               <th>Email</th>
-              <th>Manager</th>
+              <th>WhatsApp</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody id="peopleTableBody">
-            <tr><td colspan="6">Carregando...</td></tr>
+            <tr><td colspan="6" id="hcLoadingRow">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -110,10 +114,13 @@ export function initHc(frame) {
               <input type="email" id="pEmail">
 
               <label>WhatsApp</label>
-              <input type="text" id="pPhone">
+              <input type="text" id="pPhone" placeholder="55 11 99999-9999">
+              <div id="pPhoneDisplay" style="font-size:11px;color:#1A7A3A;margin-top:2px;font-family:'IBM Plex Mono',monospace;"></div>
 
-              <label>Manager (ID Opcional por enquanto)</label>
-              <input type="text" id="pManagerId" placeholder="UUID do manager">
+              <label>Manager (pessoa responsável)</label>
+              <select id="pManagerId">
+                <option value="">— Sem manager —</option>
+              </select>
 
               <label style="display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="pActive" style="width:auto;" checked> Ativo
@@ -136,13 +143,17 @@ export function initHc(frame) {
               <label>Papel na loja *</label>
               <select id="aRole" required>
                 <option value="promotor_principal">Promotor Principal</option>
-                <option value="backup">Backup</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="coordenador">Coordenador</option>
+                <option value="promotor_backup">Promotor Backup</option>
+                <option value="supervisor_resp">Supervisor Responsável</option>
+                <option value="coord_resp">Coordenador Responsável</option>
               </select>
               <label style="display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="aPrimary" style="width:auto;"> É o principal da rota?
               </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                <div><label>Vigência: início</label><input type="date" id="aStartAt" style="width:100%;"></div>
+                <div><label>Vigência: fim (opcional)</label><input type="date" id="aEndAt" style="width:100%;"></div>
+              </div>
               <button type="submit" style="width:100%; margin-top:10px;">Vincular PDV</button>
             </form>
           </div>
@@ -156,6 +167,20 @@ export function initHc(frame) {
         let allPeople = [];
         let currentWorkspaceId = null;
         let currentPersonId = null;
+        let csvRows = [];
+
+        // ── WhatsApp normalizer ─────────────────────────────────────
+        function normalizeWA(raw) {
+          if (!raw) return { digits: '', display: '' };
+          const digits = String(raw).replace(/\D/g, '');
+          if (!digits) return { digits: '', display: raw };
+          let display = digits;
+          if      (digits.length === 13) display = '+' + digits.slice(0,2) + ' (' + digits.slice(2,4) + ') ' + digits.slice(4,9) + '-' + digits.slice(9);
+          else if (digits.length === 12) display = '+' + digits.slice(0,2) + ' (' + digits.slice(2,4) + ') ' + digits.slice(4,8) + '-' + digits.slice(8);
+          else if (digits.length === 11) display = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+          else if (digits.length === 10) display = '(' + digits.slice(0,2) + ') ' + digits.slice(2,6) + '-' + digits.slice(6);
+          return { digits, display };
+        }
 
         async function init() {
           try {
@@ -184,19 +209,40 @@ export function initHc(frame) {
         });
 
         async function loadPeople() {
-          const search = document.getElementById('searchName').value.toLowerCase();
-          const role = document.getElementById('filterRole').value;
-          const managerId = document.getElementById('filterManager').value.trim();
+          const role   = document.getElementById('filterRole').value;
+          const status = document.getElementById('filterStatus').value;
 
           let query = getSupabase().from('people').select('*').eq('workspace_id', currentWorkspaceId).order('name');
-          if(role) query = query.eq('role', role);
-          if(managerId) query = query.eq('manager_id', managerId);
+          if (role)             query = query.eq('role', role);
+          if (status === 'active')   query = query.eq('is_active', true);
+          if (status === 'inactive') query = query.eq('is_active', false);
 
           const { data, error } = await query;
-          if(error) { console.error(error); return; }
+          if (error) { console.error(error); return; }
 
           allPeople = data || [];
+          await loadManagerOptions();
           renderTable();
+        }
+
+        async function loadManagerOptions() {
+          const { data } = await getSupabase().from('people')
+            .select('id, name, role')
+            .eq('workspace_id', currentWorkspaceId)
+            .eq('is_active', true)
+            .in('role', ['supervisor','coordenador','gerente','admin'])
+            .order('name');
+          const sel = document.getElementById('pManagerId');
+          if (!sel) return;
+          const cur = sel.value;
+          sel.innerHTML = '<option value="">— Sem manager —</option>';
+          (data || []).forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.id;
+            o.textContent = p.name + ' (' + p.role + ')';
+            sel.appendChild(o);
+          });
+          if (cur) sel.value = cur;
         }
 
         function renderTable() {
@@ -211,12 +257,16 @@ export function initHc(frame) {
           }
 
           tbody.innerHTML = filtered.map(p => {
+            const wa = normalizeWA(p.phone_whatsapp);
+            const waHtml = wa.display
+              ? '<a href="https://wa.me/' + escapeHTML(wa.digits) + '" target="_blank" style="color:#1A7A3A;text-decoration:none;font-family:\'IBM Plex Mono\',monospace;font-size:12px;">' + escapeHTML(wa.display) + '</a>'
+              : '<span style="color:#94a3b8">—</span>';
             return \`<tr>
-              <td>\${escapeHTML(p.name)}</td>
+              <td><strong>\${escapeHTML(p.name)}</strong></td>
               <td>\${escapeHTML(p.role)}</td>
-              <td>\${escapeHTML(p.email || '-')}</td>
-              <td>\${p.manager_id ? 'Sim' : '-'}</td>
-              <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
+              <td>\${escapeHTML(p.email || '—')}</td>
+              <td>\${waHtml}</td>
+              <td>\${p.is_active ? '<span style="color:#15803d;font-weight:600;">Ativo</span>' : '<span style="color:#64748b;">Inativo</span>'}</td>
               <td>
                 <button class="btn-edit" onclick="editPerson('\${p.id}')">Editar</button>
               </td>
@@ -241,6 +291,10 @@ export function initHc(frame) {
           document.getElementById('pRole').value = p.role || 'promotor';
           document.getElementById('pEmail').value = p.email || '';
           document.getElementById('pPhone').value = p.phone_whatsapp || '';
+          const waP = normalizeWA(p.phone_whatsapp || '');
+          const pdEl = document.getElementById('pPhoneDisplay');
+          if (pdEl) pdEl.textContent = waP.display || '';
+          await loadManagerOptions();
           document.getElementById('pManagerId').value = p.manager_id || '';
           document.getElementById('pActive').checked = p.is_active;
 
@@ -281,17 +335,24 @@ export function initHc(frame) {
         document.getElementById('formAssignment').addEventListener('submit', async (e) => {
           e.preventDefault();
           if(!currentPersonId) return;
+          const startAt = document.getElementById('aStartAt');
+          const endAt   = document.getElementById('aEndAt');
           const payload = {
-            workspace_id: currentWorkspaceId,
-            person_id: currentPersonId,
-            pdv_id: document.getElementById('aPdvId').value.trim(),
+            workspace_id:    currentWorkspaceId,
+            person_id:       currentPersonId,
+            pdv_id:          document.getElementById('aPdvId').value.trim(),
             assignment_role: document.getElementById('aRole').value,
-            is_primary: document.getElementById('aPrimary').checked
+            is_primary:      document.getElementById('aPrimary').checked,
+            start_at:        (startAt && startAt.value) ? startAt.value : new Date().toISOString(),
+            end_at:          (endAt   && endAt.value)   ? endAt.value   : null,
           };
           const { error } = await getSupabase().from('assignments').insert([payload]);
           if(error) alert('Erro: ' + error.message);
           else {
             document.getElementById('aPdvId').value = '';
+            document.getElementById('aPrimary').checked = false;
+            if (startAt) startAt.value = '';
+            if (endAt)   endAt.value   = '';
             await loadAssignments(currentPersonId);
           }
         });
@@ -302,20 +363,32 @@ export function initHc(frame) {
           document.getElementById('personId').value = '';
           document.getElementById('modalTitle').innerText = 'Nova Pessoa';
           document.getElementById('tabAlocacoesTrigger').style.display = 'none';
+          const disp = document.getElementById('pPhoneDisplay');
+          if (disp) disp.textContent = '';
           document.querySelector('[data-target="tabDados"]').click();
+          loadManagerOptions();
           openModal();
+        });
+
+        // Live WhatsApp display
+        const pPhoneEl = document.getElementById('pPhone');
+        if (pPhoneEl) pPhoneEl.addEventListener('input', function() {
+          const wa = normalizeWA(this.value);
+          const el = document.getElementById('pPhoneDisplay');
+          if (el) el.textContent = wa.display || '';
         });
 
         document.getElementById('formPerson').addEventListener('submit', async (e) => {
           e.preventDefault();
           const id = document.getElementById('personId').value;
+          const waInput = normalizeWA(document.getElementById('pPhone').value);
           const payload = {
             workspace_id: currentWorkspaceId,
             name: document.getElementById('pName').value.trim(),
             role: document.getElementById('pRole').value,
             email: document.getElementById('pEmail').value.trim() || null,
-            phone_whatsapp: document.getElementById('pPhone').value.trim() || null,
-            manager_id: document.getElementById('pManagerId').value.trim() || null,
+            phone_whatsapp: waInput.digits || null,
+            manager_id: document.getElementById('pManagerId').value || null,
             is_active: document.getElementById('pActive').checked
           };
 
@@ -337,7 +410,96 @@ export function initHc(frame) {
         document.getElementById('btnSearch').addEventListener('click', loadPeople);
         document.getElementById('searchName').addEventListener('keyup', (e) => {
            if(e.key === 'Enter') loadPeople();
-           else renderTable(); // live filter
+           else renderTable();
+        });
+
+        // ── CSV Import ────────────────────────────────────────────────
+        function parseCsv(text) {
+          const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+          if (!lines.length) return [];
+          const delim = lines[0].includes(';') ? ';' : ',';
+          return lines.map(l => {
+            const cols=[]; let cur=''; let inQ=false;
+            for(let i=0;i<l.length;i++){
+              const ch=l[i];
+              if(inQ){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}
+              else{if(ch==='"')inQ=true;else if(ch===delim){cols.push(cur.trim());cur='';}else cur+=ch;}
+            }
+            cols.push(cur.trim()); return cols;
+          });
+        }
+        function csvToObjs(headers, rows) {
+          return rows.map(r => {
+            const o={}; headers.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+          });
+        }
+
+        const btnOpenImport = document.getElementById('btnOpenImport');
+        if (btnOpenImport) btnOpenImport.addEventListener('click', () => {
+          document.getElementById('hcImportFile').value = '';
+          document.getElementById('hcPreviewSection').style.display  = 'none';
+          document.getElementById('hcImportProgress').style.display  = 'none';
+          document.getElementById('hcImportResult').style.display    = 'none';
+          csvRows = [];
+          document.getElementById('hcImportOverlay').style.display = 'flex';
+        });
+        document.getElementById('hcCloseImport').addEventListener('click', () => {
+          document.getElementById('hcImportOverlay').style.display = 'none';
+        });
+        document.getElementById('hcCancelImport').addEventListener('click', () => {
+          document.getElementById('hcImportOverlay').style.display = 'none';
+        });
+
+        document.getElementById('hcImportFile').addEventListener('change', async (e) => {
+          const file = e.target.files[0]; if(!file) return;
+          const text = await file.text();
+          const raw  = parseCsv(text);
+          if (!raw.length) return;
+          const headers = raw[0];
+          csvRows = csvToObjs(headers, raw.slice(1).filter(r=>r.some(c=>c)));
+          document.getElementById('hcImportCount').textContent = csvRows.length;
+          const errCount = csvRows.filter(r=>!r.name||!r.role).length;
+          document.getElementById('hcPreviewSummary').innerHTML =
+            '<b>' + csvRows.length + ' linhas</b>' +
+            (errCount ? ' — <span style="color:#dc2626">' + errCount + ' com campos faltando (serão rejeitadas)</span>' : ' — Sem erros detectados');
+          let th='<thead><tr>' + headers.slice(0,7).map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc">' + h + '</th>').join('') + '</tr></thead>';
+          let tb='<tbody>' + csvRows.slice(0,5).map(r=>{
+            const isErr=!r.name||!r.role;
+            return '<tr' + (isErr?' style="background:#fff7f7"':'') + '>' +
+              headers.slice(0,7).map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">' + (r[h.toLowerCase().trim()]||'') + '</td>').join('') + '</tr>';
+          }).join('') + '</tbody>';
+          document.getElementById('hcPreviewTable').innerHTML = th+tb;
+          document.getElementById('hcPreviewSection').style.display = 'block';
+          document.getElementById('hcImportResult').style.display = 'none';
+        });
+
+        document.getElementById('hcConfirmImport').addEventListener('click', async () => {
+          if (!csvRows.length) return;
+          document.getElementById('hcPreviewSection').style.display  = 'none';
+          document.getElementById('hcImportProgress').style.display  = 'block';
+          try {
+            const normalized = csvRows.map(r => { const wa=normalizeWA(r.phone_whatsapp); return {...r, phone_whatsapp: wa.digits||null}; });
+            const { data, error } = await getSupabase().functions.invoke('csv-import', {
+              body: { entity:'people', workspace_id: currentWorkspaceId, rows: normalized }
+            });
+            document.getElementById('hcImportProgress').style.display = 'none';
+            document.getElementById('hcImportResult').style.display   = 'block';
+            if (error || !data) {
+              document.getElementById('hcImportResult').innerHTML = '<span style="color:#dc2626">Erro: Edge Function não respondeu. Verifique se foi publicada.</span>';
+              return;
+            }
+            const { inserted=0, updated=0, rejected=0, errors=[] } = data;
+            document.getElementById('hcImportResult').innerHTML =
+              '<b style="color:#15803d">Inseridos: ' + inserted + '</b>  ' +
+              '<b>Atualizados: ' + updated + '</b>  ' +
+              (rejected ? '<b style="color:#dc2626">Rejeitados: ' + rejected + '</b>' : '') +
+              (errors.length ? '<div style="color:#dc2626;font-size:11px;margin-top:6px">' + errors.slice(0,5).join('<br>') + '</div>' : '');
+            loadPeople();
+          } catch(err) {
+            document.getElementById('hcImportProgress').style.display = 'none';
+            document.getElementById('hcImportResult').style.display   = 'block';
+            document.getElementById('hcImportResult').innerHTML = '<span style="color:#dc2626">Erro: ' + String(err?.message||err) + '</span>';
+          }
         });
 
         // Tabs
@@ -357,6 +519,29 @@ export function initHc(frame) {
 
         init();
       </script>
+
+      <!-- ── CSV Import Overlay ─────────────────────────────────── -->
+      <div id="hcImportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:12px;padding:24px;width:680px;max-width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h2 style="margin:0;font-size:17px;color:#071C46;">Importar CSV — Pessoas</h2>
+            <button id="hcCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:16px;">&#x2715;</button>
+          </div>
+          <p style="color:#64748b;font-size:12px;margin:0 0 14px;">Colunas: <strong>name, role, email, phone_whatsapp, manager_id, is_active</strong>. Chave upsert: workspace_id + email.</p>
+          <input type="file" id="hcImportFile" accept=".csv,text/csv" style="margin-bottom:14px;">
+          <div id="hcPreviewSection" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Preview (primeiras 5 linhas)</div>
+            <div style="overflow-x:auto;"><table id="hcPreviewTable" style="border-collapse:collapse;"></table></div>
+            <div id="hcPreviewSummary" style="margin:8px 0;font-size:13px;"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;">
+              <button id="hcConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:9px;cursor:pointer;font-size:13px;">Importar <span id="hcImportCount">0</span> linha(s)</button>
+              <button id="hcCancelImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:9px 14px;cursor:pointer;font-size:13px;">Cancelar</button>
+            </div>
+          </div>
+          <div id="hcImportProgress" style="display:none;text-align:center;padding:20px;color:#64748b;font-size:13px;">Importando…</div>
+          <div id="hcImportResult" style="display:none;font-size:13px;padding:10px 0;"></div>
+        </div>
+      </div>
     </body>
     </html>
   `;
