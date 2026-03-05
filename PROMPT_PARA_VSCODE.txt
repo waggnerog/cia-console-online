@@ -1,0 +1,45 @@
+**OBJETIVO**: O botão "Importar CSV" desapareceu após um grande refactor em `src/modules`. Seu objetivo é reintroduzir exclusivamente o `<button id="btnImportCsv">Importar CSV</button>` e a lógica nativa em JavaScript puro para leitura e parseamento desses arquivos nas tabelas do Supabase, nas três principais telas (Pessoas, PDVs e Produtos). Você também atuará preventivamente em segurança (XSS).
+
+**REGRAS INEGOCIÁVEIS (ANTI-ALUCINAÇÃO / ANTI-PREGUIÇA):**
+1. **Não introduza bibliotecas externas.** A importação do CSV será feita via `FileReader` puro (`readAsText`), dividindo a string por `\n` e extraindo campos por `,` ou `;`.
+2. **Não invente chaves.** As credenciais do Supabase (`VITE_SUPABASE_ANON_KEY`) já estão implementadas em `src/lib/supabaseClient.js`. **Nunca** insira a `service_role` (senha do backend) no front-end.
+3. **Não altere o design além do necessário.** Mantenha a interface existente (uso de classes CSS atuais como `btn-secondary`).
+
+### PLANO DE EXECUÇÃO:
+
+**ETAPA 1: Inserir a UI do Importar CSV (HTML) nos 3 módulos**
+Para os arquivos: `src/modules/hc.js`, `src/modules/pdvs.js` e `src/modules/products.js`:
+1. Localize a tag `div.filters` dentro da string do template.
+2. Ao lado do botão `+ Nova Pessoa` (ou PDV/Produto), adicione:
+   ```html
+   <input type="file" id="fileImportCsv" accept=".csv" style="display:none;">
+   <button id="btnImportCsv" class="btn-secondary" style="margin-left: 5px;">Importar CSV</button>
+   ```
+
+**ETAPA 2: Inserir a Lógica de Leitura e Importação (JS) nos 3 módulos**
+Para cada um dos 3 arquivos (`hc.js`, `pdvs.js`, `products.js`), dentro da tag `<script>` interna, adicione a lógica para interagir com a Supabase API.
+
+- **Exemplo para Pessoas (`hc.js`):**
+  - Adicione um listener de clique no `btnImportCsv` que faça `document.getElementById('fileImportCsv').click()`.
+  - Adicione um listener de 'change' no `fileImportCsv` que crie um `new FileReader()` para ler o arquivo selecionado (`readAsText(file)`).
+  - No evento `onload`, quebre o conteúdo do CSV por linhas (`split('\n')`).
+  - Ignore o cabeçalho. Para cada linha de dados válida (separada por vírgula ou ponto-e-vírgula), extraia Nome, Role, Email (por exemplo).
+  - Verifique e mapeie as colunas para o banco de dados `people`.
+  - Construa um array de payloads (objetos contendo o workspace\_id atual). **Importante:** certifique-se de que a variável de workspace local existente (`currentWorkspaceId`) esteja incluída nos objetos de insert.
+  - Insira o array chamando `await getSupabase().from('people').insert(payloads)`.
+  - Atualize a tabela localmente chamando `loadPeople()`.
+  - Limpe o input de file (ex: `document.getElementById('fileImportCsv').value = '';`) para permitir uploads futuros.
+
+- **Aplique a mesma lógica para PDVs (`pdvs.js`) e Produtos (`products.js`)**, alterando apenas o nome da tabela (ex: `pdvs`, `products`), as colunas mapeadas do CSV e a função de reload (ex: `loadPdvs()`, `loadProducts()`).
+
+**ETAPA 3: Reforço de Segurança (AppSec) e Revisão de `innerHTML`**
+Nos 3 arquivos, já existe a função `escapeHTML(str)`.
+1. Analise as concatenações de template strings em `renderTable()`, `loadAssignments()`, e `loadPdvProducts()` onde `innerHTML` é utilizado.
+2. Certifique-se de que **toda e qualquer variável interpolada** proveniente dos dados do Supabase ou de uploads CSV (ex: `p.name`, `p.role`, `a.assignment_role`, `p.pdv_code`, etc) esteja obrigatoriamente sendo passada por `${escapeHTML(variavel)}`.
+3. Não mude a estrutura do HTML do iframe/srcdoc a não ser para garantir o `escapeHTML()`.
+
+**ETAPA 4: Verificação Final (Critérios de Aceite)**
+Você deve:
+1. Rodar `npm run build` no terminal para garantir que a build do Vite não quebre com erros de sintaxe após as modificações.
+2. Exigir e apresentar as saídas do log de build para confirmar sucesso.
+3. Garantir que as funcionalidades pré-existentes (`Filtrar`, `Salvar`, Modais) não sofreram qualquer refatoração desnecessária. Não introduza "melhorias de código" que escapem ao escopo CSV+Segurança.
