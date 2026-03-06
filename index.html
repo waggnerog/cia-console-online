@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>CIA — Console Integrado de Analise</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- hardening: frame-ancestors — blocks embedding in third-party iframes (clickjacking) -->
+  <!-- Note: meta CSP frame-ancestors is NOT enforced by all browsers; real protection comes
+       from the frame-buster script below + server headers (add X-Frame-Options on your CDN) -->
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none'" />
+
+  <!-- hardening: frame-buster script (defense-in-depth; runs before body renders) -->
+  <script>
+    (function(){
+      try{
+        if(window.top !== window.self){
+          // Disable UI and show a safety message — no infinite redirect loop
+          document.write('<style>body{display:none!important}</style>');
+          // Show a minimal warning overlay after document is ready
+          window.addEventListener('DOMContentLoaded', function(){
+            document.body.style.display = 'block';
+            document.body.innerHTML =
+              '<div style="display:flex;align-items:center;justify-content:center;height:100vh;' +
+              'font:16px/1.5 system-ui,sans-serif;background:#0f172a;color:#f1f5f9;text-align:center;padding:2rem">' +
+              '<div><h2 style="margin:0 0 .5rem">CIA — Acesso bloqueado</h2>' +
+              '<p style="margin:0;color:#94a3b8">Esta aplicação não pode ser incorporada em páginas de terceiros.</p>' +
+              '<p style="margin:.5rem 0 0;font-size:13px;color:#475569">Para acessar, abra diretamente em ' +
+              '<a href="https://app.usecia.com" style="color:#4ade80">app.usecia.com</a></p></div></div>';
+          });
+        }
+      }catch(e){
+        // cross-origin top access throws — app IS framed, block it
+        document.write('<style>body{display:none!important}</style>');
+      }
+    })();
+  </script>
+
+  <!-- IBM Plex Sans + IBM Plex Mono (CIA typography) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="/assets/index-Bttqt5cw.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BlawlJ47.css">
+</head>
+<body class="auth-locked">
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegação">
+      <div>
+        <div class="brand">
+          <div class="brand-logo">S</div>
+          <div class="brand-text">
+            <div class="brand-title">CIA</div>
+            <div class="brand-sub">Console Integrado de Analise</div>
+          <button class="brand-logout" id="btnLogout" type="button" title="Sair" aria-label="Sair">
+            <span aria-hidden="true">&#8651;</span>
+          </button>
+          </div>
+        </div>
+
+        <div class="nav-section" id="sidebarWorkspaceSlot" style="display:none;"></div>
+        <div class="nav-section">
+          <div class="nav-label">Telas</div>
+          <button class="nav-item nav-item-active" id="navSist" type="button"><span>Mapa da operação</span><span>●</span></button>
+          <button class="nav-item" id="navFotos" type="button"><span style="display:flex;align-items:center;gap:8px;flex:1;">Fotos<span id="btnPhotoReport" title="Baixar Relatório" style="display:none; margin-left:auto; font-size:12px; background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px; cursor:pointer;">&#11015; XLSX</span></span><span>○</span></button>
+          <button class="nav-item" id="navEfet" type="button"><span>Efetividade</span><span>○</span></button>
+          <button class="nav-item" id="navPesq" type="button"><span>Tracking de Pesquisa</span><span>○</span></button>
+          <button class="nav-item" id="navDataCrit" type="button"><span>Data Crítica</span><span>○</span></button>
+          <button class="nav-item" id="navDataMgr" type="button"><span>Gestão de Dados</span><span>○</span></button>
+          <button class="nav-item" id="navHc" type="button"><span>Headcount (People)</span><span>○</span></button>
+          <button class="nav-item" id="navPdvs" type="button"><span>PDVs</span><span>○</span></button>
+          <button class="nav-item" id="navProducts" type="button"><span>Produtos</span><span>○</span></button>
+          <button class="nav-item" id="navAdmin" type="button" style="display:none"><span>Admin</span><span>○</span></button>
+          <button class="nav-item" id="navPlanejamento" type="button" style="display:none"><span>Planejamento</span><span>○</span></button>
+        </div>
+      </div>
+
+      <div>
+        <div class="nav-section" id="sidebarFilesSection" style="display:none">
+          <div class="nav-label">Arquivos</div>
+          <button class="nav-item" id="btnUploadSist" type="button" title="Carregar Sistemática"><span>Carregar Sistemática</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnUploadBase" type="button" title="Carregar Base de Supervisores/Telefones"><span>Carregar Base</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnUploadFotos" type="button" title="Carregar relatório de Fotos"><span>Carregar Fotos</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnUploadEfet" type="button" title="Carregar relatório de Efetividade"><span>Carregar Efetividade</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnUploadPesq" type="button" title="Carregar relatório de Tracking de Pesquisa"><span>Carregar Tracking de Pesquisa</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnUploadDataCrit" type="button" title="Carregar relatório de Data Crítica"><span>Carregar Data Crítica</span><span>&#10562;</span></button>
+          <button class="nav-item" id="btnExportReportFotos" type="button" title="Exportar relatório de ajustes (Fotos)"><span>Exportar relatório</span><span>&#8681;</span></button>
+
+          <div class="status-list">
+            <span class="mini-pill" id="sistStatusOuter"><span class="mini-dot"></span><span class="pill-text">Sistemática: não carregada</span></span>
+            <span class="mini-pill" id="phonesStatusOuter"><span class="mini-dot"></span><span class="pill-text">Base: não carregada</span></span>
+            <span class="mini-pill" id="photosStatusOuter"><span class="mini-dot"></span><span class="pill-text">Fotos: não carregadas</span></span>
+            <span class="mini-pill" id="efetStatusOuter"><span class="mini-dot"></span><span class="pill-text">Efetividade: não carregada</span></span>
+            <span class="mini-pill" id="pesqStatusOuter"><span class="mini-dot"></span><span class="pill-text">Tracking de Pesquisa: não carregada</span></span>
+            <span class="mini-pill" id="datacritStatusOuter"><span class="mini-dot"></span><span class="pill-text">Data Crítica: não carregada</span></span>
+          </div>
+
+          <input class="pill-input" id="contactsInputOuter" placeholder="Fallback WhatsApp (opcional) – ex: 5511999999999" value="" style="margin-top:10px;" />
+        </div>
+
+        <div class="nav-section" id="sidebarActionsSection" style="margin-top:14px;">
+          <div class="nav-label">Ações</div>
+          <button class="nav-item" id="btnExportAvalFotos" type="button"><span>Exportar avaliações</span><span>&#10579;</span></button>
+          <button class="nav-item" id="btnClearAvalFotos" type="button"><span>Limpar avaliações</span><span>✕</span></button>
+          <button class="nav-item" id="btnResetWorkspaceCloud" type="button" title="Zerar 100% do ambiente (apaga histórico de weeks e estados locais). Use ao iniciar um novo ano."><span>Reset Workspace</span><span>☁</span></button>
+        </div>
+      </div>
+      <div class="sidebar-legal" id="sidebarLegalFooter"></div>
+    </aside>
+
+    <div class="app-main">
+      <div class="frame-wrap">
+        <iframe id="frameSist" title="Tela Sistemática"></iframe>
+        <iframe id="frameFotos" title="Tela Fotos"></iframe>
+        <iframe id="frameEfet" title="Tela Efetividade"></iframe>
+        <iframe id="framePesq" title="Tela Tracking de Pesquisa"></iframe>
+        <iframe id="frameDataCrit" title="Tela Data Crítica"></iframe>
+        <iframe id="frameHc" title="Tela Headcount"></iframe>
+        <iframe id="framePdvs" title="Tela PDVs"></iframe>
+        <iframe id="frameProducts" title="Tela Produtos"></iframe>
+        <iframe id="framePlanejamento" title="Tela Planejamento"></iframe>
+
+        <div id="dataManagerScreen" class="data-manager">
+          <div class="data-mgr-title">Gestão de Dados</div>
+          <div class="data-mgr-sub">Central única para carregar e limpar arquivos do console (sem top bar).</div>
+
+          <div class="data-mgr-grid">
+            <div class="data-mgr-card half">
+              <h3>Uploads</h3>
+              <div id="dmUploadsSlot"></div>
+            </div>
+
+            <div class="data-mgr-card half">
+              <h3>Remover arquivos</h3>
+              <div class="dm-hint">Remove o arquivo do console e reinicia apenas as telas impactadas.</div>
+              <div class="uploads" id="dmRemoveSlot">
+                <button class="nav-item" id="dmRemoveSist" type="button"><span>Remover Sistemática</span><span>✖</span></button>
+                <button class="nav-item" id="dmRemoveBase" type="button"><span>Remover Base (telefones)</span><span>✖</span></button>
+                <button class="nav-item" id="dmRemoveFotos" type="button"><span>Remover Fotos</span><span>✖</span></button>
+                <button class="nav-item" id="dmRemoveEfet" type="button"><span>Remover Efetividade</span><span>✖</span></button>
+                <button class="nav-item" id="dmRemovePesq" type="button"><span>Remover Tracking de Pesquisa</span><span>✖</span></button>
+                <button class="nav-item" id="dmRemoveDataCrit" type="button"><span>Remover Data Crítica</span><span>✖</span></button>
+              </div>
+            </div>
+
+            <div class="data-mgr-card half">
+              <h3>Status</h3>
+              <div id="dmStatusSlot"></div>
+            </div>
+
+            <div class="data-mgr-card half">
+              <h3>Ações</h3>
+              <div id="dmActionsSlot"></div>
+            </div>
+
+            <div class="data-mgr-card">
+              <h3>Cloud Sync (Supabase)</h3>
+              <div class="dm-hint">Use para <b>carregar do cloud</b> os arquivos já enviados por alguém da sua organização. Selecione a WEEK e clique em "Carregar Week".</div>
+              <div class="dm-cloud-row" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <select id="dmCloudWeekSelect" class="pill-input" style="min-width:160px;"></select>
+                <button class="btn" id="dmCloudRefresh" type="button">Atualizar Weeks</button>
+                <button class="btn primary" id="dmCloudLoad" type="button">Carregar Week</button>
+              </div>
+              <div id="dmCloudStatus" class="uploads" style="margin-top:12px;"></div>
+            </div>
+
+            <div class="data-mgr-card">
+              <h3>WhatsApp</h3>
+              <div class="dm-hint">Fallback opcional para o envio de mensagens quando a loja/supervisor não estiver na base.</div>
+              <div id="dmContactsSlot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="adminScreen" class="data-manager" aria-label="Administração">
+          <div class="admin-title">Administração (Master)</div>
+          <div class="admin-sub">
+            Onboarding completo (Org → Workspace → Auth User → Profile → Member → Features) <b>100% via CIA</b>.
+            Disponível apenas para <b>master</b> e <b>global_admin</b>.
+          </div>
+
+          <div class="admin-kv">
+            <div class="pill">Usuário: <code id="admMeEmail">—</code></div>
+            <div class="pill">Role: <code id="admMeRole">—</code></div>
+            <div class="pill">Org atual: <code id="admMeOrg">—</code></div>
+            <button class="admin-btn" id="admRefresh" type="button" title="Recarregar listas (orgs/workspaces/features)">Atualizar</button>
+          </div>
+
+          <div class="admin-grid">
+            <div class="admin-card half">
+              <h3 style="margin:0;">1) Criar usuário (Auth)</h3>
+              <div class="admin-hint">Cria o login no Supabase Auth via Edge Function (service_role fica no backend). Retorna <code>user_id</code> para usar nos passos 2/3.</div>
+              <div class="admin-row">
+                <input id="admAuthEmail" class="admin-in" placeholder="Email (ex.: user@empresa.com)" />
+                <input id="admAuthPass" class="admin-in" placeholder="Senha (opcional: deixar vazio para gerar)" />
+              </div>
+              <div class="admin-row">
+                <label style="display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(229,231,235,.9);">
+                  <input id="admAuthConfirmEmail" type="checkbox" />
+                  Confirmar email (opcional)
+                </label>
+                <button id="admAuthGenPass" class="admin-btn" type="button" title="Gera uma senha forte e preenche o campo">Gerar senha</button>
+                <button id="admCreateAuthUser" class="admin-btn primary" type="button">Criar Auth User</button>
+              </div>
+              <div id="admAuthOut" class="admin-out" aria-live="polite"></div>
+            </div>
+
+            <div class="admin-card half">
+              <h3 style="margin:0;">2) Criar organização (org)</h3>
+              <div class="admin-hint">Agency = multi-tenant (vários workspaces). Industry/Commerce = uni-tenant (apenas 1 workspace).</div>
+              <div class="admin-row">
+                <input id="admOrgName" class="admin-in" placeholder="Nome da org (ex.: Mococa)" />
+                <select id="admOrgType" class="admin-in">
+                  <option value="agency">agency (multi-tenant)</option>
+                  <option value="industry">industry (uni-tenant)</option>
+                  <option value="commerce">commerce (uni-tenant)</option>
+                </select>
+                <button id="admCreateOrg" class="admin-btn primary" type="button">Criar org</button>
+              </div>
+              <div id="admOrgList" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card half">
+              <h3 style="margin:0;">3) Criar workspace</h3>
+              <div class="admin-hint">Obrigatório para agency (clientes). Para industry/commerce, o workspace "Principal" pode ser criado automaticamente (ou bloqueado pelo uni-tenant).</div>
+              <div class="admin-row">
+                <select id="admWsOrg" class="admin-in"></select>
+                <input id="admWsName" class="admin-in" placeholder="Nome do workspace (ex.: Cliente X / Principal)" />
+                <input id="admWsSlug" class="admin-in" placeholder="slug (opcional, único)" />
+              </div>
+              <div class="admin-row">
+                <button id="admCreateWs" class="admin-btn primary" type="button">Criar workspace</button>
+              </div>
+              <div id="admWsList" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card half">
+              <h3 style="margin:0;">4) Criar profile (vincular user → org + role)</h3>
+              <div class="admin-hint">Regras: <b>global_admin nunca pode promover/criar master</b>. (Master por bootstrap manual ou por master).</div>
+              <div class="admin-row">
+                <input id="admUserId" class="admin-in" placeholder="user_id (uuid) do Auth" />
+                <select id="admProfOrg" class="admin-in"></select>
+              </div>
+              <div class="admin-row">
+                <input id="admProfName" class="admin-in" placeholder="Nome exibido" />
+                <select id="admProfRole" class="admin-in"></select>
+                <button id="admCreateProfile" class="admin-btn primary" type="button">Criar profile</button>
+              </div>
+              <div id="admProfOut" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card half">
+              <h3 style="margin:0;">5) Vincular membro ao workspace</h3>
+              <div class="admin-hint">Associa o <code>user_id</code> a um <code>workspace_id</code> (workspace_users).</div>
+              <div class="admin-row">
+                <input id="admMemberUserId" class="admin-in" placeholder="user_id (uuid)" />
+                <select id="admMemberWs" class="admin-in"></select>
+                <button id="admAddMember" class="admin-btn primary" type="button">Vincular</button>
+              </div>
+              <div id="admMembersOut" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card half">
+              <h3 style="margin:0;">6) Definir trade owner do workspace</h3>
+              <div class="admin-hint">Atualiza <code>workspaces.trade_owner_user_id</code> para roteamento de mensagens e ownership operacional.</div>
+              <div class="admin-row">
+                <select id="admTradeOwnerWs" class="admin-in"></select>
+                <input id="admTradeOwnerUserId" class="admin-in" placeholder="trade_owner_user_id (uuid)" />
+                <button id="admSetTradeOwner" class="admin-btn primary" type="button">Salvar</button>
+              </div>
+              <div id="admTradeOwnerOut" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card">
+              <h3 style="margin:0;">7) Features da org (org_entitlements)</h3>
+              <div class="admin-hint">A org define o teto. O usuário pode apenas restringir via <code>user_features</code>. CORE/Base de Telefones é sempre obrigatório (não é feature flag).</div>
+              <div class="admin-row">
+                <select id="admFeatOrg" class="admin-in" style="min-width:260px;"></select>
+                <label style="display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(229,231,235,.9);">
+                  <input id="admFeatReplace" type="checkbox" checked />
+                  Substituir pacote inteiro (replace)
+                </label>
+                <button id="admLoadOrgFeatures" class="admin-btn" type="button">Carregar</button>
+                <button id="admSaveOrgFeatures" class="admin-btn primary" type="button">Salvar features</button>
+              </div>
+              <div id="admFeaturesList" class="feat-list"></div>
+              <div id="admFeaturesOut" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card">
+              <h3 style="margin:0;">8) Restrições por usuário (user_features)</h3>
+              <div class="admin-hint">Aqui você define <b>apenas bloqueios</b>. "Desbloquear" remove override (herda org_entitlements). O sistema impede escalada: global_admin não cria/promove master.</div>
+              <div class="admin-row">
+                <input id="admUserFeatUserId" class="admin-in" placeholder="user_id alvo (uuid)" style="min-width:320px;" />
+                <button id="admLoadUserFeatures" class="admin-btn" type="button">Carregar</button>
+                <button id="admSaveUserFeatures" class="admin-btn primary" type="button">Salvar restrições</button>
+              </div>
+              <div id="admUserFeaturesList" class="feat-list"></div>
+              <div id="admUserFeaturesOut" class="admin-out"></div>
+            </div>
+
+            <div class="admin-card">
+              <h3 style="margin:0;">Logs (Admin)</h3>
+              <div class="admin-hint">Mensagens do front para depuração (não contém secrets).</div>
+              <div id="admLog" class="admin-out"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Login overlay -->
+  <div id="loginOverlay" role="dialog" aria-modal="true" aria-label="Login">
+    <div class="login-card">
+      <div class="login-left">
+        <div class="login-brand">
+          <div class="login-mark">C</div>
+          <div>
+            <h1>CIA</h1>
+            <p>Console Integrado de Analise</p>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="login-title">Acesse o CIA</h2>
+          <p class="login-sub">
+            Coloque foco no que importa: consolide dados, identifique riscos e acelere a tomada de decisão no PDV — com clareza, consistência e ação.
+          </p>
+        </div>
+
+        <form class="login-form" id="loginForm" autocomplete="off">
+          <div class="login-field">
+            <label for="loginUser">E-mail</label>
+            <input id="loginUser" type="email" autocomplete="email" placeholder="Digite seu e-mail..." />
+          </div>
+
+          <div class="login-field">
+            <label for="loginPass">Senha</label>
+            <div class="pass-wrap">
+              <input id="loginPass" type="password" autocomplete="current-password" placeholder="Digite sua senha..." />
+              <button type="button" id="btnTogglePass" class="btn-pass-toggle" aria-label="Ver senha">Ver</button>
+            </div>
+          </div>
+
+          <div class="login-actions" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button id="btnSendCode" type="button" class="btn-secondary" style="display:none;">Enviar código</button>
+            <button id="btnLogin" type="submit">Entrar</button>
+          </div>
+
+          <div class="login-error" id="loginError"></div>
+
+          <div class="login-hint">
+            Use seu e-mail e senha para entrar. Se você tiver mais de um workspace, poderá selecionar após o login.
+          </div>
+        </form>
+        <div class="login-legal" id="loginLegalFooter"></div>
+      </div>
+
+      <div class="login-right" aria-hidden="true"></div>
+    </div>
+  </div>
+
+</body>
+</html>
