@@ -50,7 +50,9 @@ export function initProducts(frame) {
           <input type="text" id="filterBrand" placeholder="Marca...">
           <input type="text" id="filterCategory" placeholder="Categoria...">
           <button id="btnSearch">Filtrar</button>
-          <button id="btnNew" style="margin-left: auto;">+ Novo Produto</button>
+          <input type="file" id="fileImportCsv" accept=".csv" style="display:none;">
+          <button id="btnImportCsv" class="btn-secondary" style="margin-left: auto; margin-right: 10px;">Importar CSV</button>
+          <button id="btnNew">+ Novo Produto</button>
         </div>
 
         <table>
@@ -210,9 +212,9 @@ export function initProducts(frame) {
               <td>\${escapeHTML(p.name)}</td>
               <td>\${escapeHTML(p.brand || '-')}</td>
               <td>\${escapeHTML(p.category || '-')}</td>
-              <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
+              <td>\${escapeHTML(p.is_active ? 'Ativo' : 'Inativo')}</td>
               <td>
-                <button class="btn-edit" onclick="editProduct('\${p.id}')">Editar</button>
+                <button class="btn-edit" onclick="editProduct('\${escapeHTML(p.id)}')">Editar</button>
               </td>
             </tr>\`;
           }).join('');
@@ -258,7 +260,7 @@ export function initProducts(frame) {
             <div class="list-item">
               <div>
                 <strong>\${escapeHTML(p.pdvs?.name || p.pdv_id)}</strong> (\${escapeHTML(p.pdvs?.pdv_code || 'sem cd')})<br>
-                Listado: \${p.is_listed ? 'Sim' : 'Não'} | Prio: \${p.priority}
+                Listado: \${escapeHTML(p.is_listed ? 'Sim' : 'Não')} | Prio: \${escapeHTML(p.priority)}
               </div>
             </div>
           \`).join('');
@@ -273,6 +275,43 @@ export function initProducts(frame) {
           document.getElementById('tabPdvsTrigger').style.display = 'none';
           document.querySelector('[data-target="tabDados"]').click();
           openModal();
+        });
+
+        document.getElementById('btnImportCsv').addEventListener('click', () => {
+          document.getElementById('fileImportCsv').click();
+        });
+
+        document.getElementById('fileImportCsv').addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if(!file) return;
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const text = ev.target.result;
+            const lines = text.split('\\n');
+            const payloads = [];
+            for(let i=1; i<lines.length; i++){
+              const line = lines[i].trim();
+              if(!line) continue;
+              const cols = line.split(/[,;]/);
+              if(cols.length >= 2){
+                payloads.push({
+                  workspace_id: currentWorkspaceId,
+                  sku_code: cols[0] ? cols[0].trim() : null,
+                  ean: cols[1] ? cols[1].trim() : null,
+                  name: cols[2] ? cols[2].trim() : (cols[0] ? cols[0].trim() : 'Produto'),
+                  brand: cols[3] ? cols[3].trim() : null,
+                  category: cols[4] ? cols[4].trim() : null
+                });
+              }
+            }
+            if(payloads.length > 0){
+              const { error } = await getSupabase().from('products').insert(payloads);
+              if(error) alert('Erro ao importar CSV: ' + error.message);
+              else { alert('CSV Importado com sucesso!'); loadProducts(); }
+            }
+            document.getElementById('fileImportCsv').value = '';
+          };
+          reader.readAsText(file);
         });
 
         document.getElementById('formProduct').addEventListener('submit', async (e) => {
