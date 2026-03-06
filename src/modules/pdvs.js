@@ -59,8 +59,8 @@ export function initPdvs(frame) {
             <option value="inactive">Inativos</option>
           </select>
           <button id="btnSearch">Filtrar</button>
-          <button id="btnOpenImportPdv" style="background:#ede9fe;color:#7c3aed;">&#8593; Importar CSV</button>
-          <button id="btnNew" style="margin-left: auto;">+ Novo PDV</button>
+          <button id="btnOpenImportPdv" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">&#8679; Importar CSV</button>
+          <button id="btnNew">+ Novo PDV</button>
         </div>
 
         <table>
@@ -245,7 +245,7 @@ export function initPdvs(frame) {
           try {
             const { data: { user } } = await getSupabase().auth.getUser();
             if(!user) return;
-            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
+            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id,role').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
               // Load workspace settings for geo validation
@@ -314,7 +314,7 @@ export function initPdvs(frame) {
               <td>\${escapeHTML(p.city || '-')} / \${escapeHTML(p.uf || '-')}</td>
               <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
               <td>
-                <button class="btn-edit" onclick="editPdv('\${p.id}')">Editar</button>
+                <button class="btn-edit" onclick="editPdv('\${escapeHTML(p.id)}')">Editar</button>
               </td>
             </tr>\`;
           }).join('');
@@ -371,7 +371,7 @@ export function initPdvs(frame) {
               : '<span style="color:#94a3b8;font-size:12px">—</span>';
             return \`<div class="list-item">
               <div><strong>\${escapeHTML(c.name)}</strong> <span style="color:#94a3b8;font-size:11px">(\${escapeHTML(roleLabel[c.contact_role]||c.contact_role)})</span><br>\${waHtml}</div>
-              <button class="btn-secondary" onclick="removeContact('\${c.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removeContact('\${escapeHTML(c.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>\`;
           }).join('');
         }
@@ -424,7 +424,7 @@ export function initPdvs(frame) {
                 <strong>\${escapeHTML(a.people?.name || a.person_id)}</strong><br>
                 \${escapeHTML(a.assignment_role)} \${a.is_primary ? '(Principal)' : ''}
               </div>
-              <button class="btn-secondary" onclick="removeAssignment('\${a.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removeAssignment('\${escapeHTML(a.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -468,7 +468,7 @@ export function initPdvs(frame) {
                 <strong>\${escapeHTML(p.products?.name || p.product_id)}</strong> (\${escapeHTML(p.products?.sku_code || 'sem sku')})<br>
                 Listado: \${p.is_listed ? 'Sim' : 'Não'} | Prio: \${p.priority}
               </div>
-              <button class="btn-secondary" onclick="removePdvProduct('\${p.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removePdvProduct('\${escapeHTML(p.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -557,7 +557,7 @@ export function initPdvs(frame) {
            else renderTable();
         });
 
-        // ── CSV Import (PDVs) ──────────────────────────────────────
+        // ── CSV Import (overlay avançado) ─────────────────────────────────────────────────────────────────
         function parseCsv(text) {
           const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
           if(!lines.length) return [];
@@ -569,15 +569,35 @@ export function initPdvs(frame) {
           });
         }
 
+        function showToast(msg, isErr) {
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:' + (isErr?'#dc2626':'#15803d') + ';color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-family:\'IBM Plex Sans\',sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.2);';
+          t.textContent = msg;
+          document.body.appendChild(t);
+          setTimeout(() => { t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3500);
+        }
+
+        function downloadPdvTemplate() {
+          const cols = 'pdv_code,name,uf,city,cnpj,address,lat,lng,is_active';
+          const row1 = 'PDV001,Supermercado Exemplo,SP,São Paulo,00000000000100,Rua Exemplo 123,-23.5505,-46.6333,true';
+          const blob = new Blob([cols+'\n'+row1+'\n'], {type:'text/csv;charset=utf-8;'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href=url; a.download='modelo_pdvs.csv'; a.click();
+          URL.revokeObjectURL(url);
+        }
+
         const btnOpenImportPdv = document.getElementById('btnOpenImportPdv');
         if (btnOpenImportPdv) btnOpenImportPdv.addEventListener('click', () => {
           document.getElementById('pdvImportFile').value='';
           document.getElementById('pdvPreviewSection').style.display='none';
           document.getElementById('pdvImportProgress').style.display='none';
           document.getElementById('pdvImportResult').style.display='none';
+          document.getElementById('pdvErrorList').style.display='none';
+          document.getElementById('pdvDetectedCols').textContent='Nenhum arquivo carregado';
           pdvCsvRows=[];
           document.getElementById('pdvImportOverlay').style.display='flex';
         });
+        document.getElementById('pdvDownloadTemplate').addEventListener('click', downloadPdvTemplate);
         document.getElementById('pdvCloseImport').addEventListener('click',()=>{ document.getElementById('pdvImportOverlay').style.display='none'; });
         document.getElementById('pdvCancelImport').addEventListener('click',()=>{ document.getElementById('pdvImportOverlay').style.display='none'; });
 
@@ -585,42 +605,84 @@ export function initPdvs(frame) {
           const file=e.target.files[0]; if(!file) return;
           const text=await file.text();
           const raw=parseCsv(text); if(!raw.length) return;
-          const headers=raw[0];
+          const headerRow=raw[0];
+          const headers=headerRow.map(h=>h.toLowerCase().trim());
+          const requiredCols=['pdv_code','name','uf','city'];
           pdvCsvRows=raw.slice(1).filter(r=>r.some(c=>c)).map(r=>{
-            const o={}; headers.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+            const o={}; headerRow.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+          });
+          document.getElementById('pdvDetectedCols').textContent=headers.join(', ')||'—';
+          const rowErrors=[];
+          pdvCsvRows.forEach((r,i)=>{
+            const missing=requiredCols.filter(c=>!r[c]);
+            if(missing.length) rowErrors.push('Linha '+(i+2)+': campo(s) obrigatório(s) faltando — '+missing.join(', '));
+            else if(wsSettings.require_geo_for_pdvs && (!r.lat||!r.lng)) rowErrors.push('Linha '+(i+2)+': lat/lng obrigatórios (workspace_settings.require_geo_for_pdvs=true)');
           });
           document.getElementById('pdvImportCount').textContent=pdvCsvRows.length;
-          const errCount=pdvCsvRows.filter(r=>!r.name).length;
-          document.getElementById('pdvPreviewSummary').innerHTML='<b>'+pdvCsvRows.length+' linhas</b>'+(errCount?' — <span style="color:#dc2626">'+errCount+' sem nome</span>':' — OK');
-          let th='<thead><tr>'+headers.slice(0,7).map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc">'+h+'</th>').join('')+'</tr></thead>';
-          let tb='<tbody>'+pdvCsvRows.slice(0,5).map(r=>'<tr>'+headers.slice(0,7).map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">'+(r[h.toLowerCase().trim()]||'')+'</td>').join('')+'</tr>').join('')+'</tbody>';
+          const errCount=rowErrors.length;
+          document.getElementById('pdvPreviewSummary').innerHTML=
+            '<b>'+pdvCsvRows.length+' linha(s)</b>'+
+            (errCount?' &nbsp;— <span style="color:#dc2626">'+errCount+' com erro</span>':' &nbsp;<span style="color:#15803d">✓ Sem erros</span>');
+          const errListEl=document.getElementById('pdvErrorList');
+          if(rowErrors.length){
+            errListEl.style.display='block';
+            document.getElementById('pdvErrorListItems').innerHTML=rowErrors.slice(0,20).map(e=>'<li>'+e+'</li>').join('');
+          } else { errListEl.style.display='none'; }
+          const displayH=headerRow.slice(0,8);
+          let th='<thead><tr>'+displayH.map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc;white-space:nowrap">'+h+'</th>').join('')+'</tr></thead>';
+          let tb='<tbody>'+pdvCsvRows.slice(0,20).map(r=>{
+            const isErr=requiredCols.some(c=>!r[c]);
+            return '<tr'+(isErr?' style="background:#fff7f7"':'')+'>'+
+              displayH.map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">'+(r[h.toLowerCase().trim()]||'')+'</td>').join('')+'</tr>';
+          }).join('')+'</tbody>';
           document.getElementById('pdvPreviewTable').innerHTML=th+tb;
           document.getElementById('pdvPreviewSection').style.display='block';
           document.getElementById('pdvImportResult').style.display='none';
+          const confirmBtn=document.getElementById('pdvConfirmImport');
+          confirmBtn.disabled=errCount>0;
+          confirmBtn.style.opacity=errCount>0?'0.5':'1';
+          confirmBtn.style.cursor=errCount>0?'not-allowed':'pointer';
         });
 
         document.getElementById('pdvConfirmImport').addEventListener('click', async () => {
           if(!pdvCsvRows.length) return;
           document.getElementById('pdvPreviewSection').style.display='none';
+          document.getElementById('pdvErrorList').style.display='none';
           document.getElementById('pdvImportProgress').style.display='block';
           try {
+            const normalized = pdvCsvRows.map(r => {
+              const row = Object.assign({}, r);
+              if (row.lat)  row.lat  = parseFloat(row.lat)  || null;
+              if (row.lng)  row.lng  = parseFloat(row.lng)  || null;
+              if (typeof row.is_active === 'string') row.is_active = row.is_active.toLowerCase() !== 'false' && row.is_active !== '0';
+              return row;
+            });
             const { data, error } = await getSupabase().functions.invoke('csv-import',{
-              body:{ entity:'pdvs', workspace_id:currentWorkspaceId, rows:pdvCsvRows }
+              body:{ entity:'pdvs', workspace_id:currentWorkspaceId, rows:normalized }
             });
             document.getElementById('pdvImportProgress').style.display='none';
             document.getElementById('pdvImportResult').style.display='block';
             if(error||!data){
-              document.getElementById('pdvImportResult').innerHTML='<span style="color:#dc2626">Erro: Edge Function não respondeu.</span>'; return;
+              document.getElementById('pdvImportResult').innerHTML='<span style="color:#dc2626">Erro: Edge Function não respondeu.</span>';
+              showToast('Erro ao importar', true);
+              return;
             }
             const {inserted=0,updated=0,rejected=0,errors=[]}=data;
             document.getElementById('pdvImportResult').innerHTML=
-              '<b style="color:#15803d">Inseridos: '+inserted+'</b>  <b>Atualizados: '+updated+'</b>  '+(rejected?'<b style="color:#dc2626">Rejeitados: '+rejected+'</b>':'')+
-              (errors.length?'<div style="color:#dc2626;font-size:11px;margin-top:6px">'+errors.slice(0,5).join('<br>')+'</div>':'');
+              '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">'+
+              '<span style="color:#15803d;font-weight:600;">✓ '+inserted+' inseridos</span>'+
+              '<span style="font-weight:600;">'+updated+' atualizados</span>'+
+              (rejected?'<span style="color:#dc2626;font-weight:600;">✗ '+rejected+' rejeitados</span>':'')+
+              '</div>'+
+              (errors.length?'<div style="background:#fff7f7;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;font-size:12px;color:#dc2626;max-height:120px;overflow-y:auto;"><ul style="margin:0;padding-left:16px;">'+errors.slice(0,20).map(e=>'<li>'+e+'</li>').join('')+'</ul></div>':'');
             loadPdvs();
+            if(!rejected) showToast('Importação concluída: '+inserted+' inseridos, '+updated+' atualizados');
+            else showToast('Importação com '+rejected+' rejeitados', true);
           } catch(err) {
             document.getElementById('pdvImportProgress').style.display='none';
             document.getElementById('pdvImportResult').style.display='block';
             document.getElementById('pdvImportResult').innerHTML='<span style="color:#dc2626">Erro: '+String(err?.message||err)+'</span>';
+            showToast('Erro inesperado ao importar', true);
           }
         });
 
@@ -644,24 +706,40 @@ export function initPdvs(frame) {
 
       <!-- ── CSV Import Overlay (PDVs) ──────────────────────────── -->
       <div id="pdvImportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
-        <div style="background:#fff;border-radius:12px;padding:24px;width:680px;max-width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-            <h2 style="margin:0;font-size:17px;color:#071C46;">Importar CSV — PDVs</h2>
-            <button id="pdvCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:16px;">&#x2715;</button>
+        <div style="background:#fff;border-radius:12px;padding:24px;width:720px;max-width:100%;box-shadow:0 20px 40px rgba(0,0,0,.15);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 style="margin:0;font-size:17px;color:#071C46;font-weight:600;">Importar CSV — PDVs</h2>
+            <button id="pdvCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:16px;color:#475569;">&#x2715;</button>
           </div>
-          <p style="color:#64748b;font-size:12px;margin:0 0 14px;">Colunas: <strong>pdv_code, cnpj, name, address, city, uf, lat, lng, is_active</strong>. Chave upsert: workspace_id + pdv_code.</p>
-          <input type="file" id="pdvImportFile" accept=".csv,text/csv" style="margin-bottom:14px;">
+          <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="flex:1;font-size:12px;color:#64748b;line-height:1.6;">Obrigatórios: <strong>pdv_code, name, uf, city</strong> &nbsp;·&nbsp; Opcionais: cnpj, address, lat, lng, is_active &nbsp;·&nbsp; Chave upsert: workspace_id + pdv_code</div>
+            <button id="pdvDownloadTemplate" style="white-space:nowrap;background:#f0fdf4;color:#1A7A3A;border:1px solid #bbf7d0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:500;">⬇ Baixar modelo CSV</button>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:10px;padding:6px 10px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;">
+            <strong>Colunas detectadas:</strong> <span id="pdvDetectedCols" style="font-family:monospace;color:#0f172a;">Nenhum arquivo carregado</span>
+          </div>
+          <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:10px;">
+            Selecionar arquivo CSV:
+            <input type="file" id="pdvImportFile" accept=".csv,text/csv" style="display:block;margin-top:6px;font-size:13px;width:100%;box-sizing:border-box;">
+          </label>
           <div id="pdvPreviewSection" style="display:none;">
-            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Preview (primeiras 5 linhas)</div>
-            <div style="overflow-x:auto;"><table id="pdvPreviewTable" style="border-collapse:collapse;"></table></div>
-            <div id="pdvPreviewSummary" style="margin:8px 0;font-size:13px;"></div>
-            <div style="display:flex;gap:8px;margin-top:14px;">
-              <button id="pdvConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:9px;cursor:pointer;font-size:13px;">Importar <span id="pdvImportCount">0</span> linha(s)</button>
-              <button id="pdvCancelImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:9px 14px;cursor:pointer;font-size:13px;">Cancelar</button>
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:#374151;">Preview (primeiras 20 linhas)</div>
+            <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;"><table id="pdvPreviewTable" style="border-collapse:collapse;width:100%;min-width:400px;"></table></div>
+            <div id="pdvPreviewSummary" style="margin:10px 0 6px;font-size:13px;"></div>
+            <div id="pdvErrorList" style="display:none;background:#fff7f7;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;margin-bottom:10px;max-height:120px;overflow-y:auto;">
+              <div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;">Erros de validação:</div>
+              <ul id="pdvErrorListItems" style="font-size:12px;color:#dc2626;margin:0;padding-left:16px;line-height:1.6;"></ul>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button id="pdvConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:10px;cursor:pointer;font-size:14px;font-weight:500;">Importar <span id="pdvImportCount">0</span> linha(s)</button>
+              <button id="pdvCancelImport" style="background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;border-radius:6px;padding:10px 16px;cursor:pointer;font-size:13px;">Cancelar</button>
             </div>
           </div>
-          <div id="pdvImportProgress" style="display:none;text-align:center;padding:20px;color:#64748b;font-size:13px;">Importando…</div>
-          <div id="pdvImportResult" style="display:none;font-size:13px;padding:10px 0;"></div>
+          <div id="pdvImportProgress" style="display:none;text-align:center;padding:28px;color:#64748b;font-size:13px;">
+            <div>⏳ Importando…</div>
+            <div style="font-size:11px;margin-top:6px;">Aguarde, isso pode levar alguns segundos.</div>
+          </div>
+          <div id="pdvImportResult" style="display:none;padding:10px 0;font-size:13px;"></div>
         </div>
       </div>
     </body>

@@ -69,11 +69,12 @@
           <button class="nav-item" id="navPdvs" type="button"><span>PDVs</span><span>○</span></button>
           <button class="nav-item" id="navProducts" type="button"><span>Produtos</span><span>○</span></button>
           <button class="nav-item" id="navAdmin" type="button" style="display:none"><span>Admin</span><span>○</span></button>
+          <button class="nav-item" id="navPlanejamento" type="button" style="display:none"><span>Planejamento</span><span>○</span></button>
         </div>
       </div>
 
       <div>
-        <div class="nav-section" id="sidebarFilesSection">
+        <div class="nav-section" id="sidebarFilesSection" style="display:none">
           <div class="nav-label">Arquivos</div>
           <button class="nav-item" id="btnUploadSist" type="button" title="Carregar Sistemática"><span>Carregar Sistemática</span><span>&#10562;</span></button>
           <button class="nav-item" id="btnUploadBase" type="button" title="Carregar Base de Supervisores/Telefones"><span>Carregar Base</span><span>&#10562;</span></button>
@@ -115,6 +116,7 @@
         <iframe id="frameHc" title="Tela Headcount"></iframe>
         <iframe id="framePdvs" title="Tela PDVs"></iframe>
         <iframe id="frameProducts" title="Tela Produtos"></iframe>
+        <iframe id="framePlanejamento" title="Tela Planejamento"></iframe>
 
         <div id="dataManagerScreen" class="data-manager">
           <div class="data-mgr-title">Gestão de Dados</div>
@@ -147,16 +149,6 @@
             <div class="data-mgr-card half">
               <h3>Ações</h3>
               <div id="dmActionsSlot"></div>
-            </div>
-
-            <div class="data-mgr-card">
-              <h3>Cadastros (Multi-tenant)</h3>
-              <div class="dm-hint">Acessos rápidos para telas de gestão de pessoas, lojas e produtos.</div>
-              <div style="display:flex; flex-direction:row; gap:10px;">
-                <button class="nav-item" id="btnOpenHc" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>HC (People)</span><span>✖</span></button>
-                <button class="nav-item" id="btnOpenPdvs" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>PDVs</span><span>✖</span></button>
-                <button class="nav-item" id="btnOpenProducts" type="button" style="flex:1; justify-content:space-between; display:flex;"><span>Produtos</span><span>✖</span></button>
-              </div>
             </div>
 
             <div class="data-mgr-card">
@@ -360,21 +352,6 @@
 
           <div class="login-hint">
             Use seu e-mail e senha para entrar. Se você tiver mais de um workspace, poderá selecionar após o login.
-          </div>
-
-          <!-- Cadastro por convite (invite-only) — visível mas explicitamente bloqueado -->
-          <div class="login-invite-section" style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(148,163,184,0.2);">
-            <div style="font-size:13px; color:rgba(148,163,184,0.9); margin-bottom:8px; font-weight:500;">Novo usuário?</div>
-            <button type="button" id="btnSignupDisabled" class="btn-secondary"
-              style="width:100%; opacity:0.55; cursor:not-allowed; border:1px solid rgba(148,163,184,0.3);"
-              aria-disabled="true"
-              title="Cadastro apenas por convite — solicite acesso ao administrador"
-              onclick="document.getElementById('loginError').textContent='Cadastro apenas por convite. Solicite acesso ao administrador da sua organização.'">
-              Criar conta
-            </button>
-            <div style="font-size:11px; color:rgba(148,163,184,0.7); margin-top:6px; text-align:center;">
-              Cadastro apenas por convite do administrador.
-            </div>
           </div>
         </form>
         <div class="login-legal" id="loginLegalFooter"></div>
