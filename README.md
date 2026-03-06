@@ -28,8 +28,9 @@ cp .env.example .env.local
 ```
 VITE_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
-VITE_SUPABASE_BUCKET=cia-files
 ```
+
+> **Nota:** use apenas a **anon/public key**. A service_role key nunca deve ser exposta no cliente.
 
 ### 3. Rodar em desenvolvimento
 
@@ -46,6 +47,19 @@ npm run build
 ```
 
 Saída em `dist/`. Faça deploy via GitHub Pages, Vercel, Netlify ou qualquer host estático.
+
+### 5. Deploy automático (GitHub Actions → gh-pages)
+
+O workflow `.github/workflows/deploy.yml` faz build e deploy automaticamente a cada push em `main`.
+
+**Secrets necessários** (configurar em `Settings → Secrets and variables → Actions` do repositório):
+
+| Secret | Valor |
+|---|---|
+| `VITE_SUPABASE_URL` | URL do seu projeto Supabase |
+| `VITE_SUPABASE_ANON_KEY` | Chave anon/public do Supabase |
+
+Após configurar os secrets, qualquer push em `main` dispara o workflow e publica em `app.usecia.com`.
 
 ---
 
@@ -95,12 +109,14 @@ Após configurar o `.env.local` e rodar `npm run dev`, verifique:
 - [ ] Login com e-mail/senha válidos funciona
 - [ ] Login com credenciais inválidas exibe erro (sem crash)
 - [ ] Logout funciona e retorna ao overlay de login
-- [ ] Navegação entre telas (Sist / Fotos / Efet / Pesq / DataCrit) exibe iframes corretamente
-- [ ] "Gestão de Dados" → Cloud Sync: `Atualizar Weeks` lista weeks do Supabase
-- [ ] "Gestão de Dados" → Cloud Sync: `Carregar Week` baixa e injeta arquivos
-- [ ] Upload de arquivo Sistemática funciona (carrega no Supabase Storage)
+- [ ] Navegação entre telas (Sist / Fotos / Efet / Pesq / DataCrit / HC / PDVs / Produtos / Planejamento) exibe iframes corretamente
+- [ ] Telas **Efetividade**, **Data Crítica** e **Fotos** carregam dados **direto do Supabase** (sem upload de arquivo)
+- [ ] Tela **Planejamento** visível para master/admin; permite criar planos e itens via modal
+- [ ] Botão **Importar CSV** aparece nas telas HC, PDVs e Produtos e abre modal de import
+- [ ] **Gestão de Dados** → Cloud Sync: `Atualizar Weeks` lista weeks do Supabase
+- [ ] **Seção "Arquivos" da sidebar** está oculta por padrão (uploads disponíveis via Gestão de Dados para admins)
 - [ ] Admin screen aparece apenas para `master` / `global_admin`
-- [ ] Sem erros de console relacionados a `file://`, `wrangler`, `D1`, `/api/`
+- [ ] Sem erros de console relacionados a `file://`, `wrangler`, `D1`, `/api/`, `service_role`
 
 ---
 
