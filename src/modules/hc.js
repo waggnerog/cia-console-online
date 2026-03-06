@@ -1,5 +1,4 @@
-﻿import { supabase } from '../lib/supabaseClient';
-
+﻿// CIA Console — HC module (people/headcount CRUD + assignments/CSV import)
 export function initHc(frame) {
   const html = `
     <!doctype html>
@@ -55,9 +54,14 @@ export function initHc(frame) {
             <option value="admin">Admin</option>
             <option value="bko">BKO</option>
           </select>
-          <input type="text" id="filterManager" placeholder="Manager ID...">
+          <select id="filterStatus">
+            <option value="">Status: Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
           <button id="btnSearch">Filtrar</button>
-          <button id="btnNew" style="margin-left: auto;">+ Nova Pessoa</button>
+          <button id="btnOpenImport" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;">&#8679; Importar CSV</button>
+          <button id="btnNew">+ Nova Pessoa</button>
         </div>
 
         <table>
@@ -66,13 +70,13 @@ export function initHc(frame) {
               <th>Nome</th>
               <th>Role</th>
               <th>Email</th>
-              <th>Manager</th>
+              <th>WhatsApp</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody id="peopleTableBody">
-            <tr><td colspan="6">Carregando...</td></tr>
+            <tr><td colspan="6" id="hcLoadingRow">Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -110,10 +114,13 @@ export function initHc(frame) {
               <input type="email" id="pEmail">
 
               <label>WhatsApp</label>
-              <input type="text" id="pPhone">
+              <input type="text" id="pPhone" placeholder="55 11 99999-9999">
+              <div id="pPhoneDisplay" style="font-size:11px;color:#1A7A3A;margin-top:2px;font-family:'IBM Plex Mono',monospace;"></div>
 
-              <label>Manager (ID Opcional por enquanto)</label>
-              <input type="text" id="pManagerId" placeholder="UUID do manager">
+              <label>Manager (pessoa responsável)</label>
+              <select id="pManagerId">
+                <option value="">— Sem manager —</option>
+              </select>
 
               <label style="display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="pActive" style="width:auto;" checked> Ativo
@@ -136,13 +143,17 @@ export function initHc(frame) {
               <label>Papel na loja *</label>
               <select id="aRole" required>
                 <option value="promotor_principal">Promotor Principal</option>
-                <option value="backup">Backup</option>
-                <option value="supervisor">Supervisor</option>
-                <option value="coordenador">Coordenador</option>
+                <option value="promotor_backup">Promotor Backup</option>
+                <option value="supervisor_resp">Supervisor Responsável</option>
+                <option value="coord_resp">Coordenador Responsável</option>
               </select>
               <label style="display:flex; align-items:center; gap:8px;">
                 <input type="checkbox" id="aPrimary" style="width:auto;"> É o principal da rota?
               </label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                <div><label>Vigência: início</label><input type="date" id="aStartAt" style="width:100%;"></div>
+                <div><label>Vigência: fim (opcional)</label><input type="date" id="aEndAt" style="width:100%;"></div>
+              </div>
               <button type="submit" style="width:100%; margin-top:10px;">Vincular PDV</button>
             </form>
           </div>
@@ -156,12 +167,26 @@ export function initHc(frame) {
         let allPeople = [];
         let currentWorkspaceId = null;
         let currentPersonId = null;
+        let csvRows = [];
+
+        // ── WhatsApp normalizer ─────────────────────────────────────
+        function normalizeWA(raw) {
+          if (!raw) return { digits: '', display: '' };
+          const digits = String(raw).replace(/\D/g, '');
+          if (!digits) return { digits: '', display: raw };
+          let display = digits;
+          if      (digits.length === 13) display = '+' + digits.slice(0,2) + ' (' + digits.slice(2,4) + ') ' + digits.slice(4,9) + '-' + digits.slice(9);
+          else if (digits.length === 12) display = '+' + digits.slice(0,2) + ' (' + digits.slice(2,4) + ') ' + digits.slice(4,8) + '-' + digits.slice(8);
+          else if (digits.length === 11) display = '(' + digits.slice(0,2) + ') ' + digits.slice(2,7) + '-' + digits.slice(7);
+          else if (digits.length === 10) display = '(' + digits.slice(0,2) + ') ' + digits.slice(2,6) + '-' + digits.slice(6);
+          return { digits, display };
+        }
 
         async function init() {
           try {
             const { data: { user } } = await getSupabase().auth.getUser();
             if(!user) return;
-            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id').eq('user_id', user.id).limit(1);
+            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id,role').eq('user_id', user.id).limit(1);
             if(wusers && wusers.length > 0) {
               currentWorkspaceId = wusers[0].workspace_id;
               await loadPeople();
@@ -184,19 +209,40 @@ export function initHc(frame) {
         });
 
         async function loadPeople() {
-          const search = document.getElementById('searchName').value.toLowerCase();
-          const role = document.getElementById('filterRole').value;
-          const managerId = document.getElementById('filterManager').value.trim();
+          const role   = document.getElementById('filterRole').value;
+          const status = document.getElementById('filterStatus').value;
 
           let query = getSupabase().from('people').select('*').eq('workspace_id', currentWorkspaceId).order('name');
-          if(role) query = query.eq('role', role);
-          if(managerId) query = query.eq('manager_id', managerId);
+          if (role)             query = query.eq('role', role);
+          if (status === 'active')   query = query.eq('is_active', true);
+          if (status === 'inactive') query = query.eq('is_active', false);
 
           const { data, error } = await query;
-          if(error) { console.error(error); return; }
+          if (error) { console.error(error); return; }
 
           allPeople = data || [];
+          await loadManagerOptions();
           renderTable();
+        }
+
+        async function loadManagerOptions() {
+          const { data } = await getSupabase().from('people')
+            .select('id, name, role')
+            .eq('workspace_id', currentWorkspaceId)
+            .eq('is_active', true)
+            .in('role', ['supervisor','coordenador','gerente','admin'])
+            .order('name');
+          const sel = document.getElementById('pManagerId');
+          if (!sel) return;
+          const cur = sel.value;
+          sel.innerHTML = '<option value="">— Sem manager —</option>';
+          (data || []).forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.id;
+            o.textContent = p.name + ' (' + p.role + ')';
+            sel.appendChild(o);
+          });
+          if (cur) sel.value = cur;
         }
 
         function renderTable() {
@@ -211,14 +257,18 @@ export function initHc(frame) {
           }
 
           tbody.innerHTML = filtered.map(p => {
+            const wa = normalizeWA(p.phone_whatsapp);
+            const waHtml = wa.display
+              ? '<a href="https://wa.me/' + escapeHTML(wa.digits) + '" target="_blank" style="color:#1A7A3A;text-decoration:none;font-family:\'IBM Plex Mono\',monospace;font-size:12px;">' + escapeHTML(wa.display) + '</a>'
+              : '<span style="color:#94a3b8">—</span>';
             return \`<tr>
-              <td>\${escapeHTML(p.name)}</td>
+              <td><strong>\${escapeHTML(p.name)}</strong></td>
               <td>\${escapeHTML(p.role)}</td>
-              <td>\${escapeHTML(p.email || '-')}</td>
-              <td>\${p.manager_id ? 'Sim' : '-'}</td>
-              <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
+              <td>\${escapeHTML(p.email || '—')}</td>
+              <td>\${waHtml}</td>
+              <td>\${p.is_active ? '<span style="color:#15803d;font-weight:600;">Ativo</span>' : '<span style="color:#64748b;">Inativo</span>'}</td>
               <td>
-                <button class="btn-edit" onclick="editPerson('\${p.id}')">Editar</button>
+                <button class="btn-edit" onclick="editPerson('\${escapeHTML(p.id)}')">Editar</button>
               </td>
             </tr>\`;
           }).join('');
@@ -241,6 +291,10 @@ export function initHc(frame) {
           document.getElementById('pRole').value = p.role || 'promotor';
           document.getElementById('pEmail').value = p.email || '';
           document.getElementById('pPhone').value = p.phone_whatsapp || '';
+          const waP = normalizeWA(p.phone_whatsapp || '');
+          const pdEl = document.getElementById('pPhoneDisplay');
+          if (pdEl) pdEl.textContent = waP.display || '';
+          await loadManagerOptions();
           document.getElementById('pManagerId').value = p.manager_id || '';
           document.getElementById('pActive').checked = p.is_active;
 
@@ -267,7 +321,7 @@ export function initHc(frame) {
                 <strong>\${escapeHTML(a.pdvs?.name || a.pdv_id)}</strong><br>
                 \${escapeHTML(a.assignment_role)} \${a.is_primary ? '(Principal)' : ''}
               </div>
-              <button class="btn-secondary" onclick="removeAssignment('\${a.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removeAssignment('\${escapeHTML(a.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -281,17 +335,24 @@ export function initHc(frame) {
         document.getElementById('formAssignment').addEventListener('submit', async (e) => {
           e.preventDefault();
           if(!currentPersonId) return;
+          const startAt = document.getElementById('aStartAt');
+          const endAt   = document.getElementById('aEndAt');
           const payload = {
-            workspace_id: currentWorkspaceId,
-            person_id: currentPersonId,
-            pdv_id: document.getElementById('aPdvId').value.trim(),
+            workspace_id:    currentWorkspaceId,
+            person_id:       currentPersonId,
+            pdv_id:          document.getElementById('aPdvId').value.trim(),
             assignment_role: document.getElementById('aRole').value,
-            is_primary: document.getElementById('aPrimary').checked
+            is_primary:      document.getElementById('aPrimary').checked,
+            start_at:        (startAt && startAt.value) ? startAt.value : new Date().toISOString(),
+            end_at:          (endAt   && endAt.value)   ? endAt.value   : null,
           };
           const { error } = await getSupabase().from('assignments').insert([payload]);
           if(error) alert('Erro: ' + error.message);
           else {
             document.getElementById('aPdvId').value = '';
+            document.getElementById('aPrimary').checked = false;
+            if (startAt) startAt.value = '';
+            if (endAt)   endAt.value   = '';
             await loadAssignments(currentPersonId);
           }
         });
@@ -302,20 +363,32 @@ export function initHc(frame) {
           document.getElementById('personId').value = '';
           document.getElementById('modalTitle').innerText = 'Nova Pessoa';
           document.getElementById('tabAlocacoesTrigger').style.display = 'none';
+          const disp = document.getElementById('pPhoneDisplay');
+          if (disp) disp.textContent = '';
           document.querySelector('[data-target="tabDados"]').click();
+          loadManagerOptions();
           openModal();
+        });
+
+        // Live WhatsApp display
+        const pPhoneEl = document.getElementById('pPhone');
+        if (pPhoneEl) pPhoneEl.addEventListener('input', function() {
+          const wa = normalizeWA(this.value);
+          const el = document.getElementById('pPhoneDisplay');
+          if (el) el.textContent = wa.display || '';
         });
 
         document.getElementById('formPerson').addEventListener('submit', async (e) => {
           e.preventDefault();
           const id = document.getElementById('personId').value;
+          const waInput = normalizeWA(document.getElementById('pPhone').value);
           const payload = {
             workspace_id: currentWorkspaceId,
             name: document.getElementById('pName').value.trim(),
             role: document.getElementById('pRole').value,
             email: document.getElementById('pEmail').value.trim() || null,
-            phone_whatsapp: document.getElementById('pPhone').value.trim() || null,
-            manager_id: document.getElementById('pManagerId').value.trim() || null,
+            phone_whatsapp: waInput.digits || null,
+            manager_id: document.getElementById('pManagerId').value || null,
             is_active: document.getElementById('pActive').checked
           };
 
@@ -337,7 +410,167 @@ export function initHc(frame) {
         document.getElementById('btnSearch').addEventListener('click', loadPeople);
         document.getElementById('searchName').addEventListener('keyup', (e) => {
            if(e.key === 'Enter') loadPeople();
-           else renderTable(); // live filter
+           else renderTable();
+        });
+
+        // ── CSV Import (overlay avançado) ─────────────────────────────
+        function parseCsv(text) {
+          const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+          if (!lines.length) return [];
+          const delim = lines[0].includes(';') ? ';' : ',';
+          return lines.map(l => {
+            const cols=[]; let cur=''; let inQ=false;
+            for(let i=0;i<l.length;i++){
+              const ch=l[i];
+              if(inQ){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else inQ=false;}else cur+=ch;}
+              else{if(ch==='"')inQ=true;else if(ch===delim){cols.push(cur.trim());cur='';}else cur+=ch;}
+            }
+            cols.push(cur.trim()); return cols;
+          });
+        }
+        function csvToObjs(headers, rows) {
+          return rows.map(r => {
+            const o={}; headers.forEach((h,i)=>{ o[h.toLowerCase().trim()]=r[i]??''; }); return o;
+          });
+        }
+
+        function showToast(msg, isErr) {
+          const t = document.createElement('div');
+          t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:' + (isErr?'#dc2626':'#15803d') + ';color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-family:\'IBM Plex Sans\',sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.2);';
+          t.textContent = msg;
+          document.body.appendChild(t);
+          setTimeout(() => { t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3500);
+        }
+
+        function downloadHcTemplate() {
+          const cols = 'name,role,email,phone_whatsapp,manager_email,is_active';
+          const row1 = 'João Silva,promotor,joao@empresa.com,5511999990000,,true';
+          const blob = new Blob([cols+'\n'+row1+'\n'], {type:'text/csv;charset=utf-8;'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href=url; a.download='modelo_pessoas.csv'; a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        const btnOpenImport = document.getElementById('btnOpenImport');
+        if (btnOpenImport) btnOpenImport.addEventListener('click', () => {
+          document.getElementById('hcImportFile').value = '';
+          document.getElementById('hcPreviewSection').style.display  = 'none';
+          document.getElementById('hcImportProgress').style.display  = 'none';
+          document.getElementById('hcImportResult').style.display    = 'none';
+          document.getElementById('hcErrorList').style.display       = 'none';
+          document.getElementById('hcDetectedCols').textContent      = 'Nenhum arquivo carregado';
+          csvRows = [];
+          document.getElementById('hcImportOverlay').style.display = 'flex';
+        });
+        document.getElementById('hcDownloadTemplate').addEventListener('click', downloadHcTemplate);
+        document.getElementById('hcCloseImport').addEventListener('click', () => {
+          document.getElementById('hcImportOverlay').style.display = 'none';
+        });
+        document.getElementById('hcCancelImport').addEventListener('click', () => {
+          document.getElementById('hcImportOverlay').style.display = 'none';
+        });
+
+        document.getElementById('hcImportFile').addEventListener('change', async (e) => {
+          const file = e.target.files[0]; if(!file) return;
+          const text = await file.text();
+          const raw  = parseCsv(text);
+          if (!raw.length) return;
+          const headerRow = raw[0];
+          const headers = headerRow.map(h => h.toLowerCase().trim());
+          const requiredCols = ['name','role'];
+          csvRows = csvToObjs(headerRow, raw.slice(1).filter(r=>r.some(c=>c)));
+          document.getElementById('hcDetectedCols').textContent = headers.join(', ') || '—';
+          const rowErrors = [];
+          csvRows.forEach((r, i) => {
+            const missing = requiredCols.filter(c => !r[c]);
+            if (missing.length) rowErrors.push('Linha ' + (i+2) + ': campo(s) obrigatório(s) faltando — ' + missing.join(', '));
+          });
+          document.getElementById('hcImportCount').textContent = csvRows.length;
+          const errCount = rowErrors.length;
+          document.getElementById('hcPreviewSummary').innerHTML =
+            '<b>' + csvRows.length + ' linha(s)</b>' +
+            (errCount ? ' &nbsp;— <span style="color:#dc2626">' + errCount + ' com erro</span>' : ' &nbsp;<span style="color:#15803d">✓ Sem erros</span>');
+          const errListEl = document.getElementById('hcErrorList');
+          if (rowErrors.length) {
+            errListEl.style.display = 'block';
+            document.getElementById('hcErrorListItems').innerHTML = rowErrors.slice(0,20).map(e=>'<li>'+e+'</li>').join('');
+          } else { errListEl.style.display = 'none'; }
+          const displayH = headerRow.slice(0, 8);
+          let th = '<thead><tr>' + displayH.map(h=>'<th style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px;background:#f8fafc;white-space:nowrap">'+h+'</th>').join('') + '</tr></thead>';
+          let tb = '<tbody>' + csvRows.slice(0,20).map(r => {
+            const isErr = !r.name || !r.role;
+            return '<tr'+(isErr?' style="background:#fff7f7"':'')+'>'+
+              displayH.map(h=>'<td style="padding:4px 8px;border:1px solid #e2e8f0;font-size:11px">'+(r[h.toLowerCase().trim()]||'')+'</td>').join('')+'</tr>';
+          }).join('') + '</tbody>';
+          document.getElementById('hcPreviewTable').innerHTML = th + tb;
+          document.getElementById('hcPreviewSection').style.display = 'block';
+          document.getElementById('hcImportResult').style.display = 'none';
+          const confirmBtn = document.getElementById('hcConfirmImport');
+          confirmBtn.disabled = errCount > 0;
+          confirmBtn.style.opacity = errCount > 0 ? '0.5' : '1';
+          confirmBtn.style.cursor  = errCount > 0 ? 'not-allowed' : 'pointer';
+        });
+
+        document.getElementById('hcConfirmImport').addEventListener('click', async () => {
+          if (!csvRows.length) return;
+          document.getElementById('hcPreviewSection').style.display  = 'none';
+          document.getElementById('hcErrorList').style.display       = 'none';
+          document.getElementById('hcImportProgress').style.display  = 'block';
+          try {
+            // Resolve manager_email → manager_id
+            const managerEmails = [...new Set(csvRows.map(r=>r.manager_email||'').filter(e=>e))];
+            let managerMap = {};
+            if (managerEmails.length) {
+              const { data: mgrs } = await getSupabase().from('people')
+                .select('id,email').eq('workspace_id', currentWorkspaceId).in('email', managerEmails);
+              (mgrs||[]).forEach(m => { if(m.email) managerMap[m.email.toLowerCase()] = m.id; });
+            }
+            const importErrors = [];
+            const normalized = [];
+            csvRows.forEach((r, i) => {
+              const row = Object.assign({}, r);
+              const wa = normalizeWA(row.phone_whatsapp);
+              row.phone_whatsapp = wa.digits || null;
+              if (row.manager_email) {
+                const mid = managerMap[(row.manager_email||'').toLowerCase()];
+                if (!mid) {
+                  importErrors.push('Linha '+(i+2)+': manager_email "'+row.manager_email+'" não encontrado — linha rejeitada.');
+                  return;
+                }
+                row.manager_id = mid;
+              }
+              delete row.manager_email;
+              if (typeof row.is_active === 'string') row.is_active = row.is_active.toLowerCase() !== 'false' && row.is_active !== '0';
+              normalized.push(row);
+            });
+            const { data, error } = await getSupabase().functions.invoke('csv-import', {
+              body: { entity:'people', workspace_id: currentWorkspaceId, rows: normalized }
+            });
+            document.getElementById('hcImportProgress').style.display = 'none';
+            document.getElementById('hcImportResult').style.display   = 'block';
+            if (error || !data) {
+              document.getElementById('hcImportResult').innerHTML = '<span style="color:#dc2626">Erro: Edge Function não respondeu. Verifique se foi publicada.</span>';
+              showToast('Erro ao importar', true);
+              return;
+            }
+            const { inserted=0, updated=0, rejected=0, errors=[] } = data;
+            const allErrors = importErrors.concat(errors);
+            document.getElementById('hcImportResult').innerHTML =
+              '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">' +
+              '<span style="color:#15803d;font-weight:600;">✓ ' + inserted + ' inseridos</span>' +
+              '<span style="font-weight:600;">' + updated + ' atualizados</span>' +
+              ((rejected||importErrors.length) ? '<span style="color:#dc2626;font-weight:600;">✗ '+(rejected+importErrors.length)+' rejeitados</span>' : '') +
+              '</div>' +
+              (allErrors.length ? '<div style="background:#fff7f7;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;font-size:12px;color:#dc2626;max-height:120px;overflow-y:auto;"><ul style="margin:0;padding-left:16px;">'+allErrors.slice(0,20).map(e=>'<li>'+e+'</li>').join('')+'</ul></div>' : '');
+            loadPeople();
+            if (!rejected && !importErrors.length) showToast('Importação concluída: '+inserted+' inseridos, '+updated+' atualizados');
+            else showToast('Importação com '+(rejected+importErrors.length)+' rejeitados', true);
+          } catch(err) {
+            document.getElementById('hcImportProgress').style.display = 'none';
+            document.getElementById('hcImportResult').style.display   = 'block';
+            document.getElementById('hcImportResult').innerHTML = '<span style="color:#dc2626">Erro: ' + String(err?.message||err) + '</span>';
+            showToast('Erro inesperado ao importar', true);
+          }
         });
 
         // Tabs
@@ -357,6 +590,45 @@ export function initHc(frame) {
 
         init();
       </script>
+
+      <!-- ── CSV Import Overlay ─────────────────────────────────── -->
+      <div id="hcImportOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;">
+        <div style="background:#fff;border-radius:12px;padding:24px;width:720px;max-width:100%;box-shadow:0 20px 40px rgba(0,0,0,.15);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h2 style="margin:0;font-size:17px;color:#071C46;font-weight:600;">Importar CSV — Pessoas (HC)</h2>
+            <button id="hcCloseImport" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:16px;color:#475569;">&#x2715;</button>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div style="flex:1;font-size:12px;color:#64748b;line-height:1.6;">Obrigatórios: <strong>name, role</strong> &nbsp;·&nbsp; Recomendados: email, phone_whatsapp, manager_email, is_active &nbsp;·&nbsp; Chave upsert: workspace_id + email</div>
+            <button id="hcDownloadTemplate" style="white-space:nowrap;background:#f0fdf4;color:#1A7A3A;border:1px solid #bbf7d0;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:500;">⬇ Baixar modelo CSV</button>
+          </div>
+          <div style="font-size:12px;color:#475569;margin-bottom:10px;padding:6px 10px;background:#f8fafc;border-radius:4px;border:1px solid #e2e8f0;">
+            <strong>Colunas detectadas:</strong> <span id="hcDetectedCols" style="font-family:monospace;color:#0f172a;">Nenhum arquivo carregado</span>
+          </div>
+          <label style="display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:10px;">
+            Selecionar arquivo CSV:
+            <input type="file" id="hcImportFile" accept=".csv,text/csv" style="display:block;margin-top:6px;font-size:13px;width:100%;box-sizing:border-box;">
+          </label>
+          <div id="hcPreviewSection" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:#374151;">Preview (primeiras 20 linhas)</div>
+            <div style="overflow-x:auto;max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;"><table id="hcPreviewTable" style="border-collapse:collapse;width:100%;min-width:400px;"></table></div>
+            <div id="hcPreviewSummary" style="margin:10px 0 6px;font-size:13px;"></div>
+            <div id="hcErrorList" style="display:none;background:#fff7f7;border:1px solid #fecaca;border-radius:6px;padding:8px 12px;margin-bottom:10px;max-height:120px;overflow-y:auto;">
+              <div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;">Erros de validação:</div>
+              <ul id="hcErrorListItems" style="font-size:12px;color:#dc2626;margin:0;padding-left:16px;line-height:1.6;"></ul>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button id="hcConfirmImport" style="flex:1;background:#1A7A3A;color:#fff;border:none;border-radius:6px;padding:10px;cursor:pointer;font-size:14px;font-weight:500;">Importar <span id="hcImportCount">0</span> linha(s)</button>
+              <button id="hcCancelImport" style="background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;border-radius:6px;padding:10px 16px;cursor:pointer;font-size:13px;">Cancelar</button>
+            </div>
+          </div>
+          <div id="hcImportProgress" style="display:none;text-align:center;padding:28px;color:#64748b;font-size:13px;">
+            <div>⏳ Importando…</div>
+            <div style="font-size:11px;margin-top:6px;">Aguarde, isso pode levar alguns segundos.</div>
+          </div>
+          <div id="hcImportResult" style="display:none;padding:10px 0;font-size:13px;"></div>
+        </div>
+      </div>
     </body>
     </html>
   `;

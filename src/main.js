@@ -28,6 +28,11 @@ import { createClient } from '@supabase/supabase-js';
 import { initHc } from './modules/hc.js';
 import { initPdvs } from './modules/pdvs.js';
 import { initProducts } from './modules/products.js';
+import { initMapa } from './modules/mapa.js';
+import { initEfetividade } from './modules/efetividade.js';
+import { initDataCrit } from './modules/datacrit.js';
+import { initFotos } from './modules/fotos.js';
+import { initPlanejamento } from './modules/planejamento.js';
 
 // ── Validate config eagerly (fail loudly if env is not set) ─────────
 {
@@ -2327,7 +2332,8 @@ ciaObsWrite(key, obj);
     datacrit: document.getElementById('frameDataCrit'),
     hc: document.getElementById('frameHc'),
     pdvs: document.getElementById('framePdvs'),
-    products: document.getElementById('frameProducts')
+    products: document.getElementById('frameProducts'),
+    planejamento: document.getElementById('framePlanejamento')
   };
 
   // ── hardening: postMessage origin + source validation ──────────────
@@ -2407,9 +2413,14 @@ ciaObsWrite(key, obj);
       return false;
     }
     try{
+      if (frameKey === 'sist') { initMapa(fr); return true; }
       if (frameKey === 'hc') { initHc(fr); return true; }
       if (frameKey === 'pdvs') { initPdvs(fr); return true; }
       if (frameKey === 'products') { initProducts(fr); return true; }
+      if (frameKey === 'efet') { initEfetividade(fr); return true; }
+      if (frameKey === 'datacrit') { initDataCrit(fr); return true; }
+      if (frameKey === 'fotos') { initFotos(fr); return true; }
+      if (frameKey === 'planejamento') { initPlanejamento(fr); return true; }
       const decoded = decodeB64(B64[frameKey]);
       fr.srcdoc = injectOverrides(decoded, frameKey);
       return true;
@@ -2638,7 +2649,8 @@ function ensureLoaded(page){
     hc: document.getElementById('navHc'),
     pdvs: document.getElementById('navPdvs'),
     products: document.getElementById('navProducts'),
-    admin: document.getElementById('navAdmin')
+    admin: document.getElementById('navAdmin'),
+    planejamento: document.getElementById('navPlanejamento')
   };
 
   const dataManagerScreen = document.getElementById('dataManagerScreen');
@@ -2890,7 +2902,7 @@ function ensureLoaded(page){
       }
     }catch(_e){}
 
-    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr', hc:'hc', pdvs:'pdvs', products:'products', admin:'admin' };
+    const navMap = { sist:'sist', fotos:'fotos', efet:'efet', pesq:'pesq', datacrit:'datacrit', datamgr:'datamgr', hc:'hc', pdvs:'pdvs', products:'products', admin:'admin', planejamento:'planejamento' };
     const btnKey = navMap[page];
     try{
       if(btnKey && navButtons && navButtons[btnKey] && navButtons[btnKey].classList){
@@ -2939,6 +2951,7 @@ function ensureLoaded(page){
   if(navButtons.pdvs) navButtons.pdvs.addEventListener('click', ()=>setActive('pdvs'));
   if(navButtons.products) navButtons.products.addEventListener('click', ()=>setActive('products'));
   if(navButtons.admin) navButtons.admin.addEventListener('click', ()=>setActive('admin'));
+  if(navButtons.planejamento) navButtons.planejamento.addEventListener('click', ()=>setActive('planejamento'));
   // Data Manager navigation buttons
   const btnOpenHc = document.getElementById('btnOpenHc');
   const btnOpenPdvs = document.getElementById('btnOpenPdvs');
@@ -4685,11 +4698,12 @@ const AUTH_KEY = "cia_auth_v1";
       show("navProducts", true);
       const isAdmin = ["master","global_admin"].includes(role);
       show("navAdmin", isAdmin);
+      show("navPlanejamento", isMasterOrAdmin || !!f["planejamento"]);
       show("btnExportReportFotos", !!f["fotos"]);
 
-      const canUpload = ["master","global_admin","org_admin","org_member"].includes(role);
+      // Legacy upload section hidden — data is now sourced from Supabase DB
       const filesSection = document.getElementById("sidebarFilesSection");
-      if(filesSection) filesSection.style.display = canUpload ? "" : "none";
+      if(filesSection) filesSection.style.display = "none";
     }
 
     function mountWorkspaceSelector(){
