@@ -57,7 +57,9 @@ export function initHc(frame) {
           </select>
           <input type="text" id="filterManager" placeholder="Manager ID...">
           <button id="btnSearch">Filtrar</button>
-          <button id="btnNew" style="margin-left: auto;">+ Nova Pessoa</button>
+          <input type="file" id="fileImportCsv" accept=".csv" style="display:none;">
+          <button id="btnImportCsv" class="btn-secondary" style="margin-left: auto; margin-right: 10px;">Importar CSV</button>
+          <button id="btnNew">+ Nova Pessoa</button>
         </div>
 
         <table>
@@ -215,10 +217,10 @@ export function initHc(frame) {
               <td>\${escapeHTML(p.name)}</td>
               <td>\${escapeHTML(p.role)}</td>
               <td>\${escapeHTML(p.email || '-')}</td>
-              <td>\${p.manager_id ? 'Sim' : '-'}</td>
-              <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
+              <td>\${escapeHTML(p.manager_id ? 'Sim' : '-')}</td>
+              <td>\${escapeHTML(p.is_active ? 'Ativo' : 'Inativo')}</td>
               <td>
-                <button class="btn-edit" onclick="editPerson('\${p.id}')">Editar</button>
+                <button class="btn-edit" onclick="editPerson('\${escapeHTML(p.id)}')">Editar</button>
               </td>
             </tr>\`;
           }).join('');
@@ -265,9 +267,9 @@ export function initHc(frame) {
             <div class="assignment-item">
               <div>
                 <strong>\${escapeHTML(a.pdvs?.name || a.pdv_id)}</strong><br>
-                \${escapeHTML(a.assignment_role)} \${a.is_primary ? '(Principal)' : ''}
+                \${escapeHTML(a.assignment_role)} \${escapeHTML(a.is_primary ? '(Principal)' : '')}
               </div>
-              <button class="btn-secondary" onclick="removeAssignment('\${a.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removeAssignment('\${escapeHTML(a.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -304,6 +306,41 @@ export function initHc(frame) {
           document.getElementById('tabAlocacoesTrigger').style.display = 'none';
           document.querySelector('[data-target="tabDados"]').click();
           openModal();
+        });
+
+        document.getElementById('btnImportCsv').addEventListener('click', () => {
+          document.getElementById('fileImportCsv').click();
+        });
+
+        document.getElementById('fileImportCsv').addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if(!file) return;
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const text = ev.target.result;
+            const lines = text.split('\\n');
+            const payloads = [];
+            for(let i=1; i<lines.length; i++){
+              const line = lines[i].trim();
+              if(!line) continue;
+              const cols = line.split(/[,;]/);
+              if(cols.length >= 2){
+                payloads.push({
+                  workspace_id: currentWorkspaceId,
+                  name: cols[0].trim(),
+                  role: cols[1].trim().toLowerCase() || 'promotor',
+                  email: cols[2] ? cols[2].trim() : null
+                });
+              }
+            }
+            if(payloads.length > 0){
+              const { error } = await getSupabase().from('people').insert(payloads);
+              if(error) alert('Erro ao importar CSV: ' + error.message);
+              else { alert('CSV Importado com sucesso!'); loadPeople(); }
+            }
+            document.getElementById('fileImportCsv').value = '';
+          };
+          reader.readAsText(file);
         });
 
         document.getElementById('formPerson').addEventListener('submit', async (e) => {

@@ -55,7 +55,9 @@ export function initPdvs(frame) {
           </select>
           <input type="text" id="filterResp" placeholder="Responsável (UUID Pessoa)">
           <button id="btnSearch">Filtrar</button>
-          <button id="btnNew" style="margin-left: auto;">+ Novo PDV</button>
+          <input type="file" id="fileImportCsv" accept=".csv" style="display:none;">
+          <button id="btnImportCsv" class="btn-secondary" style="margin-left: auto; margin-right: 10px;">Importar CSV</button>
+          <button id="btnNew">+ Novo PDV</button>
         </div>
 
         <table>
@@ -277,9 +279,9 @@ export function initPdvs(frame) {
               <td>\${escapeHTML(p.cnpj || '-')}</td>
               <td>\${escapeHTML(p.name)}</td>
               <td>\${escapeHTML(p.city || '-')} / \${escapeHTML(p.uf || '-')}</td>
-              <td>\${p.is_active ? 'Ativo' : 'Inativo'}</td>
+              <td>\${escapeHTML(p.is_active ? 'Ativo' : 'Inativo')}</td>
               <td>
-                <button class="btn-edit" onclick="editPdv('\${p.id}')">Editar</button>
+                <button class="btn-edit" onclick="editPdv('\${escapeHTML(p.id)}')">Editar</button>
               </td>
             </tr>\`;
           }).join('');
@@ -330,9 +332,9 @@ export function initPdvs(frame) {
             <div class="list-item">
               <div>
                 <strong>\${escapeHTML(a.people?.name || a.person_id)}</strong><br>
-                \${escapeHTML(a.assignment_role)} \${a.is_primary ? '(Principal)' : ''}
+                \${escapeHTML(a.assignment_role)} \${escapeHTML(a.is_primary ? '(Principal)' : '')}
               </div>
-              <button class="btn-secondary" onclick="removeAssignment('\${a.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removeAssignment('\${escapeHTML(a.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -374,9 +376,9 @@ export function initPdvs(frame) {
             <div class="list-item">
               <div>
                 <strong>\${escapeHTML(p.products?.name || p.product_id)}</strong> (\${escapeHTML(p.products?.sku_code || 'sem sku')})<br>
-                Listado: \${p.is_listed ? 'Sim' : 'Não'} | Prio: \${p.priority}
+                Listado: \${escapeHTML(p.is_listed ? 'Sim' : 'Não')} | Prio: \${escapeHTML(p.priority)}
               </div>
-              <button class="btn-secondary" onclick="removePdvProduct('\${p.id}')" style="padding:4px 8px;font-size:12px;">Remover</button>
+              <button class="btn-secondary" onclick="removePdvProduct('\${escapeHTML(p.id)}')" style="padding:4px 8px;font-size:12px;">Remover</button>
             </div>
           \`).join('');
         }
@@ -415,6 +417,43 @@ export function initPdvs(frame) {
           document.getElementById('tabProdutosTrigger').style.display = 'none';
           document.querySelector('[data-target="tabDados"]').click();
           openModal();
+        });
+
+        document.getElementById('btnImportCsv').addEventListener('click', () => {
+          document.getElementById('fileImportCsv').click();
+        });
+
+        document.getElementById('fileImportCsv').addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if(!file) return;
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const text = ev.target.result;
+            const lines = text.split('\\n');
+            const payloads = [];
+            for(let i=1; i<lines.length; i++){
+              const line = lines[i].trim();
+              if(!line) continue;
+              const cols = line.split(/[,;]/);
+              if(cols.length >= 2){
+                payloads.push({
+                  workspace_id: currentWorkspaceId,
+                  pdv_code: cols[0] ? cols[0].trim() : null,
+                  cnpj: cols[1] ? cols[1].trim() : null,
+                  name: cols[2] ? cols[2].trim() : (cols[0] ? cols[0].trim() : 'PDV'),
+                  city: cols[3] ? cols[3].trim() : null,
+                  uf: cols[4] ? cols[4].trim().toUpperCase() : null
+                });
+              }
+            }
+            if(payloads.length > 0){
+              const { error } = await getSupabase().from('pdvs').insert(payloads);
+              if(error) alert('Erro ao importar CSV: ' + error.message);
+              else { alert('CSV Importado com sucesso!'); loadPdvs(); }
+            }
+            document.getElementById('fileImportCsv').value = '';
+          };
+          reader.readAsText(file);
         });
 
         document.getElementById('formPdv').addEventListener('submit', async (e) => {
