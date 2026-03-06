@@ -61,6 +61,8 @@ O workflow `.github/workflows/deploy.yml` faz build e deploy automaticamente a c
 
 Após configurar os secrets, qualquer push em `main` dispara o workflow e publica em `app.usecia.com`.
 
+> **CI Guard**: o workflow falha imediatamente (antes do build) se qualquer um dos secrets estiver vazio, evitando publicar uma versão sem backend configurado.
+
 ---
 
 ## Estrutura do Projeto
