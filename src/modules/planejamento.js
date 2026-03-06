@@ -250,6 +250,18 @@ export function initPlanejamento(frame) {
       function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = 'Erro: ' + msg; b.style.display = ''; }
       function hideError() { document.getElementById('errorBox').style.display = 'none'; }
 
+      // Detecta erro de contrato ausente (tabela/view não existe no banco)
+      function contractCheck(err, tableName) {
+        if (!err) return null;
+        const msg = ((err.message || '') + (err.details || '') + (err.hint || '') + String(err)).toLowerCase();
+        const code = (err.code || '').toUpperCase();
+        if (code === '42P01' || code === 'PGRST200' || msg.includes('does not exist') ||
+            msg.includes('relation') || msg.includes('could not find')) {
+          return 'Contrato do banco ausente: ' + tableName;
+        }
+        return null;
+      }
+
       // ── Render plans list ──────────────────────────────────
       function renderPlans() {
         const cont = document.getElementById('plansContainer');
@@ -302,7 +314,10 @@ export function initPlanejamento(frame) {
             .select('*')
             .eq('workspace_id', wsId)
             .order('created_at', { ascending: false });
-          if (error) throw error;
+          if (error) {
+            const contractMsg = contractCheck(error, 'visit_plans');
+            throw contractMsg ? new Error(contractMsg) : error;
+          }
           plans = data || [];
           renderPlans();
         } catch (err) {

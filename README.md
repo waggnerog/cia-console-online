@@ -61,6 +61,8 @@ O workflow `.github/workflows/deploy.yml` faz build e deploy automaticamente a c
 
 Após configurar os secrets, qualquer push em `main` dispara o workflow e publica em `app.usecia.com`.
 
+> **CI Guard**: o workflow falha imediatamente (antes do build) se qualquer um dos secrets estiver vazio, evitando publicar uma versão sem backend configurado.
+
 ---
 
 ## Estrutura do Projeto
@@ -111,12 +113,41 @@ Após configurar o `.env.local` e rodar `npm run dev`, verifique:
 - [ ] Logout funciona e retorna ao overlay de login
 - [ ] Navegação entre telas (Sist / Fotos / Efet / Pesq / DataCrit / HC / PDVs / Produtos / Planejamento) exibe iframes corretamente
 - [ ] Telas **Efetividade**, **Data Crítica** e **Fotos** carregam dados **direto do Supabase** (sem upload de arquivo)
-- [ ] Tela **Planejamento** visível para master/admin; permite criar planos e itens via modal
+- [ ] Tela **Planejamento** visível para todos os usuários autenticados; permite criar planos e itens via modal
 - [ ] Botão **Importar CSV** aparece nas telas HC, PDVs e Produtos e abre modal de import
 - [ ] **Gestão de Dados** → Cloud Sync: `Atualizar Weeks` lista weeks do Supabase
 - [ ] **Seção "Arquivos" da sidebar** está oculta por padrão (uploads disponíveis via Gestão de Dados para admins)
 - [ ] Admin screen aparece apenas para `master` / `global_admin`
 - [ ] Sem erros de console relacionados a `file://`, `wrangler`, `D1`, `/api/`, `service_role`
+
+---
+
+## CIA_DB_ONLY — Modo DB-only (default: `true`)
+
+A constante `CIA_DB_ONLY = true` em `src/main.js` garante que:
+
+- A seção **Arquivos** (uploads legacy) é sempre oculta da sidebar.
+- Os módulos **Efetividade**, **Data Crítica**, **Fotos** e **Planejamento** são alimentados **exclusivamente** pelo Supabase.
+- O path legacy `decodeB64/srcdoc` é contornado para esses módulos.
+
+Para reabilitar uploads temporariamente (somente em dev), mude para `CIA_DB_ONLY = false` em `src/main.js`.
+
+### Tabelas/Views obrigatórias no Supabase
+
+| Tabela / View | Módulo | Fallback |
+|---|---|---|
+| `effectiveness_records` | Efetividade | — |
+| `data_critica_records` | Data Crítica | — |
+| `photos_records` | Fotos | — |
+| `visit_plans` | Planejamento | — |
+| `visit_plan_items` | Planejamento (itens) | — |
+| `pdvs` | Planejamento (dropdown) | — |
+| `people` | Planejamento (dropdown) | — |
+| `workspace_users` | Auth (todos os módulos) | — |
+
+Se uma tabela não existir, o módulo exibirá `Contrato do banco ausente: <nome_da_tabela>` sem quebrar o app.
+
+> Consulte [SUPABASE_BACKEND_SETUP.md](SUPABASE_BACKEND_SETUP.md) para o SQL completo de criação.
 
 ---
 
