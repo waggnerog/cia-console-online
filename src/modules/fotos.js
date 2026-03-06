@@ -313,7 +313,10 @@ export function initFotos(frame) {
             .order('uploaded_at', { ascending: false })
             .limit(2000);
 
-          if (error) throw error;
+          if (error) {
+            const contractMsg = contractCheck(error, 'photos_records');
+            throw contractMsg ? new Error(contractMsg) : error;
+          }
           allRows = data || [];
 
           if (!allRows.length) { setLoading(false); showEmpty(); return; }
@@ -360,6 +363,18 @@ export function initFotos(frame) {
         box.style.display = '';
       }
       function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+
+      // Detecta erro de contrato ausente (tabela/view não existe no banco)
+      function contractCheck(err, tableName) {
+        if (!err) return null;
+        const msg = ((err.message || '') + (err.details || '') + (err.hint || '') + String(err)).toLowerCase();
+        const code = (err.code || '').toUpperCase();
+        if (code === '42P01' || code === 'PGRST200' || msg.includes('does not exist') ||
+            msg.includes('relation') || msg.includes('could not find')) {
+          return 'Contrato do banco ausente: ' + tableName;
+        }
+        return null;
+      }
 
       function setViewMode(mode) {
         viewMode = mode;
