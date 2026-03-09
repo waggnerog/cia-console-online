@@ -316,6 +316,21 @@ export function initProducts(frame) {
           else renderTable();
         });
 
+        // Tabs
+        document.querySelectorAll('.tab').forEach(t => {
+          t.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            document.getElementById(t.getAttribute('data-target')).classList.add('active');
+          });
+        });
+
+        function openModal() { document.getElementById('modalProduct').classList.add('active'); }
+        function closeModal() { document.getElementById('modalProduct').classList.remove('active'); }
+        document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+        document.getElementById('btnCancel').addEventListener('click', closeModal);
+
         // ── CSV Import (overlay avançado) ─────────────────────────────────────
         let productCsvRows = [];
         function parseCsv(text) {
@@ -443,21 +458,6 @@ export function initProducts(frame) {
           }
         });
 
-        // Tabs
-        document.querySelectorAll('.tab').forEach(t => {
-          t.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-            t.classList.add('active');
-            document.getElementById(t.getAttribute('data-target')).classList.add('active');
-          });
-        });
-
-        function openModal() { document.getElementById('modalProduct').classList.add('active'); }
-        function closeModal() { document.getElementById('modalProduct').classList.remove('active'); }
-        document.getElementById('btnCloseModal').addEventListener('click', closeModal);
-        document.getElementById('btnCancel').addEventListener('click', closeModal);
-
         init();
       </script>
 
@@ -495,52 +495,6 @@ export function initProducts(frame) {
           <div id="prodImportResult" style="display:none;font-size:13px;padding:10px 0;"></div>
         </div>
       </div>
-    </body>
-    </html>
-  \`;
-  frame.srcdoc = html;
-}
-            is_active: document.getElementById('pActive').checked
-          };
-
-          let res;
-          if(id) {
-            res = await getSupabase().from('products').update(payload).eq('id', id);
-          } else {
-            res = await getSupabase().from('products').insert([payload]);
-          }
-
-          if(res.error) {
-            alert('Erro ao salvar: ' + res.error.message);
-          } else {
-            closeModal();
-            loadProducts();
-          }
-        });
-
-        document.getElementById('btnSearch').addEventListener('click', loadProducts);
-        document.getElementById('searchName').addEventListener('keyup', (e) => {
-           if(e.key === 'Enter') loadProducts();
-           else renderTable(); // live filter
-        });
-
-        // Tabs
-        document.querySelectorAll('.tab').forEach(t => {
-          t.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-            t.classList.add('active');
-            document.getElementById(t.getAttribute('data-target')).classList.add('active');
-          });
-        });
-
-        function openModal() { document.getElementById('modalProduct').classList.add('active'); }
-        function closeModal() { document.getElementById('modalProduct').classList.remove('active'); }
-        document.getElementById('btnCloseModal').addEventListener('click', closeModal);
-        document.getElementById('btnCancel').addEventListener('click', closeModal);
-
-        init();
-      </script>
     </body>
     </html>
   `;
