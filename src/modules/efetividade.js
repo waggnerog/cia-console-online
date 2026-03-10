@@ -132,27 +132,60 @@ export function initEfetividade(frame) {
       let wsId = null;
       let allRows = [];
 
+      function getBootstrapState() {
+        try {
+          return parent.window.CIA_BOOTSTRAP?.getWorkspaceResolution?.() || null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function getBootstrapWorkspaceMessage(state) {
+        if (!state) return null;
+        if (state.status === 'selection_required') return 'Selecione um workspace no menu lateral para continuar.';
+        if (state.status === 'no_workspace') return 'Nenhum workspace vinculado ao seu usuário.';
+        if (state.status === 'incomplete') return state.message || 'Backend incompleto ou dados de workspace ausentes.';
+        if (state.status === 'error') return state.message || 'Erro ao carregar workspace.';
+        return null;
+      }
+
       // ── Auth & workspace ──────────────────────────────────
       async function getWorkspaceId(sb) {
+        if (wsId) return wsId;
+        const boot = getBootstrapState();
+        const bootWsId = boot?.activeWorkspaceId || parent.window.CIA_CTX?.workspaceActive || null;
+        if (bootWsId) {
+          wsId = bootWsId;
+          return wsId;
+        }
+        if (boot?.status === 'loading') return null;
+        const bootMsg = getBootstrapWorkspaceMessage(boot);
+        if (bootMsg) throw new Error(bootMsg);
         const { data: { user } } = await sb.auth.getUser();
         if (!user) throw new Error('Sem sessão');
-        // Check for workspace from postMessage first
-        if (wsId) return wsId;
         const { data, error } = await sb.from('workspace_users')
-          .select('workspace_id').eq('user_id', user.id).limit(1);
-        if (error || !data || !data.length) throw new Error('Workspace não encontrado');
-        return data[0].workspace_id;
+          .select('workspace_id,is_active')
+          .eq('user_id', user.id)
+          .or('is_active.eq.true,is_active.is.null');
+        if (error) throw new Error('Erro ao consultar workspace_users.');
+        if (!data?.length) throw new Error('Nenhum workspace vinculado ao seu usuário.');
+        if (data.length > 1) throw new Error('Selecione um workspace no menu lateral para continuar.');
+        wsId = data[0].workspace_id;
+        return wsId;
       }
 
       // ── Listen for workspace changes ──────────────────────
       window.addEventListener('message', ev => {
         try {
-          if (ev.data?.type === 'CIA_POST_LOGIN' && ev.data.workspace_id)
-            wsId = ev.data.workspace_id;
+          if (ev.data?.type === 'CIA_POST_LOGIN') {
+            wsId = ev.data.workspace_id || null;
+            setTimeout(loadData, 0);
+          }
           if (ev.data?.type === 'CIA_ACTIVE_WORKSPACE' && ev.data.workspace_id) {
             wsId = ev.data.workspace_id;
             allRows = [];
             populateWeeks([]);
+            setTimeout(loadData, 0);
           }
         } catch (_) {}
       });
@@ -287,6 +320,10 @@ export function initEfetividade(frame) {
 
         try {
           wsId = await getWorkspaceId(sb);
+          if (!wsId) {
+            document.getElementById('loadingBox').textContent = 'Carregando workspace…';
+            return;
+          }
 
           let query = sb.from('effectiveness_records')
             .select('*')
@@ -336,7 +373,7 @@ export function initEfetividade(frame) {
         document.getElementById('loadingBox').innerHTML =
           '<div class="empty">' +
           '<div class="empty-icon">📊</div>' +
-          '<div class="empty-title">Nenhum dado de efetividade</div>' +
+          '<div class="empty-title">Nenhum dado operacional de Efetividade</div>' +
           '<div class="empty-hint">Use o painel de Admin → Importar para carregar registros de efetividade no banco de dados.<br>Formato: CSV com colunas date, pdv_name, promoter_name, visited, tasks_done, tasks_total, photos_count.</div>' +
           '</div>';
         document.getElementById('loadingBox').style.display = '';

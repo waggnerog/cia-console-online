@@ -663,6 +663,60 @@
     box-shadow: var(--shadow);
     backdrop-filter: blur(10px);
   }
+  .frame-wrap.bootstrap-blocked iframe.is-active{
+    filter: blur(2px);
+    opacity: .28;
+    pointer-events: none;
+  }
+  .bootstrap-state{
+    position:absolute;
+    inset:0;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    background:linear-gradient(180deg, rgba(252,252,255,.78), rgba(252,252,255,.92));
+    backdrop-filter: blur(8px);
+  }
+  .bootstrap-card{
+    width:min(640px, 100%);
+    padding:28px 30px;
+    border-radius:24px;
+    border:1px solid rgba(7,27,66,.12);
+    background:rgba(255,255,255,.96);
+    box-shadow:0 24px 60px rgba(7,27,66,.12);
+  }
+  .bootstrap-info{ border-left:6px solid rgba(7,27,66,.78); }
+  .bootstrap-warn{ border-left:6px solid rgba(245,158,11,.92); }
+  .bootstrap-danger{ border-left:6px solid rgba(239,68,68,.92); }
+  .bootstrap-eyebrow{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:rgba(7,27,66,.58);
+    margin-bottom:10px;
+  }
+  .bootstrap-title{
+    font-size:26px;
+    line-height:1.1;
+    color:rgba(9,17,29,.94);
+    margin:0 0 10px;
+  }
+  .bootstrap-message,
+  .bootstrap-detail,
+  .bootstrap-hint{
+    font-size:14px;
+    line-height:1.55;
+    color:rgba(15,23,42,.78);
+    margin:0;
+  }
+  .bootstrap-detail,
+  .bootstrap-hint{
+    margin-top:8px;
+    color:rgba(15,23,42,.64);
+  }
 
   .pill-input{
     border: 1px solid rgba(255,255,255,.16);

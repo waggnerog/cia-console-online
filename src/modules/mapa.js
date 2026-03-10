@@ -363,6 +363,71 @@ export function initMapa(frame) {
     let currentPage = 1;
     const PAGE_SIZE = 30;
 
+    function getBootstrapState() {
+      try {
+        return parent.window.CIA_BOOTSTRAP?.getWorkspaceResolution?.() || null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function renderWorkspaceMessage(msg) {
+      document.getElementById('mapaTableBody').innerHTML =
+        '<tr><td colspan="8"><div class="empty-state">' + msg + '</div></td></tr>';
+    }
+
+    async function resolveWorkspaceId() {
+      if (wsId) return wsId;
+      const boot = getBootstrapState();
+      const bootWsId = boot?.activeWorkspaceId || parent.window.CIA_CTX?.workspaceActive || null;
+      if (bootWsId) {
+        wsId = bootWsId;
+        return wsId;
+      }
+      if (boot?.status === 'loading') {
+        renderWorkspaceMessage('Carregando workspace...');
+        return null;
+      }
+      if (boot?.status === 'selection_required') {
+        renderWorkspaceMessage('Selecione um workspace no menu lateral para continuar.');
+        return null;
+      }
+      if (boot?.status === 'no_workspace') {
+        renderWorkspaceMessage('Nenhum workspace vinculado ao seu usuário.');
+        return null;
+      }
+      if (boot?.status === 'incomplete' || boot?.status === 'error') {
+        renderWorkspaceMessage(boot.message || 'Erro ao carregar workspace.');
+        return null;
+      }
+
+      const sb = getSupabase();
+      if (!sb) return null;
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) {
+        renderWorkspaceMessage('Sem sessão.');
+        return null;
+      }
+      const { data: wusers, error } = await sb.from('workspace_users')
+        .select('workspace_id,is_active')
+        .eq('user_id', user.id)
+        .or('is_active.eq.true,is_active.is.null');
+      if (error) {
+        renderWorkspaceMessage('Erro ao consultar workspace_users.');
+        return null;
+      }
+      if (!wusers || !wusers.length) {
+        renderWorkspaceMessage('Nenhum workspace vinculado ao seu usuário.');
+        return null;
+      }
+      if (wusers.length > 1) {
+        renderWorkspaceMessage('Selecione um workspace no menu lateral para continuar.');
+        return null;
+      }
+      wsId = wusers[0].workspace_id;
+      return wsId;
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // Init
     // ──────────────────────────────────────────────────────────────────
@@ -370,21 +435,16 @@ export function initMapa(frame) {
       try {
         const sb = getSupabase();
         if (!sb) return;
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        const { data: wusers } = await sb.from('workspace_users')
-          .select('workspace_id').eq('user_id', user.id).limit(1);
-        if (wusers && wusers.length) {
-          wsId = wusers[0].workspace_id;
-          await loadData();
-        }
+        const resolvedWsId = await resolveWorkspaceId();
+        if (!resolvedWsId) return;
+        await loadData();
       } catch (e) { console.error('[Mapa] init', e); }
     }
 
     window.addEventListener('message', ev => {
       if (!ev || ev.source !== window.parent) return;
       if (ev.data?.type === 'CIA_POST_LOGIN') {
-        if (ev.data.workspace_id) wsId = ev.data.workspace_id;
+        wsId = ev.data.workspace_id || null;
         init();
       }
       if (ev.data?.type === 'CIA_ACTIVE_WORKSPACE' && ev.data.workspace_id) {
@@ -398,7 +458,10 @@ export function initMapa(frame) {
     // ──────────────────────────────────────────────────────────────────
     async function loadData() {
       const sb = getSupabase();
-      if (!sb || !wsId) return;
+      if (!sb) return;
+
+      const resolvedWsId = await resolveWorkspaceId();
+      if (!resolvedWsId) return;
 
       setLoading(true);
       try {

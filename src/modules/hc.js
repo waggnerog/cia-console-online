@@ -169,6 +169,72 @@ export function initHc(frame) {
         let currentPersonId = null;
         let csvRows = [];
 
+        function getBootstrapState() {
+          try {
+            return parent.window.CIA_BOOTSTRAP?.getWorkspaceResolution?.() || null;
+          } catch (_) {
+            return null;
+          }
+        }
+
+        function renderWorkspaceMessage(msg) {
+          const tbody = document.getElementById('peopleTableBody');
+          if (!tbody) return;
+          tbody.innerHTML = '<tr><td colspan="6">' + msg + '</td></tr>';
+        }
+
+        async function resolveWorkspaceContext() {
+          if (currentWorkspaceId) return { workspaceId: currentWorkspaceId };
+          const boot = getBootstrapState();
+          const bootWsId = boot?.activeWorkspaceId || parent.window.CIA_CTX?.workspaceActive || null;
+          if (bootWsId) {
+            currentWorkspaceId = bootWsId;
+            return { workspaceId: currentWorkspaceId };
+          }
+          if (boot?.status === 'loading') {
+            renderWorkspaceMessage('Carregando workspace...');
+            return null;
+          }
+          if (boot?.status === 'selection_required') {
+            renderWorkspaceMessage('Selecione um workspace no menu lateral para continuar.');
+            return null;
+          }
+          if (boot?.status === 'no_workspace') {
+            renderWorkspaceMessage('Nenhum workspace vinculado ao seu usuário.');
+            return null;
+          }
+          if (boot?.status === 'incomplete' || boot?.status === 'error') {
+            renderWorkspaceMessage(boot.message || 'Erro ao carregar workspace.');
+            return null;
+          }
+
+          const sb = getSupabase();
+          if (!sb) return null;
+          const { data: { user } } = await sb.auth.getUser();
+          if (!user) {
+            renderWorkspaceMessage('Sem sessão.');
+            return null;
+          }
+          const { data: wusers, error } = await sb.from('workspace_users')
+            .select('workspace_id,is_active')
+            .eq('user_id', user.id)
+            .or('is_active.eq.true,is_active.is.null');
+          if (error) {
+            renderWorkspaceMessage('Erro ao consultar workspace_users.');
+            return null;
+          }
+          if (!wusers || !wusers.length) {
+            renderWorkspaceMessage('Nenhum workspace vinculado ao seu usuário.');
+            return null;
+          }
+          if (wusers.length > 1) {
+            renderWorkspaceMessage('Selecione um workspace no menu lateral para continuar.');
+            return null;
+          }
+          currentWorkspaceId = wusers[0].workspace_id;
+          return { workspaceId: currentWorkspaceId };
+        }
+
         // ── WhatsApp normalizer ─────────────────────────────────────
         function normalizeWA(raw) {
           if (!raw) return { digits: '', display: '' };
@@ -184,13 +250,9 @@ export function initHc(frame) {
 
         async function init() {
           try {
-            const { data: { user } } = await getSupabase().auth.getUser();
-            if(!user) return;
-            const { data: wusers } = await getSupabase().from('workspace_users').select('workspace_id,role').eq('user_id', user.id).limit(1);
-            if(wusers && wusers.length > 0) {
-              currentWorkspaceId = wusers[0].workspace_id;
-              await loadPeople();
-            }
+            const resolved = await resolveWorkspaceContext();
+            if(!resolved || !resolved.workspaceId) return;
+            await loadPeople();
           } catch(e) { console.error(e); }
         }
 
@@ -198,8 +260,7 @@ export function initHc(frame) {
           // hardening: only accept messages from the parent host
           if(!ev || ev.source !== window.parent) return;
           if(ev && ev.data && ev.data.type === "CIA_POST_LOGIN") {
-            // re-run init after login; discovers workspace via Supabase auth (handles wsId=null case)
-            if(ev.data.workspace_id) currentWorkspaceId = ev.data.workspace_id;
+            currentWorkspaceId = ev.data.workspace_id || null;
             init();
           }
           if(ev && ev.data && ev.data.type === "CIA_ACTIVE_WORKSPACE" && ev.data.workspace_id) {
@@ -209,6 +270,10 @@ export function initHc(frame) {
         });
 
         async function loadPeople() {
+          if (!currentWorkspaceId) {
+            const resolved = await resolveWorkspaceContext();
+            if (!resolved || !resolved.workspaceId) return;
+          }
           const role   = document.getElementById('filterRole').value;
           const status = document.getElementById('filterStatus').value;
 

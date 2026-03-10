@@ -221,10 +221,29 @@ export function initPlanejamento(frame) {
       const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
       const FREQ_LABELS = { weekly: 'Semanal', biweekly: 'Quinzenal', monthly: 'Mensal' };
 
+      function getBootstrapState() {
+        try {
+          return parent.window.CIA_BOOTSTRAP?.getWorkspaceResolution?.() || null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function getBootstrapWorkspaceMessage(state) {
+        if (!state) return null;
+        if (state.status === 'selection_required') return 'Selecione um workspace no menu lateral para continuar.';
+        if (state.status === 'no_workspace') return 'Nenhum workspace vinculado ao seu usuário.';
+        if (state.status === 'incomplete') return state.message || 'Backend incompleto ou dados de workspace ausentes.';
+        if (state.status === 'error') return state.message || 'Erro ao carregar workspace.';
+        return null;
+      }
+
       window.addEventListener('message', ev => {
         try {
-          if (ev.data?.type === 'CIA_POST_LOGIN' && ev.data.workspace_id)
-            wsId = ev.data.workspace_id;
+          if (ev.data?.type === 'CIA_POST_LOGIN') {
+            wsId = ev.data.workspace_id || null;
+            setTimeout(init, 0);
+          }
           if (ev.data?.type === 'CIA_ACTIVE_WORKSPACE' && ev.data.workspace_id) {
             wsId = ev.data.workspace_id;
             init();
@@ -234,12 +253,26 @@ export function initPlanejamento(frame) {
 
       async function getWorkspaceId(sb) {
         if (wsId) return wsId;
+        const boot = getBootstrapState();
+        const bootWsId = boot?.activeWorkspaceId || parent.window.CIA_CTX?.workspaceActive || null;
+        if (bootWsId) {
+          wsId = bootWsId;
+          return wsId;
+        }
+        if (boot?.status === 'loading') return null;
+        const bootMsg = getBootstrapWorkspaceMessage(boot);
+        if (bootMsg) throw new Error(bootMsg);
         const { data: { user } } = await sb.auth.getUser();
         if (!user) throw new Error('Sem sessão');
         const { data, error } = await sb.from('workspace_users')
-          .select('workspace_id').eq('user_id', user.id).limit(1);
-        if (error || !data?.length) throw new Error('Workspace não encontrado');
-        return data[0].workspace_id;
+          .select('workspace_id,is_active')
+          .eq('user_id', user.id)
+          .or('is_active.eq.true,is_active.is.null');
+        if (error) throw new Error('Erro ao consultar workspace_users.');
+        if (!data?.length) throw new Error('Nenhum workspace vinculado ao seu usuário.');
+        if (data.length > 1) throw new Error('Selecione um workspace no menu lateral para continuar.');
+        wsId = data[0].workspace_id;
+        return wsId;
       }
 
       function escHtml(s) {
@@ -267,7 +300,7 @@ export function initPlanejamento(frame) {
         const cont = document.getElementById('plansContainer');
         document.getElementById('loadingPlans').style.display = 'none';
         if (!plans.length) {
-          cont.innerHTML = '<div class="empty">Nenhum plano criado ainda.<br><small>Clique em "+ Novo Plano" para começar.</small></div>';
+          cont.innerHTML = '<div class="empty">Nenhum dado operacional em Planejamento.<br><small>Clique em "+ Novo Plano" para começar.</small></div>';
           return;
         }
         const statusLabel = { draft:'Rascunho', active:'Ativo', closed:'Encerrado' };
@@ -310,6 +343,10 @@ export function initPlanejamento(frame) {
         document.getElementById('plansContainer').innerHTML = '';
         try {
           wsId = await getWorkspaceId(sb);
+          if (!wsId) {
+            document.getElementById('loadingPlans').textContent = 'Carregando workspace…';
+            return;
+          }
           const { data, error } = await sb.from('visit_plans')
             .select('*')
             .eq('workspace_id', wsId)

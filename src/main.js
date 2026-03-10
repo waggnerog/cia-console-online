@@ -4319,6 +4319,16 @@ const AUTH_KEY = "cia_auth_v1";
 
     // Contexto pÃ³s-login (profile/org/workspaces/features)
     let ctx = { profile:null, org:null, workspaces:[], features:{ catalog:[], org:{}, user:{}, effective:{} } };
+    let bootstrapState = {
+      status: "idle",
+      code: "idle",
+      title: "",
+      message: "",
+      detail: "",
+      workspaceCount: 0,
+      activeWorkspaceId: null,
+      workspaces: []
+    };
 
     function isConfigured(){
       return !!(SUPABASE_URL && SUPABASE_ANON_KEY && typeof createClient === "function");
@@ -4350,6 +4360,121 @@ const AUTH_KEY = "cia_auth_v1";
     }
 
     function clearMe(){ meCache = null; }
+
+    function _safeErrorMessage(err, fallback){
+      if(!err) return fallback || "Erro inesperado.";
+      if(typeof err === "string") return err;
+      return err.message || err.details || err.hint || String(err) || fallback || "Erro inesperado.";
+    }
+
+    function _cloneWorkspaces(workspaces){
+      return (workspaces || []).map(w => ({ ...w }));
+    }
+
+    function getBootstrapSnapshot(){
+      return {
+        ...bootstrapState,
+        activeWorkspaceId: workspaceActive || null,
+        workspaceCount: (ctx.workspaces || []).length,
+        workspaces: _cloneWorkspaces(ctx.workspaces || bootstrapState.workspaces || [])
+      };
+    }
+
+    function renderBootstrapState(){
+      const panel = document.getElementById("bootstrapState");
+      const frameWrap = document.querySelector(".frame-wrap");
+      if(!panel || !frameWrap) return;
+
+      const state = getBootstrapSnapshot();
+      const blocking = ["loading", "selection_required", "no_workspace", "incomplete", "error"].includes(state.status);
+      panel.style.display = blocking ? "flex" : "none";
+      frameWrap.classList.toggle("bootstrap-blocked", blocking);
+
+      if(!blocking){
+        panel.innerHTML = "";
+        return;
+      }
+
+      const tone = state.status === "error"
+        ? "danger"
+        : (state.status === "selection_required" || state.status === "incomplete" || state.status === "no_workspace")
+          ? "warn"
+          : "info";
+
+      let hint = "";
+      if(state.status === "selection_required"){
+        hint = "Selecione um workspace no menu lateral para continuar.";
+      }else if(state.status === "no_workspace"){
+        hint = "Verifique os vínculos em workspace_users para este usuário.";
+      }else if(state.status === "incomplete"){
+        hint = "O backend respondeu, mas faltam dados obrigatórios para concluir o bootstrap.";
+      }else if(state.status === "loading"){
+        hint = "Validando sessão, memberships e workspace ativo.";
+      }
+
+      panel.innerHTML = [
+        '<div class="bootstrap-card bootstrap-' + tone + '">',
+          '<div class="bootstrap-eyebrow">Bootstrap</div>',
+          '<h2 class="bootstrap-title">' + (state.title || 'Carregando aplicação') + '</h2>',
+          '<p class="bootstrap-message">' + (state.message || hint || 'Aguarde.') + '</p>',
+          state.detail ? '<p class="bootstrap-detail">' + state.detail + '</p>' : '',
+          hint && !state.message ? '<p class="bootstrap-hint">' + hint + '</p>' : '',
+        '</div>'
+      ].join("");
+    }
+
+    function publishBootstrapState(next){
+      bootstrapState = {
+        ...bootstrapState,
+        ...(next || {}),
+        activeWorkspaceId: Object.prototype.hasOwnProperty.call(next || {}, "activeWorkspaceId")
+          ? (next.activeWorkspaceId || null)
+          : (workspaceActive || null),
+        workspaceCount: Object.prototype.hasOwnProperty.call(next || {}, "workspaceCount")
+          ? next.workspaceCount
+          : (ctx.workspaces || []).length,
+        workspaces: Object.prototype.hasOwnProperty.call(next || {}, "workspaces")
+          ? _cloneWorkspaces(next.workspaces || [])
+          : _cloneWorkspaces(ctx.workspaces || [])
+      };
+      const snapshot = getBootstrapSnapshot();
+      window.CIA_BOOTSTRAP_STATE = snapshot;
+      window.CIA_BOOTSTRAP = window.CIA_BOOTSTRAP || {};
+      window.CIA_BOOTSTRAP.getState = getBootstrapSnapshot;
+      window.CIA_BOOTSTRAP.getWorkspaceResolution = getBootstrapSnapshot;
+      window.CIA_BOOTSTRAP.reload = afterLogin;
+      renderBootstrapState();
+    }
+
+    function resolveActiveWorkspace(workspaces){
+      const list = workspaces || [];
+      const stored = localStorage.getItem("CIA_ACTIVE_WORKSPACE") || "";
+      const storedMatch = list.find(w => w.id === stored);
+      if(storedMatch){
+        return { status:"ready", code:"stored_workspace", workspaceId: storedMatch.id, message:"Workspace restaurado do storage." };
+      }
+      if(list.length === 1){
+        return { status:"ready", code:"single_workspace", workspaceId: list[0].id, message:"Workspace único selecionado automaticamente." };
+      }
+      if(list.length > 1){
+        return { status:"selection_required", code:"multiple_workspaces", workspaceId:null, message:"Mais de um workspace disponível para este usuário." };
+      }
+      return { status:"no_workspace", code:"no_workspace", workspaceId:null, message:"Nenhum workspace disponível para este usuário." };
+    }
+
+    function broadcastWorkspaceState(opts={}){
+      const includePostLogin = !!opts.includePostLogin;
+      const wsId = opts.workspaceId || workspaceActive || null;
+      try{
+        document.querySelectorAll("iframe").forEach(fr => {
+          try{
+            if(!fr.contentWindow) return;
+            if(includePostLogin) fr.contentWindow.postMessage({ type:"CIA_POST_LOGIN", workspace_id: wsId }, "*");
+            if(wsId) fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: wsId }, "*");
+          }catch(_e){}
+        });
+      }catch(_e){}
+    }
 
     // Local read helper for observations (ciaObsRead is IIFE-scoped; define locally for CIA_CLOUD)
     function _ciaLocalRead(key){
@@ -4441,7 +4566,7 @@ const AUTH_KEY = "cia_auth_v1";
           .select("role")
           .eq("user_id", userId)
           .eq("org_id", orgId)
-          .eq("is_active", true)
+          .or("is_active.eq.true,is_active.is.null")
           .single();
         if(orgUser?.role === "owner" || orgUser?.role === "admin") return "org_admin";
       }
@@ -4451,7 +4576,7 @@ const AUTH_KEY = "cia_auth_v1";
           .select("role")
           .eq("user_id", userId)
           .eq("workspace_id", workspaceId)
-          .eq("is_active", true)
+          .or("is_active.eq.true,is_active.is.null")
           .single();
         return wsUser?.role || "viewer";
       }
@@ -4462,9 +4587,19 @@ const AUTH_KEY = "cia_auth_v1";
     async function loadContext(){
       const c = client();
       const user = await me();
-      if(!c || !user) return null;
+      if(!c || !user){
+        throw new Error("Sessão Supabase não encontrada no bootstrap.");
+      }
 
-      console.log("[CIA][CTX] loadContext para user:", user.id, user.email);
+      publishBootstrapState({
+        status: "loading",
+        code: "bootstrap_loading",
+        title: "Carregando workspace",
+        message: "Validando sessão e memberships do usuário.",
+        detail: ""
+      });
+
+      console.log("[CIA][BOOT] sessão carregada:", user.id, user.email || "sem-email");
 
       // 1. Profile (novo schema: id, email, full_name, is_master, is_platform_admin)
       let pr = await c.from("profiles")
@@ -4506,38 +4641,18 @@ const AUTH_KEY = "cia_auth_v1";
       const ou = await c.from("org_users")
         .select("org_id,role,is_active")
         .eq("user_id", user.id)
-        .eq("is_active", true)
+        .or("is_active.eq.true,is_active.is.null")
         .maybeSingle();
+
+      if(ou.error){
+        throw new Error("Falha ao consultar org_users: " + _safeErrorMessage(ou.error));
+      }
 
       let orgId = (ou.data && ou.data.org_id) ? ou.data.org_id : null;
       let orgRole = (ou.data && ou.data.role) ? ou.data.role : null;
 
-      // Auto-bootstrap: se sem org, buscar a primeira org disponÃ­vel e vincular
       if(!orgId){
-        console.warn("[CIA][CTX] Sem org membership. Buscando org existente...");
-        try{
-          const firstOrg = await c.from("organizations").select("id").limit(1).maybeSingle();
-          if(firstOrg.data && firstOrg.data.id){
-            orgId = firstOrg.data.id;
-            orgRole = "owner";
-            console.log("[CIA][CTX] Vinculando user Ã  org:", orgId);
-            await c.from("org_users").upsert({
-              org_id: orgId, user_id: user.id, role: "owner", is_active: true
-            }, { onConflict: "org_id,user_id" });
-          }else{
-            console.warn("[CIA][CTX] Nenhuma org encontrada. Criando org padrÃ£o...");
-            const newOrg = await c.from("organizations").insert({
-              name: "CIA Default", slug: "cia-default", category: "trade", plan: "pro"
-            }).select("id").single();
-            if(newOrg.data && newOrg.data.id){
-              orgId = newOrg.data.id;
-              orgRole = "owner";
-              await c.from("org_users").upsert({
-                org_id: orgId, user_id: user.id, role: "owner", is_active: true
-              }, { onConflict: "org_id,user_id" });
-            }
-          }
-        }catch(_oe){ console.warn("[CIA][CTX] Auto-bootstrap org falhou:", _oe); }
+        console.warn("[CIA][BOOT] Nenhum vínculo visível em org_users para o usuário.");
       }
       ctx.profile.org_id = orgId;
 
@@ -4548,11 +4663,15 @@ const AUTH_KEY = "cia_auth_v1";
           .eq("id", orgId)
           .maybeSingle();
 
+        if(og.error){
+          throw new Error("Falha ao consultar organizations: " + _safeErrorMessage(og.error));
+        }
+
         if(!og.error && og.data){
           ctx.org = og.data;
           ctx.org.type = ctx.org.category;
         }else{
-          console.warn("[CIA][CTX] Org nÃ£o encontrada para id:", orgId);
+          console.warn("[CIA][BOOT] Org não encontrada para id:", orgId);
           ctx.org = null;
         }
       }else{
@@ -4563,40 +4682,20 @@ const AUTH_KEY = "cia_auth_v1";
       const ws = await c.from("workspace_users")
         .select("workspace_id,role,is_active,workspaces(id,name,slug,org_id,type,client_name,client_document,trade_owner_user_id,created_at)")
         .eq("user_id", user.id)
-        .eq("is_active", true);
+        .or("is_active.eq.true,is_active.is.null");
 
-      ctx.workspaces = (ws.data || [])
+      if(ws.error){
+        console.error("[CIA][BOOT] erro de query no boot (workspace_users):", ws.error);
+        throw new Error("Falha ao consultar workspace_users: " + _safeErrorMessage(ws.error));
+      }
+
+      const workspaceMemberships = ws.data || [];
+
+      ctx.workspaces = workspaceMemberships
         .filter(w => w.workspaces)
         .map(w => ({ ...w.workspaces, userRole: w.role }));
 
-      // Auto-bootstrap: se sem workspace, buscar existente ou criar
-      if(ctx.workspaces.length === 0){
-        console.warn("[CIA][CTX] Sem workspaces. Buscando workspace existente...");
-        try{
-          const firstWs = await c.from("workspaces").select("id,name,slug,org_id,type,client_name,client_document,trade_owner_user_id,created_at").limit(1).maybeSingle();
-          if(firstWs.data && firstWs.data.id){
-            console.log("[CIA][CTX] Vinculando user ao workspace:", firstWs.data.id);
-            await c.from("workspace_users").upsert({
-              workspace_id: firstWs.data.id, user_id: user.id, role: "admin", is_active: true
-            }, { onConflict: "workspace_id,user_id" });
-            ctx.workspaces = [{ ...firstWs.data, userRole: "admin" }];
-          }else if(orgId){
-            console.log("[CIA][CTX] Nenhum workspace. Criando workspace padrÃ£o...");
-            const slug = (ctx.org && ctx.org.slug) ? ctx.org.slug : "default";
-            const newWs = await c.from("workspaces").insert({
-              name: "OperaÃ§Ã£o Principal", slug: slug, org_id: orgId, type: "trade"
-            }).select("id,name,slug,org_id,type,client_name,client_document,trade_owner_user_id,created_at").single();
-            if(newWs.data && newWs.data.id){
-              await c.from("workspace_users").upsert({
-                workspace_id: newWs.data.id, user_id: user.id, role: "admin", is_active: true
-              }, { onConflict: "workspace_id,user_id" });
-              ctx.workspaces = [{ ...newWs.data, userRole: "admin" }];
-            }
-          }
-        }catch(_we){ console.warn("[CIA][CTX] Auto-bootstrap workspace falhou:", _we); }
-      }
-
-      console.log("[CIA][CTX] Workspaces:", ctx.workspaces.length, ctx.workspaces.map(w=>w.slug||w.id));
+      console.log("[CIA][BOOT] workspaces encontrados:", ctx.workspaces.length, ctx.workspaces.map(w=>w.slug||w.id));
 
       // 5. Effective role (hierarquia: master > global_admin > org_admin > workspace role)
       if(ctx.profile.is_master){
@@ -4674,17 +4773,59 @@ const AUTH_KEY = "cia_auth_v1";
       ctx.features.effective = effective;
 
       // 10. Workspace ativo
-      const stored = localStorage.getItem("CIA_ACTIVE_WORKSPACE") || "";
-      const exists = ctx.workspaces.find(w => w.id === stored);
-      if(exists) workspaceActive = exists.id;
-      else workspaceActive = (ctx.workspaces[0] && ctx.workspaces[0].id) ? ctx.workspaces[0].id : null;
+      const hasDanglingMembership = workspaceMemberships.length > 0 && ctx.workspaces.length === 0;
+      const resolution = resolveActiveWorkspace(ctx.workspaces);
+      workspaceActive = resolution.workspaceId || null;
+      try{ localStorage.setItem("CIA_ACTIVE_WORKSPACE", workspaceActive || ""); }catch(_e){}
 
       // 10b. Week ativa (restaurar do localStorage)
       const storedWeek = localStorage.getItem("CIA_ACTIVE_WEEK") || "";
       if(storedWeek) weekActive = storedWeek;
 
-      console.log("[CIA][CTX] workspaceActive:", workspaceActive, "| weekActive:", weekActive);
+      console.log("[CIA][BOOT] workspace ativo definido:", workspaceActive || "(pendente)", "| weekActive:", weekActive);
       window.CIA_CTX = { ...ctx, weekActive, workspaceActive };
+
+      if(hasDanglingMembership){
+        publishBootstrapState({
+          status: "incomplete",
+          code: "workspace_relation_missing",
+          title: "Backend incompleto / dados ausentes",
+          message: "Há vínculos em workspace_users, mas os dados do workspace não puderam ser carregados.",
+          detail: "Verifique relacionamento com workspaces e integridade dos registros.",
+          activeWorkspaceId: null,
+          workspaces: ctx.workspaces
+        });
+      }else if(resolution.status === "ready"){
+        publishBootstrapState({
+          status: "ready",
+          code: resolution.code,
+          title: "",
+          message: "",
+          detail: "",
+          activeWorkspaceId: workspaceActive,
+          workspaces: ctx.workspaces
+        });
+      }else if(resolution.status === "selection_required"){
+        publishBootstrapState({
+          status: "selection_required",
+          code: resolution.code,
+          title: "Selecione um workspace",
+          message: "Seu usuário possui mais de um workspace disponível.",
+          detail: "Escolha um workspace no seletor lateral para carregar os dados.",
+          activeWorkspaceId: null,
+          workspaces: ctx.workspaces
+        });
+      }else{
+        publishBootstrapState({
+          status: "no_workspace",
+          code: resolution.code,
+          title: "Nenhum workspace disponível",
+          message: "Não foi encontrado workspace acessível para o usuário autenticado.",
+          detail: "Confirme os registros em workspace_users e workspaces.",
+          activeWorkspaceId: null,
+          workspaces: ctx.workspaces
+        });
+      }
 
       applyAccessControlUI();
       try{ mountWorkspaceSelector(); }catch(_e){}
@@ -4742,6 +4883,11 @@ const AUTH_KEY = "cia_auth_v1";
       const sel = document.createElement("select");
       sel.className = "pill-input";
       sel.style.width = "100%";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Selecione um workspace";
+      if(!workspaceActive) placeholder.selected = true;
+      sel.appendChild(placeholder);
       ctx.workspaces.forEach(w=>{
         const opt = document.createElement("option");
         opt.value = w.id;
@@ -4753,11 +4899,31 @@ const AUTH_KEY = "cia_auth_v1";
         workspaceActive = sel.value || null;
         localStorage.setItem("CIA_ACTIVE_WORKSPACE", workspaceActive || "");
         window.CIA_CTX = { ...window.CIA_CTX, workspaceActive };
-        try{
-          document.querySelectorAll("iframe").forEach(fr=>{
-            try{ fr.contentWindow && fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: workspaceActive }, "*"); }catch(_e){}
+        if(workspaceActive){
+          console.log("[CIA][BOOT] workspace ativo definido:", workspaceActive);
+          publishBootstrapState({
+            status: "ready",
+            code: "workspace_selected",
+            title: "",
+            message: "",
+            detail: "",
+            activeWorkspaceId: workspaceActive,
+            workspaces: ctx.workspaces
           });
-        }catch(_e){}
+          broadcastWorkspaceState({ workspaceId: workspaceActive });
+        }else{
+          console.warn("[CIA][BOOT] múltiplos workspaces, aguardando seleção do usuário.");
+          publishBootstrapState({
+            status: "selection_required",
+            code: "multiple_workspaces",
+            title: "Selecione um workspace",
+            message: "Escolha um workspace no seletor lateral para continuar.",
+            detail: "Sem um workspace ativo, os módulos operacionais não serão carregados.",
+            activeWorkspaceId: null,
+            workspaces: ctx.workspaces
+          });
+          broadcastWorkspaceState({ workspaceId: null });
+        }
       });
       holder.appendChild(sel);
     }
@@ -4894,33 +5060,31 @@ const AUTH_KEY = "cia_auth_v1";
     });
 
     async function afterLogin(){
-      await loadContext();
-      // Força a tela inicial após login (evita tela branca)
-      if(typeof setScreen === 'function') {
-        setScreen('dash');
-      } else if(typeof window.setScreen === 'function') {
-        window.setScreen('dash');
-      } else {
-        console.error("CRITICAL: setScreen not defined");
-      }
-      // fix: broadcast CIA_POST_LOGIN to ALL iframes unconditionally after login
-      // (root cause: modules captured CIA_SUPABASE=null at parse time; after login
-      //  they must re-run init() to discover the workspace and load data)
-      // CIA_ACTIVE_WORKSPACE is kept for workspace switches; CIA_POST_LOGIN triggers init()
       try{
-        const wsId = workspaceActive;
-        document.querySelectorAll("iframe").forEach(function(fr){
-          try{
-            if(fr.contentWindow){
-              // always send CIA_POST_LOGIN (triggers init() even when wsId is null)
-              fr.contentWindow.postMessage({ type:"CIA_POST_LOGIN", workspace_id: wsId || null }, "*");
-              // also send CIA_ACTIVE_WORKSPACE if workspace is known
-              if(wsId) fr.contentWindow.postMessage({ type:"CIA_ACTIVE_WORKSPACE", workspace_id: wsId }, "*");
-            }
-          }catch(_e){}
+        await loadContext();
+        if(typeof setScreen === 'function') {
+          setScreen('dash');
+        } else if(typeof window.setScreen === 'function') {
+          window.setScreen('dash');
+        } else {
+          console.error("CRITICAL: setScreen not defined");
+        }
+        broadcastWorkspaceState({ includePostLogin:true, workspaceId: workspaceActive || null });
+        return true;
+      }catch(err){
+        console.error("[CIA][BOOT] erro de query no boot:", err);
+        publishBootstrapState({
+          status: "error",
+          code: "bootstrap_error",
+          title: "Erro ao carregar workspace",
+          message: _safeErrorMessage(err, "Não foi possível concluir o bootstrap do app."),
+          detail: "Confira as queries de bootstrap e a integridade dos dados base.",
+          activeWorkspaceId: null,
+          workspaces: ctx.workspaces
         });
-      }catch(_e){}
-      return true;
+        broadcastWorkspaceState({ includePostLogin:true, workspaceId: null });
+        throw err;
+      }
     }
 
     
