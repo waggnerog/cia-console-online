@@ -1,7 +1,8 @@
 {
-  "name": "cia-console-online",
-  "version": "2.0.0",
-  "description": "CIA — Console Integrado de Análise (Cloud Edition, Supabase)",
+  "name": "cia-evidencias",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CIA Evidências — gestão e auditoria de evidências fotográficas de campo",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1"
+    "@supabase/supabase-js": "2.49.1"
   },
   "devDependencies": {
-    "vite": "^7.3.1"
+    "vite": "7.3.1"
   }
 }
