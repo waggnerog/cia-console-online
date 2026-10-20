@@ -111,3 +111,130 @@
   .decision-dock>button b{font-size:10px}
   .context-grid{grid-template-columns:1fr}
 }
+
+/* CIA Execução PDV — UX review v3 */
+.viewer{grid-template-rows:52px minmax(0,1fr) auto}
+.filmstrip{display:none!important}
+
+.decision-dock{
+  position:static;
+  left:auto;
+  bottom:auto;
+  transform:none;
+  width:100%;
+  min-height:74px;
+  grid-template-columns:minmax(126px,.72fr) repeat(3,minmax(0,1fr));
+  gap:7px;
+  padding:8px 10px;
+  background:#fff;
+  backdrop-filter:none;
+  border:0;
+  border-top:1px solid var(--line);
+  border-radius:0;
+  box-shadow:none;
+}
+.decision-copy{padding:0 10px 0 2px}
+.decision-copy small{font-size:8px}
+.decision-copy b{font-size:11px}
+.decision-dock>button{min-height:56px}
+
+.queue{
+  grid-template-rows:auto auto auto minmax(0,1fr);
+}
+.queue-guide{
+  margin:0 9px 8px;
+  padding:9px 10px;
+  border:1px solid #e5eaed;
+  border-radius:9px;
+  background:#f8faf9;
+  display:grid;
+  gap:5px;
+}
+.queue-guide>b{
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  color:#5d6873;
+}
+.queue-guide>span{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:9px;
+  line-height:1.3;
+  color:#7a8490;
+}
+.queue-guide strong{font-weight:700;color:#46515c}
+.guide-dot{
+  flex:0 0 auto;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#9ca3af;
+}
+.guide-dot.pending{background:#9ca3af}
+.guide-dot.resubmitted{background:#4361ee}
+
+.tabs button{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:4px;
+}
+.tabs button b{
+  font-family:'IBM Plex Mono';
+  font-size:8px;
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:rgba(0,0,0,.06);
+}
+.tabs button.active b{background:rgba(26,122,58,.12)}
+
+.qcard{
+  grid-template-columns:58px minmax(0,1fr) auto;
+  align-items:start;
+}
+.queue-status{
+  align-self:start;
+  max-width:72px;
+  padding:4px 6px;
+  border-radius:999px;
+  font-size:8px;
+  line-height:1.1;
+  text-align:center;
+  color:#65707b;
+  background:#eef1f4;
+  font-weight:700;
+}
+.queue-status.approved{background:#e7f6eb;color:#20763b}
+.queue-status.rejected{background:#feeceb;color:#a83a34}
+.queue-status.adjustment_requested{background:#fff4d8;color:#8a6400}
+.queue-status.resubmitted{background:#e9efff;color:#314bb5}
+.queue-status.pending{background:#eef1f4;color:#5e6873}
+
+@media(max-width:1280px){
+  .decision-dock{
+    grid-template-columns:repeat(3,1fr);
+    width:100%;
+  }
+  .decision-copy{display:none}
+}
+@media(max-width:900px){
+  .queue.pane.active{
+    grid-template-rows:auto auto auto minmax(0,1fr);
+  }
+  .decision-dock{
+    position:static;
+    left:auto;
+    right:auto;
+    bottom:auto;
+    transform:none;
+    width:100%;
+    z-index:auto;
+    grid-template-columns:repeat(3,1fr);
+  }
+}
