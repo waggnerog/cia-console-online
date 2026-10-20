@@ -22,7 +22,7 @@ const seed=[
 ['Vivo Anália Franco','Comunicação de preço','Michel Santos','Vivo','csv_import','rejected',3]
 ];
 const statusLabel={pending:'Pendente',approved:'Aprovada',adjustment_requested:'Ajuste solicitado',resubmitted:'Reenviada',rejected:'Reprovada'};
-const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',network:r[3],source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Evidência recebida']}));
+const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',whatsapp:'',network:r[3],source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Evidência recebida'],_metadata:{}}));
 const saved=localStorage.getItem('cia-evidencias-demo');
 const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mode:location.hash==='#campo'?'field':'review',mobile:'queue'};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]).id;
@@ -36,8 +36,19 @@ function toast(msg,bad){const el=document.createElement('div');el.className='toa
 function list(){let a=state.rows.slice();if(state.queue!=='all')a=a.filter(x=>x.status===state.queue);if(state.search){const q=state.search.toLowerCase();a=a.filter(x=>[x.store,x.task,x.promoter,x.network].some(v=>v.toLowerCase().includes(q)))}if(state.source!=='all')a=a.filter(x=>x.source===state.source);if(state.network!=='all')a=a.filter(x=>x.network===state.network);return a}
 function metrics(){const c=s=>state.rows.filter(x=>x.status===s).length;return {all:state.rows.length,pending:c('pending'),approved:c('approved'),adjust:c('adjustment_requested'),rejected:c('rejected')}}
 function qcard(x){return '<button class="qcard '+(x.id===state.selected?'selected':'')+'" data-id="'+x.id+'"><img src="'+x.image_url+'" alt=""><span><b>'+esc(x.store)+'</b><small>'+esc(x.task)+'</small><em>'+esc(x.promoter)+' · '+time(x.captured_at)+'</em><i>'+(x.source==='mobile_app'?'CIA Campo':'CSV')+'</i></span><strong class="dot '+x.status+'"></strong></button>'}
-function viewer(x){return '<div class="viewer-head"><div><small>'+esc(x.network)+' · '+esc(x.store)+'</small><b>'+esc(x.task)+'</b></div><div><button data-z="out">−</button><span>'+Math.round(state.zoom*100)+'%</span><button data-z="in">+</button><button data-z="rotate">↻</button><button data-z="fit">Ajustar</button></div></div><div class="photo-stage"><button data-nav="-1">‹</button><img src="'+x.image_url+'" alt="Evidência" style="transform:scale('+state.zoom+') rotate('+state.rotation+'deg)"><button data-nav="1">›</button></div><div class="filmstrip"><span>1 / 3</span><img src="'+x.image_url+'"><img src="'+imgs[1]+'"><img src="'+imgs[2]+'"></div>'}
-function analysis(x){const cs=[['product','Produto visível'],['display','Exposição completa'],['material','Material correto'],['price','Precificação visível'],['organization','Organização'],['quality','Qualidade da imagem']];let checks=cs.map(v=>'<label><input type="checkbox" data-c="'+v[0]+'" '+(x.criteria[v[0]]?'checked':'')+'><span>✓</span><b>'+v[1]+'</b></label>').join('');return '<div class="analysis-scroll"><div class="analysis-title"><div><small>ANÁLISE</small><b>'+esc(x.store)+'</b></div><span class="pill '+x.status+'">'+statusLabel[x.status]+'</span></div><section><h3>Contexto</h3><dl><div><dt>Cliente</dt><dd>'+x.client+'</dd></div><div><dt>Operação</dt><dd>'+x.operation+'</dd></div><div><dt>Rede</dt><dd>'+x.network+'</dd></div><div><dt>Loja</dt><dd>'+x.store+'</dd></div><div><dt>Código</dt><dd>'+x.code+'</dd></div><div><dt>Promotor</dt><dd>'+x.promoter+'</dd></div><div><dt>Supervisor</dt><dd>'+x.supervisor+'</dd></div><div><dt>Captura</dt><dd>'+date(x.captured_at)+' · '+time(x.captured_at)+'</dd></div><div><dt>Origem</dt><dd>'+(x.source==='mobile_app'?'CIA Campo':'CSV')+'</dd></div></dl></section><section><h3>Critérios</h3><div class="criteria">'+checks+'</div></section><details><summary>Histórico ('+x.history.length+')</summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div><div class="decisions"><button data-action="approve" class="approve">Aprovar <kbd>A</kbd></button><button data-action="adjust">Solicitar ajuste <kbd>J</kbd></button><button data-action="reject" class="reject">Reprovar <kbd>R</kbd></button></div>'}
+function viewer(x){
+  return '<div class="viewer-head"><div class="viewer-title"><small>2 · CONFIRA A EXECUÇÃO</small><b>'+esc(x.task)+'</b><span>'+esc(x.network)+' · '+esc(x.store)+'</span></div><div><button data-z="out" aria-label="Reduzir zoom">−</button><span>'+Math.round(state.zoom*100)+'%</span><button data-z="in" aria-label="Aumentar zoom">+</button><button data-z="rotate" aria-label="Girar foto">↻</button><button data-z="fit">Ajustar</button></div></div><div class="photo-stage"><button data-nav="-1" aria-label="Evidência anterior">‹</button><img src="'+x.image_url+'" alt="Evidência de '+esc(x.task)+' em '+esc(x.store)+'" style="transform:scale('+state.zoom+') rotate('+state.rotation+'deg)"><button data-nav="1" aria-label="Próxima evidência">›</button><div class="decision-dock" aria-label="Decisão da evidência"><div class="decision-copy"><small>3 · DECIDA</small><b>O que fazer com esta evidência?</b></div><button data-action="approve" class="approve"><span class="decision-icon">✓</span><span><b>Aprovar</b><small>Execução correta</small></span><kbd>A</kbd></button><button data-action="adjust" class="adjust"><span class="decision-icon">↗</span><span><b>Solicitar ajuste</b><small>Enviar pelo WhatsApp</small></span><kbd>J</kbd></button><button data-action="reject" class="reject"><span class="decision-icon">×</span><span><b>Reprovar</b><small>Evidência inválida</small></span><kbd>R</kbd></button></div></div><div class="filmstrip"><span>1 / 3</span><img src="'+x.image_url+'"><img src="'+imgs[1]+'"><img src="'+imgs[2]+'"></div>';
+}
+function analysis(x){
+  const cs=[['product','Produto visível'],['display','Exposição completa'],['material','Material correto'],['price','Precificação visível'],['organization','Organização'],['quality','Qualidade da imagem']];
+  const checks=cs.map(v=>'<label><input type="checkbox" data-c="'+v[0]+'" '+(x.criteria[v[0]]?'checked':'')+'><span>✓</span><b>'+v[1]+'</b></label>').join('');
+  return '<div class="analysis-scroll"><div class="analysis-title"><div><small>CONTEXTO DA EVIDÊNCIA</small><b>Informações para decidir com segurança</b></div><span class="pill '+x.status+'">'+statusLabel[x.status]+'</span></div>'+
+  '<section class="context-identity"><div class="context-eyebrow">LOJA</div><div class="store-identity"><div><b>'+esc(x.store)+'</b><span>'+esc(x.network)+'</span></div><code>'+esc(x.code||'—')+'</code></div></section>'+
+  '<section class="context-group"><h3>Execução</h3><div class="context-grid"><div><span>Tarefa</span><b>'+esc(x.task)+'</b></div><div><span>Cliente</span><b>'+esc(x.client)+'</b></div><div><span>Operação</span><b>'+esc(x.operation)+'</b></div><div><span>Capturada em</span><b>'+date(x.captured_at)+' · '+time(x.captured_at)+'</b></div><div><span>Origem</span><b>'+(x.source==='mobile_app'?'CIA Campo':'Importação CSV')+'</b></div></div></section>'+
+  '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b>'+(x.whatsapp?'<small>WhatsApp: '+esc(x.whatsapp)+'</small>':'<small>WhatsApp não informado</small>')+'</div></div></div></section>'+
+  '<section class="criteria-section"><div class="section-head-copy"><div><h3>Critérios de conferência</h3><p>Marque o que você consegue confirmar visualmente. Eles apoiam sua decisão; não substituem a análise.</p></div></div><div class="criteria">'+checks+'</div></section>'+
+  '<details class="history-card"><summary>Histórico da evidência <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
+}
 function loginScreen(){
   app.innerHTML='<div class="login-shell"><section class="login-card"><div class="login-brand"><span>C</span><div><b>CIA</b><small>Evidências</small></div></div><h1>Acesse o CIA</h1><p>Entre para analisar evidências ou executar sua rota de campo.</p><form id="authForm"><label>E-mail<input id="authEmail" type="email" autocomplete="email" required></label><label>Senha<input id="authPass" type="password" autocomplete="current-password" minlength="6" required></label><button class="primary" type="submit">Entrar</button><button id="signupBtn" type="button">Primeiro acesso · criar meu acesso</button><small id="authMsg"></small></form></section></div>';
   const form=document.getElementById('authForm'),msg=document.getElementById('authMsg');
@@ -71,11 +82,11 @@ async function loadCloudRows(){
     return {
       id:row.id,client:row.operation?.client_name||'Cliente',operation:row.operation?.name||'Operação',
       store:row.store?.name||'Loja',code:row.store?.code||'',task:row.task?.title||row.metadata?.task||'Evidência',
-      promoter:row.metadata?.promoter||'—',supervisor:row.metadata?.supervisor||'—',
+      promoter:row.metadata?.promoter||'—',supervisor:row.metadata?.supervisor||'—',whatsapp:row.metadata?.whatsapp||row.metadata?.telefone||row.metadata?.phone||'',
       network:row.store?.network||row.metadata?.network||'—',source:row.source,status:row.status,
       captured_at:row.captured_at||row.uploaded_at,image_url:image||imgs[0],
       criteria:row.metadata?.criteria||{product:false,display:false,material:false,price:false,organization:false,quality:false},
-      history:row.metadata?.history||['Evidência recebida']
+      history:row.metadata?.history||['Evidência recebida'],_metadata:row.metadata||{}
     }
   }));
   state.rows=mapped;state.demo=false;state.selected=(mapped.find(x=>x.status==='pending')||mapped[0]).id;
@@ -92,14 +103,111 @@ async function start(){
   if(!session){loginScreen();return}
   try{state.membership=await ensureWorkspace();await loadCloudRows();render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
 }
-function review(){const x=current(),k=metrics(),a=list(),nets=[...new Set(state.rows.map(v=>v.network))];app.innerHTML='<div class="shell"><header class="topbar"><div class="brand"><span>C</span><div><b>CIA</b><small>Evidências</small></div></div><div class="context">Amazon / Execução Echo / Outubro 2026</div><div class="top-actions"><button id="fieldBtn" class="btn ghost">CIA Campo</button><button id="importBtn" class="btn primary">Importar CSV</button><span class="avatar">LW</span></div></header><section class="metrics"><div><small>Recebidas</small><b>'+k.all+'</b></div><div><small>Pendentes</small><b>'+k.pending+'</b></div><div><small>Aprovadas</small><b>'+k.approved+'</b></div><div><small>Ajustes</small><b>'+k.adjust+'</b></div><div><small>Reprovadas</small><b>'+k.rejected+'</b></div><div><small>Taxa de aprovação</small><b>'+(k.all?Math.round(k.approved/k.all*100):0)+'%</b></div></section><section class="filters"><input id="search" value="'+esc(state.search)+'" placeholder="Buscar loja, tarefa ou promotor"><select id="networkFilter"><option value="all">Todas as redes</option>'+nets.map(n=>'<option '+(state.network===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select><select id="sourceFilter"><option value="all">Todas as origens</option><option value="mobile_app" '+(state.source==='mobile_app'?'selected':'')+'>CIA Campo</option><option value="csv_import" '+(state.source==='csv_import'?'selected':'')+'>CSV</option></select></section><main class="workspace"><aside class="queue pane '+(state.mobile==='queue'?'active':'')+'"><div class="pane-title"><span>FILA</span><b>'+a.length+' evidências</b></div><div class="tabs"><button data-q="pending" class="'+(state.queue==='pending'?'active':'')+'">Pendentes</button><button data-q="resubmitted" class="'+(state.queue==='resubmitted'?'active':'')+'">Reenviadas</button><button data-q="all" class="'+(state.queue==='all'?'active':'')+'">Todas</button></div><div class="queue-list">'+(a.map(qcard).join('')||'<div class="empty">Nenhuma evidência neste filtro.</div>')+'</div></aside><section class="viewer pane '+(state.mobile==='viewer'?'active':'')+'">'+viewer(x)+'</section><aside class="analysis pane '+(state.mobile==='analysis'?'active':'')+'">'+analysis(x)+'</aside></main><nav class="mobile-nav"><button data-tab="queue" class="'+(state.mobile==='queue'?'active':'')+'">Fila</button><button data-tab="viewer" class="'+(state.mobile==='viewer'?'active':'')+'">Foto</button><button data-tab="analysis" class="'+(state.mobile==='analysis'?'active':'')+'">Análise</button></nav></div>';bindReview()}
-function bindReview(){document.getElementById('fieldBtn').onclick=()=>{state.mode='field';location.hash='campo';render()};document.getElementById('importBtn').onclick=openImport;document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{state.queue=b.dataset.q;render()});document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.id;state.zoom=1;state.rotation=0;if(innerWidth<900)state.mobile='viewer';render()});document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.mobile=b.dataset.tab;render()});document.getElementById('search').oninput=e=>{state.search=e.target.value;render();setTimeout(()=>{const i=document.getElementById('search');i?.focus();i?.setSelectionRange(i.value.length,i.value.length)},0)};document.getElementById('networkFilter').onchange=e=>{state.network=e.target.value;render()};document.getElementById('sourceFilter').onchange=e=>{state.source=e.target.value;render()};document.querySelectorAll('[data-c]').forEach(i=>i.onchange=()=>{current().criteria[i.dataset.c]=i.checked;persist()});document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>decision(b.dataset.action));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>navigate(+b.dataset.nav));document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>zoom(b.dataset.z))}
+function review(){
+  const x=current(),k=metrics(),a=list(),nets=[...new Set(state.rows.map(v=>v.network))];
+  app.innerHTML='<div class="shell"><header class="topbar"><div class="brand"><span>C</span><div><b>CIA</b><small>Evidências</small></div></div><div class="operation-context"><small>OPERAÇÃO ATIVA</small><b>Amazon · Execução Echo · Outubro 2026</b><span>Selecione uma evidência, confira a execução e tome uma decisão.</span></div><div class="top-actions"><button id="helpBtn" class="btn help-btn">? Como usar</button><button id="fieldBtn" class="btn ghost">CIA Campo</button><button id="importBtn" class="btn primary">Importar CSV</button><span class="avatar">LW</span></div></header>'+
+  '<section class="metrics"><div title="Total de evidências recebidas no recorte atual"><span><small>Recebidas</small><em>Total no período</em></span><b>'+k.all+'</b></div><div title="Ainda aguardam uma decisão"><span><small>Pendentes</small><em>Aguardam análise</em></span><b>'+k.pending+'</b></div><div title="Evidências aceitas como corretas"><span><small>Aprovadas</small><em>Execução validada</em></span><b>'+k.approved+'</b></div><div title="Correções solicitadas ao campo"><span><small>Ajustes</small><em>Retorno ao campo</em></span><b>'+k.adjust+'</b></div><div title="Evidências inválidas ou não aceitas"><span><small>Reprovadas</small><em>Não aceitas</em></span><b>'+k.rejected+'</b></div><div title="Percentual de evidências aprovadas"><span><small>Taxa de aprovação</small><em>Aprovadas ÷ recebidas</em></span><b>'+(k.all?Math.round(k.approved/k.all*100):0)+'%</b></div></section>'+
+  '<section class="filters"><input id="search" value="'+esc(state.search)+'" placeholder="Buscar loja, tarefa ou promotor"><select id="networkFilter"><option value="all">Todas as redes</option>'+nets.map(n=>'<option '+(state.network===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select><select id="sourceFilter"><option value="all">Todas as origens</option><option value="mobile_app" '+(state.source==='mobile_app'?'selected':'')+'>CIA Campo</option><option value="csv_import" '+(state.source==='csv_import'?'selected':'')+'>Importação CSV</option></select></section>'+
+  '<main class="workspace"><aside class="queue pane '+(state.mobile==='queue'?'active':'')+'"><div class="pane-title"><span>1 · ESCOLHA</span><b>Selecione uma evidência</b><small>'+a.length+' no filtro atual</small></div><div class="tabs"><button data-q="pending" class="'+(state.queue==='pending'?'active':'')+'">Pendentes</button><button data-q="resubmitted" class="'+(state.queue==='resubmitted'?'active':'')+'">Reenviadas</button><button data-q="all" class="'+(state.queue==='all'?'active':'')+'">Todas</button></div><div class="queue-list">'+(a.map(qcard).join('')||'<div class="empty">Nenhuma evidência neste filtro.</div>')+'</div></aside><section class="viewer pane '+(state.mobile==='viewer'?'active':'')+'">'+viewer(x)+'</section><aside class="analysis pane '+(state.mobile==='analysis'?'active':'')+'">'+analysis(x)+'</aside></main>'+
+  '<nav class="mobile-nav"><button data-tab="queue" class="'+(state.mobile==='queue'?'active':'')+'">1 · Fila</button><button data-tab="viewer" class="'+(state.mobile==='viewer'?'active':'')+'">2 · Foto</button><button data-tab="analysis" class="'+(state.mobile==='analysis'?'active':'')+'">Contexto</button></nav></div>';
+  bindReview();
+}
+function bindReview(){
+  document.getElementById('fieldBtn').onclick=()=>{state.mode='field';location.hash='campo';render()};
+  document.getElementById('importBtn').onclick=openImport;
+  document.getElementById('helpBtn').onclick=openHelp;
+  document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{state.queue=b.dataset.q;render()});
+  document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.id;state.zoom=1;state.rotation=0;if(innerWidth<900)state.mobile='viewer';render()});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.mobile=b.dataset.tab;render()});
+  document.getElementById('search').oninput=e=>{state.search=e.target.value;render();setTimeout(()=>{const i=document.getElementById('search');i?.focus();i?.setSelectionRange(i.value.length,i.value.length)},0)};
+  document.getElementById('networkFilter').onchange=e=>{state.network=e.target.value;render()};
+  document.getElementById('sourceFilter').onchange=e=>{state.source=e.target.value;render()};
+  document.querySelectorAll('[data-c]').forEach(i=>i.onchange=()=>{current().criteria[i.dataset.c]=i.checked;persist()});
+  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>decision(b.dataset.action));
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>navigate(+b.dataset.nav));
+  document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>zoom(b.dataset.z));
+}
 function navigate(d){const a=list();if(!a.length)return;let i=a.findIndex(x=>x.id===state.selected);state.selected=a[(Math.max(i,0)+d+a.length)%a.length].id;state.zoom=1;state.rotation=0;render()}
 function zoom(a){if(a==='in')state.zoom=Math.min(2.4,state.zoom+.15);if(a==='out')state.zoom=Math.max(.5,state.zoom-.15);if(a==='rotate')state.rotation=(state.rotation+90)%360;if(a==='fit'){state.zoom=1;state.rotation=0}render()}
 function nextOpen(){const n=state.rows.find(x=>x.status==='pending'||x.status==='resubmitted');if(n)state.selected=n.id}
-async function decision(a){const x=current();if(a==='approve'){try{await saveCloudDecision(x,'approved');x.status='approved';x.history.push('Evidência aprovada');persist();nextOpen();toast('Evidência aprovada');render()}catch(err){toast(err.message,true)}return}openDecision(a)}
+async function decision(a){
+  const x=current();
+  if(a==='approve'){
+    try{await saveCloudDecision(x,'approved');x.status='approved';x.history.push('Evidência aprovada');persist();nextOpen();toast('Evidência aprovada');render()}catch(err){toast(err.message,true)}
+    return;
+  }
+  if(a==='adjust'){openAdjustment();return}
+  openDecision('reject');
+}
 function modal(body){const r=document.createElement('div');r.className='modal-root';r.innerHTML='<div class="backdrop" data-close></div><section class="modal">'+body+'</section>';document.body.append(r);r.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>r.remove());return r}
-function openDecision(a){const reasons=['Foto desfocada','Produto fora do padrão','Material incorreto','Precificação ausente','Evidência incompleta','Posição incorreta','Outra'];const r=modal('<header><div><small>DECISÃO</small><h2>'+(a==='adjust'?'Solicitar ajuste':'Reprovar evidência')+'</h2></div><button data-close>×</button></header><div class="modal-body"><p>Selecione o motivo principal.</p><div class="reasons">'+reasons.map((x,i)=>'<label><input type="radio" name="reason" value="'+x+'" '+(i===0?'checked':'')+'><span>'+x+'</span></label>').join('')+'</div><textarea id="comment" placeholder="Comentário opcional"></textarea></div><footer><button data-close>Cancelar</button><button id="confirm" class="primary">Confirmar</button></footer>');r.querySelector('#confirm').onclick=async()=>{const x=current(),reason=r.querySelector('input:checked').value,comment=r.querySelector('#comment').value.trim(),decisionName=a==='adjust'?'adjustment_requested':'rejected';try{await saveCloudDecision(x,decisionName,reason,comment);x.status=decisionName;x.history.push((a==='adjust'?'Ajuste solicitado: ':'Reprovada: ')+reason+(comment?' — '+comment:''));persist();r.remove();nextOpen();toast(a==='adjust'?'Ajuste solicitado':'Evidência reprovada',a==='reject');render()}catch(err){toast(err.message,true)}}}
+function openHelp(){
+  modal('<header><div><small>COMO USAR</small><h2>Analise sem precisar aprender o sistema</h2></div><button data-close>×</button></header><div class="modal-body help-flow"><div class="help-step"><span>1</span><div><b>Escolha uma evidência</b><p>Use a fila à esquerda. Pendentes são fotos que ainda precisam de decisão; reenviadas voltaram após uma correção.</p></div></div><div class="help-step"><span>2</span><div><b>Confira a execução</b><p>A foto é o centro da análise. O painel à direita organiza loja, tarefa, equipe e critérios para você não precisar procurar contexto.</p></div></div><div class="help-step"><span>3</span><div><b>Tome uma decisão</b><p><strong>Aprovar</strong> valida a execução. <strong>Solicitar ajuste</strong> gera a mensagem e abre o WhatsApp. <strong>Reprovar</strong> encerra uma evidência inválida.</p></div></div><div class="status-guide"><b>Status</b><div><span class="pill pending">Pendente</span><small>Aguardando análise</small></div><div><span class="pill adjustment_requested">Ajuste solicitado</span><small>Correção enviada ao campo</small></div><div><span class="pill resubmitted">Reenviada</span><small>Nova foto aguardando revisão</small></div><div><span class="pill approved">Aprovada</span><small>Execução validada</small></div><div><span class="pill rejected">Reprovada</span><small>Evidência não aceita</small></div></div></div><footer><button data-close class="primary">Entendi</button></footer>');
+}
+function normalizeWhats(value){
+  let d=String(value||'').replace(/\D/g,'');
+  if((d.length===10||d.length===11)&&!d.startsWith('55'))d='55'+d;
+  return /^55\d{10,11}$/.test(d)?d:'';
+}
+const adjustmentCopy={
+  'Agrupamento de SKUs':'realizar o agrupamento dos SKUs conforme o padrão/planograma, evitando produtos dispersos e melhorando a leitura do shopper.',
+  'Alinhamento da execução':'alinhar a execução conforme o padrão combinado (organização, frentes e consistência da exposição), garantindo uma apresentação mais uniforme.',
+  'Alinhamento da Caixaria':'alinhar a caixaria conforme o padrão (posicionamento/organização), evitando bloqueios visuais e mantendo o ponto de venda mais limpo.',
+  'Aumento de share':'reforçar a ocupação para aumento de share, respeitando o espaço e o planograma, buscando melhor visibilidade e disponibilidade do produto.',
+  'Organização da gôndola':'organizar a gôndola (produtos alinhados, frenteados e com melhor visibilidade), mantendo a execução no padrão esperado.',
+  'Volume alto e pouco produto na gôndola':'ajustar o abastecimento: há indício de volume alto fora da gôndola e pouco produto exposto. Por favor, orientar reposição adequada na gôndola.',
+  'Baixo giro':'revisar a execução e a exposição do produto de baixo giro, garantindo visibilidade, organização e melhor oportunidade de saída.',
+  'Produto sem preço':'regularizar a precificação do produto, garantindo que o preço fique visível e associado corretamente ao item.',
+  'Foto desfocada':'refazer a evidência com uma foto nítida, bem iluminada e que permita validar toda a execução.',
+  'Evidência incompleta':'refazer a evidência mostrando todos os elementos necessários para validar a execução.',
+  'Enquadramento inadequado':'refazer a foto com um enquadramento mais aberto e centralizado, permitindo visualizar a execução completa.',
+  'Material incorreto':'corrigir o material aplicado e enviar uma nova evidência após o ajuste.'
+};
+function buildAdjustmentMessage(x,type,note=''){
+  const loc=[x.network,x.store].filter(Boolean).join(' – ');
+  const alvo=loc+(x.code?' (cód. '+x.code+')':'');
+  const detail=adjustmentCopy[type]||'realizar o ajuste conforme o padrão de execução.';
+  let msg='*Solicitação de ajuste · CIA*\n';
+  msg+='Loja: '+alvo+'\n';
+  msg+='Tarefa: '+x.task+'\n';
+  msg+='Data da foto: '+date(x.captured_at)+'\n';
+  if(x.image_url)msg+='Foto: '+x.image_url+'\n';
+  msg+='\nOlá! Tudo bem? 😊\n\nPor gentileza, poderia orientar o(a) promotor(a) a '+detail;
+  if(note)msg+='\n\nObservação: '+note;
+  msg+='\n\nMuito obrigado(a) pelo apoio!';
+  return msg;
+}
+async function saveEvidenceContact(e,phone){
+  e.whatsapp=phone;e._metadata={...(e._metadata||{}),whatsapp:phone};
+  if(state.demo||String(e.id).startsWith('ev-'))return;
+  const {error}=await supabase.from('evidences').update({metadata:e._metadata}).eq('id',e.id);if(error)throw error;
+}
+function openAdjustment(){
+  const x=current();
+  const types=Object.keys(adjustmentCopy);
+  const r=modal('<header><div><small>SOLICITAR AJUSTE</small><h2>Prepare a mensagem para o WhatsApp</h2><p class="modal-sub">Escolha o ajuste. O CIA monta a mensagem pronta e registra a solicitação.</p></div><button data-close>×</button></header><div class="modal-body adjustment-flow"><label class="field-label">Tipo de ajuste<select id="adjustType">'+types.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+'</select></label><label class="field-label">WhatsApp do supervisor<input id="adjustPhone" inputmode="tel" placeholder="Ex.: 11 99999-9999" value="'+esc(x.whatsapp||'')+'"><small>O CIA original também direcionava o ajuste pelo contato do supervisor. Se o número vier no CSV, ele será preenchido automaticamente.</small></label><label class="field-label">Observação adicional <textarea id="adjustNote" rows="2" placeholder="Opcional — acrescente apenas se precisar contextualizar algo específico."></textarea></label><div class="message-preview"><div><span>Mensagem pronta</span><button id="copyAdjust" type="button">Copiar</button></div><textarea id="adjustMessage" rows="9" readonly></textarea></div></div><footer><button data-close>Cancelar</button><button id="sendAdjust" class="whatsapp-primary">Salvar ajuste e abrir WhatsApp ↗</button></footer>');
+  const type=r.querySelector('#adjustType'),phone=r.querySelector('#adjustPhone'),note=r.querySelector('#adjustNote'),preview=r.querySelector('#adjustMessage');
+  const sync=()=>{preview.value=buildAdjustmentMessage(x,type.value,note.value.trim())};sync();type.onchange=sync;note.oninput=sync;
+  r.querySelector('#copyAdjust').onclick=async()=>{try{await navigator.clipboard.writeText(preview.value);toast('Mensagem copiada')}catch{toast('Não foi possível copiar',true)}};
+  r.querySelector('#sendAdjust').onclick=async()=>{
+    const wa=normalizeWhats(phone.value);
+    if(!wa){phone.focus();phone.classList.add('field-error');toast('Informe um WhatsApp válido com DDD.',true);return}
+    const msg=buildAdjustmentMessage(x,type.value,note.value.trim());
+    const url='https://wa.me/'+wa+'?text='+encodeURIComponent(msg);
+    const win=window.open('about:blank','_blank');
+    try{
+      await saveEvidenceContact(x,wa);
+      await saveCloudDecision(x,'adjustment_requested',type.value,msg);
+      x.status='adjustment_requested';x.history.push('Ajuste solicitado via WhatsApp: '+type.value);persist();
+      if(win)win.location.href=url;else window.location.href=url;
+      r.remove();nextOpen();toast('Ajuste registrado e WhatsApp aberto');render();
+    }catch(err){if(win)win.close();toast(err.message,true)}
+  };
+}
+function openDecision(){
+  const reasons=['Foto sem relação com a tarefa','Evidência duplicada','Imagem ilegível','Loja ou execução incorreta','Outro'];
+  const r=modal('<header><div><small>REPROVAR EVIDÊNCIA</small><h2>Por que esta evidência não pode ser aceita?</h2></div><button data-close>×</button></header><div class="modal-body"><p>A reprovação encerra esta evidência. Se o problema puder ser corrigido em campo, prefira “Solicitar ajuste”.</p><div class="reasons">'+reasons.map((x,i)=>'<label><input type="radio" name="reason" value="'+x+'" '+(i===0?'checked':'')+'><span>'+x+'</span></label>').join('')+'</div><textarea id="comment" placeholder="Observação opcional"></textarea></div><footer><button data-close>Cancelar</button><button id="confirm" class="danger-btn">Reprovar evidência</button></footer>');
+  r.querySelector('#confirm').onclick=async()=>{const x=current(),reason=r.querySelector('input:checked').value,comment=r.querySelector('#comment').value.trim();try{await saveCloudDecision(x,'rejected',reason,comment);x.status='rejected';x.history.push('Evidência reprovada: '+reason+(comment?' — '+comment:''));persist();r.remove();nextOpen();toast('Evidência reprovada',true);render()}catch(err){toast(err.message,true)}};
+}
 function parseCSV(text){
   const rows=[];let row=[],cell='',quoted=false;
   for(let i=0;i<text.length;i++){
@@ -177,7 +285,7 @@ async function importCsvToSupabase(rows,map,fileName){
     return {
       workspace_id:workspaceId,operation_id:operationId,store_id:storeIds.get(code),photo_task_id:tasksByTitle.get(title),import_id:imp.id,
       source:'csv_import',status:'pending',external_url:r[map.url].trim(),captured_at:parsedDate,
-      metadata:{promoter:map.promoter?r[map.promoter]||'—':'—',supervisor:map.supervisor?r[map.supervisor]||'—':'—',network:map.network?r[map.network]||'—':'—',csv_row:r.__row}
+      metadata:{promoter:map.promoter?r[map.promoter]||'—':'—',supervisor:map.supervisor?r[map.supervisor]||'—':'—',whatsapp:map.phone?r[map.phone]||'':'',network:map.network?r[map.network]||'—':'—',csv_row:r.__row}
     }
   });
   const {data:inserted,error:evidenceErr}=await supabase.from('evidences').insert(evidencePayload).select('id');
@@ -194,6 +302,7 @@ function openImport(){
     code:['Código','Codigo','Código loja','ID PDV'],
     promoter:['Consultor','Promotor','Colaborador'],
     supervisor:['Supervisor','Coordenador'],
+    phone:['WhatsApp','Whatsapp','Telefone','Celular','WPP','Telefone supervisor'],
     date:['Data visita','Data','Data da visita'],
     task:['Tipo foto','Tarefa','Tipo de foto','Evidência'],
     url:['URL imagem','Link da foto','Foto URL','URL foto','Imagem'],
@@ -219,7 +328,7 @@ function openImport(){
   function draw(){
     const b=r.querySelector('#importBody');
     if(step===1)b.innerHTML='<div class="stepper"><b>1 · Upload</b> → 2 · Mapeamento → 3 · Validação → 4 · Importar</div><div class="drop"><h3>Selecione seu CSV</h3><p>O arquivo deve conter os metadados e os links das fotos.</p><input id="csv" type="file" accept=".csv,text/csv"><button id="choose">Selecionar CSV</button></div>';
-    if(step===2)b.innerHTML='<div class="stepper">✓ Upload → <b>2 · Mapeamento</b> → 3 · Validação → 4 · Importar</div><p><b>'+esc(fileName)+'</b> · '+rows.length+' linhas</p><div class="mapping-form">'+selectField('store','Loja',true)+selectField('code','Código da loja')+selectField('promoter','Promotor')+selectField('supervisor','Supervisor')+selectField('date','Data da visita')+selectField('task','Tarefa')+selectField('url','Link da foto',true)+selectField('network','Rede')+selectField('region','Região')+'</div><button id="next" class="primary wide">Validar arquivo</button>';
+    if(step===2)b.innerHTML='<div class="stepper">✓ Upload → <b>2 · Mapeamento</b> → 3 · Validação → 4 · Importar</div><p><b>'+esc(fileName)+'</b> · '+rows.length+' linhas</p><div class="mapping-form">'+selectField('store','Loja',true)+selectField('code','Código da loja')+selectField('promoter','Promotor')+selectField('supervisor','Supervisor')+selectField('phone','WhatsApp do supervisor')+selectField('date','Data da visita')+selectField('task','Tarefa')+selectField('url','Link da foto',true)+selectField('network','Rede')+selectField('region','Região')+'</div><button id="next" class="primary wide">Validar arquivo</button>';
     if(step===3){const v=validateRows();b.innerHTML='<div class="stepper">✓ Upload → ✓ Mapeamento → <b>3 · Validação</b> → 4 · Importar</div><div class="validation"><div><b>'+v.valid+'</b><span>Linhas válidas</span></div><div><b>'+v.duplicates+'</b><span>Possíveis duplicidades</span></div><div><b>'+v.missing+'</b><span>Campos obrigatórios ausentes</span></div><div><b>'+v.badUrl+'</b><span>URLs inválidas</span></div></div><button id="next" class="primary wide" '+(!map.store||!map.url||!v.valid?'disabled':'')+'>Importar '+v.valid+' evidências</button>'}
     if(step===4)b.innerHTML='<div class="success"><div>✓</div><h3>Importação concluída</h3><p id="importResult">Processando...</p><button data-close class="primary">Ir para a fila</button></div>';
     b.querySelector('#choose')?.addEventListener('click',()=>b.querySelector('#csv').click());
