@@ -1,4 +1,4 @@
-name: Build & Deploy CIA Evidências
+name: Build & Deploy CIA Execução PDV
 
 on:
   push:
