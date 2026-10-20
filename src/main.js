@@ -161,10 +161,10 @@ const adjustmentCopy={
   'Volume alto e pouco produto na gôndola':'ajustar o abastecimento: há indício de volume alto fora da gôndola e pouco produto exposto. Por favor, orientar reposição adequada na gôndola.',
   'Baixo giro':'revisar a execução e a exposição do produto de baixo giro, garantindo visibilidade, organização e melhor oportunidade de saída.',
   'Produto sem preço':'regularizar a precificação do produto, garantindo que o preço fique visível e associado corretamente ao item.',
-  'Foto desfocada':'refazer a evidência com uma foto nítida, bem iluminada e que permita validar toda a execução.',
-  'Evidência incompleta':'refazer a evidência mostrando todos os elementos necessários para validar a execução.',
+  'Foto desfocada':'refazer a foto com nitidez, boa iluminação e enquadramento suficiente para validar toda a execução.',
+  'Execução incompleta':'refazer a foto mostrando todos os elementos necessários para validar a execução.',
   'Enquadramento inadequado':'refazer a foto com um enquadramento mais aberto e centralizado, permitindo visualizar a execução completa.',
-  'Material incorreto':'corrigir o material aplicado e enviar uma nova evidência após o ajuste.'
+  'Material incorreto':'corrigir o material aplicado e enviar uma nova foto após o ajuste.'
 };
 function buildAdjustmentMessage(x,type,note=''){
   const loc=[x.network,x.store].filter(Boolean).join(' – ');
@@ -208,7 +208,7 @@ function openAdjustment(){
   };
 }
 function openDecision(){
-  const reasons=['Foto sem relação com a tarefa','Evidência duplicada','Imagem ilegível','Loja ou execução incorreta','Outro'];
+  const reasons=['Foto sem relação com a tarefa','Foto duplicada','Imagem ilegível','Loja ou execução incorreta','Outro'];
   const r=modal('<header><div><small>REPROVAR EXECUÇÃO</small><h2>Por que esta execução não pode ser aceita?</h2></div><button data-close>×</button></header><div class="modal-body"><p>A reprovação encerra esta análise. Se o problema puder ser corrigido no PDV, prefira “Solicitar ajuste”.</p><div class="reasons">'+reasons.map((x,i)=>'<label><input type="radio" name="reason" value="'+x+'" '+(i===0?'checked':'')+'><span>'+x+'</span></label>').join('')+'</div><textarea id="comment" placeholder="Observação opcional"></textarea></div><footer><button data-close>Cancelar</button><button id="confirm" class="danger-btn">Reprovar execução</button></footer>');
   r.querySelector('#confirm').onclick=async()=>{const x=current(),reason=r.querySelector('input:checked').value,comment=r.querySelector('#comment').value.trim();try{await saveCloudDecision(x,'rejected',reason,comment);x.status='rejected';x.history.push('Execução reprovada: '+reason+(comment?' — '+comment:''));persist();r.remove();nextOpen();toast('Execução reprovada',true);render()}catch(err){toast(err.message,true)}};
 }
@@ -271,7 +271,7 @@ async function importCsvToSupabase(rows,map,fileName){
   if(storeErr)throw storeErr;
   const storeIds=new Map((storeRows||[]).map(s=>[s.code,s.id]));
 
-  const titles=[...new Set(valid.map(r=>(map.task&&r[map.task]?r[map.task]:'Evidência fotográfica').trim()))];
+  const titles=[...new Set(valid.map(r=>(map.task&&r[map.task]?r[map.task]:'Foto de execução').trim()))];
   const {data:existingTasks,error:taskReadErr}=await supabase.from('photo_tasks').select('id,title').eq('workspace_id',workspaceId).eq('operation_id',operationId).in('title',titles);
   if(taskReadErr)throw taskReadErr;
   (existingTasks||[]).forEach(t=>tasksByTitle.set(t.title,t.id));
@@ -283,7 +283,7 @@ async function importCsvToSupabase(rows,map,fileName){
 
   const evidencePayload=valid.map(r=>{
     const code=((map.code&&r[map.code])||('CSV-'+r.__row)).trim();
-    const title=((map.task&&r[map.task])||'Evidência fotográfica').trim();
+    const title=((map.task&&r[map.task])||'Foto de execução').trim();
     const rawDate=map.date?r[map.date]:'';
     const parsedDate=rawDate&& !Number.isNaN(Date.parse(rawDate)) ? new Date(rawDate).toISOString() : null;
     return {
@@ -333,7 +333,7 @@ function openImport(){
     const b=r.querySelector('#importBody');
     if(step===1)b.innerHTML='<div class="stepper"><b>1 · Upload</b> → 2 · Mapeamento → 3 · Validação → 4 · Importar</div><div class="drop"><h3>Selecione seu CSV</h3><p>O arquivo deve conter os metadados e os links das fotos.</p><input id="csv" type="file" accept=".csv,text/csv"><button id="choose">Selecionar CSV</button></div>';
     if(step===2)b.innerHTML='<div class="stepper">✓ Upload → <b>2 · Mapeamento</b> → 3 · Validação → 4 · Importar</div><p><b>'+esc(fileName)+'</b> · '+rows.length+' linhas</p><div class="mapping-form">'+selectField('store','Loja',true)+selectField('code','Código da loja')+selectField('promoter','Promotor')+selectField('supervisor','Supervisor')+selectField('phone','WhatsApp do supervisor')+selectField('date','Data da visita')+selectField('task','Tarefa')+selectField('url','Link da foto',true)+selectField('network','Rede')+selectField('region','Região')+'</div><button id="next" class="primary wide">Validar arquivo</button>';
-    if(step===3){const v=validateRows();b.innerHTML='<div class="stepper">✓ Upload → ✓ Mapeamento → <b>3 · Validação</b> → 4 · Importar</div><div class="validation"><div><b>'+v.valid+'</b><span>Linhas válidas</span></div><div><b>'+v.duplicates+'</b><span>Possíveis duplicidades</span></div><div><b>'+v.missing+'</b><span>Campos obrigatórios ausentes</span></div><div><b>'+v.badUrl+'</b><span>URLs inválidas</span></div></div><button id="next" class="primary wide" '+(!map.store||!map.url||!v.valid?'disabled':'')+'>Importar '+v.valid+' evidências</button>'}
+    if(step===3){const v=validateRows();b.innerHTML='<div class="stepper">✓ Upload → ✓ Mapeamento → <b>3 · Validação</b> → 4 · Importar</div><div class="validation"><div><b>'+v.valid+'</b><span>Linhas válidas</span></div><div><b>'+v.duplicates+'</b><span>Possíveis duplicidades</span></div><div><b>'+v.missing+'</b><span>Campos obrigatórios ausentes</span></div><div><b>'+v.badUrl+'</b><span>URLs inválidas</span></div></div><button id="next" class="primary wide" '+(!map.store||!map.url||!v.valid?'disabled':'')+'>Importar '+v.valid+' execuções</button>'}
     if(step===4)b.innerHTML='<div class="success"><div>✓</div><h3>Importação concluída</h3><p id="importResult">Processando...</p><button data-close class="primary">Ir para a fila</button></div>';
     b.querySelector('#choose')?.addEventListener('click',()=>b.querySelector('#csv').click());
     b.querySelector('#csv')?.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;fileName=f.name;rows=parseCSV(await f.text());headers=rows.length?Object.keys(rows[0]).filter(k=>k!=='__row'):[];autoMap();step=2;draw()});
