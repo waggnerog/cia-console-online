@@ -3687,3 +3687,28 @@ body:not(.public-mode) .execution-empty .empty-actions{
     padding:4px 6px!important;
   }
 }
+
+
+/* Mobile reading rhythm: editorial cards 02 and 03 should never be tall blanks. */
+@media(max-width:700px){
+  .human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide){
+    min-height:0!important;
+    height:auto!important;
+    padding:22px!important;
+    justify-content:flex-start!important;
+    gap:0!important;
+  }
+  .human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide) h3{
+    margin:18px 0 8px!important;
+    font-size:clamp(23px,6vw,29px)!important;
+    line-height:1.12!important;
+  }
+  .human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide) p{
+    margin:0!important;
+    font-size:13px!important;
+    line-height:1.55!important;
+  }
+  .human-cia .human-feature-grid .feature-wide{
+    min-height:0!important;
+  }
+}
