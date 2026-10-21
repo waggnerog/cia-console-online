@@ -818,7 +818,7 @@ function render(){
 }
 window.addEventListener('hashchange',()=>{
   const publicAnchor=(location.hash||'').replace('#','');
-  if(!state.membership&&['produto','como-funciona','servicos'].includes(publicAnchor))return;
+  if(!state.membership&&['produto','como-funciona','demonstracao','para-quem','servicos'].includes(publicAnchor))return;
   if(state.membership)render();else renderPublic();
 });
 window.addEventListener('keydown',e=>{
