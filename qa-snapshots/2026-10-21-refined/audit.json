@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-10-21T20:13:16.316Z",
+  "testedAt": "2026-10-21T20:16:13.952Z",
   "url": "https://app.usecia.com/",
   "cases": [
     {
@@ -432,17 +432,17 @@
         },
         {
           "target": "para-quem",
-          "scrollY": 3260,
+          "scrollY": 3232,
           "hash": ""
         },
         {
           "target": "planos",
-          "scrollY": 5878,
+          "scrollY": 5821,
           "hash": ""
         },
         {
           "target": "faq",
-          "scrollY": 7577,
+          "scrollY": 7575,
           "hash": ""
         }
       ],
@@ -457,8 +457,8 @@
       "title": "CIA | Software de Trade Marketing e Execução no PDV em Tempo Real",
       "viewportWidth": 1024,
       "documentWidth": 1024,
-      "documentHeight": 10359,
-      "bodyScroll": 10359,
+      "documentHeight": 10385,
+      "bodyScroll": 10385,
       "header": {
         "x": 0,
         "y": 0,
@@ -469,7 +469,7 @@
         "x": 18,
         "y": 94,
         "w": 988,
-        "h": 606
+        "h": 590
       },
       "sections": [
         {
@@ -479,7 +479,7 @@
             "x": 18,
             "y": 94,
             "w": 988,
-            "h": 606
+            "h": 590
           }
         },
         {
@@ -487,9 +487,9 @@
           "cls": "human-intro-band",
           "rect": {
             "x": 0,
-            "y": 700,
+            "y": 684,
             "w": 1024,
-            "h": 471
+            "h": 513
           }
         },
         {
@@ -497,7 +497,7 @@
           "cls": "public-section human-product",
           "rect": {
             "x": 0,
-            "y": 1171,
+            "y": 1197,
             "w": 1024,
             "h": 1994
           }
@@ -507,7 +507,7 @@
           "cls": "public-section human-demo",
           "rect": {
             "x": 0,
-            "y": 3165,
+            "y": 3191,
             "w": 1024,
             "h": 787
           }
@@ -517,7 +517,7 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3952,
+            "y": 3978,
             "w": 1024,
             "h": 1639
           }
@@ -527,7 +527,7 @@
           "cls": "public-section human-results",
           "rect": {
             "x": 0,
-            "y": 5591,
+            "y": 5617,
             "w": 1024,
             "h": 646
           }
@@ -537,7 +537,7 @@
           "cls": "brand-manifesto",
           "rect": {
             "x": 0,
-            "y": 6237,
+            "y": 6262,
             "w": 1024,
             "h": 510
           }
@@ -547,7 +547,7 @@
           "cls": "public-section human-security",
           "rect": {
             "x": 0,
-            "y": 6747,
+            "y": 6772,
             "w": 1024,
             "h": 712
           }
@@ -557,7 +557,7 @@
           "cls": "public-section human-pricing",
           "rect": {
             "x": 0,
-            "y": 7459,
+            "y": 7485,
             "w": 1024,
             "h": 1216
           }
@@ -567,7 +567,7 @@
           "cls": "public-section human-faq",
           "rect": {
             "x": 0,
-            "y": 8675,
+            "y": 8701,
             "w": 1024,
             "h": 724
           }
@@ -577,7 +577,7 @@
           "cls": "human-final-cta",
           "rect": {
             "x": 0,
-            "y": 9399,
+            "y": 9425,
             "w": 1024,
             "h": 500
           }
@@ -594,7 +594,7 @@
             "x": 18,
             "y": 94,
             "w": 988,
-            "h": 606
+            "h": 590
           }
         },
         {
@@ -605,7 +605,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 168,
-            "y": 1760,
+            "y": 1786,
             "w": 688,
             "h": 430
           }
@@ -618,7 +618,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 168,
-            "y": 2569,
+            "y": 2594,
             "w": 688,
             "h": 430
           }
@@ -631,7 +631,7 @@
           "naturalHeight": 1402,
           "rect": {
             "x": 23,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           }
@@ -644,7 +644,7 @@
           "naturalHeight": 780,
           "rect": {
             "x": 520,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           }
@@ -657,7 +657,7 @@
           "naturalHeight": 1038,
           "rect": {
             "x": 23,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           }
@@ -670,7 +670,7 @@
           "naturalHeight": 780,
           "rect": {
             "x": 520,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           }
@@ -683,7 +683,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 508,
-            "y": 5761,
+            "y": 5787,
             "w": 493,
             "h": 308
           }
@@ -694,14 +694,14 @@
           "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
           "rect": {
             "x": 167,
-            "y": 1759,
+            "y": 1785,
             "w": 690,
             "h": 468
           },
           "img": "/media/cia-execucao-real.jpg",
           "imgRect": {
             "x": 168,
-            "y": 1760,
+            "y": 1786,
             "w": 688,
             "h": 430
           }
@@ -710,14 +710,14 @@
           "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
           "rect": {
             "x": 167,
-            "y": 2568,
+            "y": 2593,
             "w": 690,
             "h": 468
           },
           "img": "/media/cia-ajuste-real.jpg",
           "imgRect": {
             "x": 168,
-            "y": 2569,
+            "y": 2594,
             "w": 688,
             "h": 430
           }
@@ -726,7 +726,7 @@
           "cls": "cia-media-slot cinema demo-main video-pending",
           "rect": {
             "x": 496,
-            "y": 3315,
+            "y": 3341,
             "w": 506,
             "h": 285
           },
@@ -736,14 +736,14 @@
           "cls": "cia-media-slot portrait  is-photographic media-kind-c",
           "rect": {
             "x": 23,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           },
           "img": "/media/cia-trade-marketing.webp",
           "imgRect": {
             "x": 23,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           }
@@ -752,14 +752,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-d",
           "rect": {
             "x": 520,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           },
           "img": "/media/cia-franquias-redes.webp",
           "imgRect": {
             "x": 520,
-            "y": 4409,
+            "y": 4435,
             "w": 481,
             "h": 361
           }
@@ -768,14 +768,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-e",
           "rect": {
             "x": 23,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           },
           "img": "/media/cia-facilities-servicos.webp",
           "imgRect": {
             "x": 23,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           }
@@ -784,14 +784,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-f",
           "rect": {
             "x": 520,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           },
           "img": "/media/cia-auditoria-campo.webp",
           "imgRect": {
             "x": 520,
-            "y": 4973,
+            "y": 4999,
             "w": 481,
             "h": 361
           }
@@ -800,14 +800,14 @@
           "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
           "rect": {
             "x": 507,
-            "y": 5760,
+            "y": 5786,
             "w": 495,
             "h": 346
           },
           "img": "/media/cia-relatorios-real.jpg",
           "imgRect": {
             "x": 508,
-            "y": 5761,
+            "y": 5787,
             "w": 493,
             "h": 308
           }
@@ -820,7 +820,7 @@
             "x": 79,
             "y": 176,
             "w": 810,
-            "h": 448
+            "h": 425
           },
           "cols": "810px"
         },
@@ -828,7 +828,7 @@
           "cls": "human-feature-grid",
           "rect": {
             "x": 22,
-            "y": 1600,
+            "y": 1626,
             "w": 980,
             "h": 1461
           },
@@ -838,7 +838,7 @@
           "cls": "demo-editorial-grid",
           "rect": {
             "x": 22,
-            "y": 3315,
+            "y": 3341,
             "w": 980,
             "h": 527
           },
@@ -848,7 +848,7 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3952,
+            "y": 3978,
             "w": 1024,
             "h": 1639
           },
@@ -858,7 +858,7 @@
           "cls": "results-stage",
           "rect": {
             "x": 22,
-            "y": 5740,
+            "y": 5766,
             "w": 980,
             "h": 387
           },
@@ -875,22 +875,22 @@
       "nav": [
         {
           "target": "produto",
-          "scrollY": 1057,
+          "scrollY": 1081,
           "hash": ""
         },
         {
           "target": "para-quem",
-          "scrollY": 3454,
+          "scrollY": 3520,
           "hash": ""
         },
         {
           "target": "planos",
-          "scrollY": 6557,
+          "scrollY": 6597,
           "hash": ""
         },
         {
           "target": "faq",
-          "scrollY": 8443,
+          "scrollY": 8472,
           "hash": ""
         }
       ],
@@ -905,8 +905,8 @@
       "title": "CIA | Software de Trade Marketing e Execução no PDV em Tempo Real",
       "viewportWidth": 390,
       "documentWidth": 390,
-      "documentHeight": 13383,
-      "bodyScroll": 13383,
+      "documentHeight": 13403,
+      "bodyScroll": 13403,
       "header": {
         "x": 0,
         "y": 0,
@@ -917,7 +917,7 @@
         "x": 12,
         "y": 88,
         "w": 366,
-        "h": 702
+        "h": 680
       },
       "sections": [
         {
@@ -927,7 +927,7 @@
             "x": 12,
             "y": 88,
             "w": 366,
-            "h": 702
+            "h": 680
           }
         },
         {
@@ -935,9 +935,9 @@
           "cls": "human-intro-band",
           "rect": {
             "x": 0,
-            "y": 790,
+            "y": 768,
             "w": 390,
-            "h": 521
+            "h": 563
           }
         },
         {
@@ -945,7 +945,7 @@
           "cls": "public-section human-product",
           "rect": {
             "x": 0,
-            "y": 1311,
+            "y": 1331,
             "w": 390,
             "h": 2033
           }
@@ -955,7 +955,7 @@
           "cls": "public-section human-demo",
           "rect": {
             "x": 0,
-            "y": 3344,
+            "y": 3364,
             "w": 390,
             "h": 963
           }
@@ -965,7 +965,7 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 4307,
+            "y": 4327,
             "w": 390,
             "h": 2471
           }
@@ -975,7 +975,7 @@
           "cls": "public-section human-results",
           "rect": {
             "x": 0,
-            "y": 6779,
+            "y": 6798,
             "w": 390,
             "h": 925
           }
@@ -985,7 +985,7 @@
           "cls": "brand-manifesto",
           "rect": {
             "x": 0,
-            "y": 7704,
+            "y": 7723,
             "w": 390,
             "h": 511
           }
@@ -995,7 +995,7 @@
           "cls": "public-section human-security",
           "rect": {
             "x": 0,
-            "y": 8215,
+            "y": 8234,
             "w": 390,
             "h": 794
           }
@@ -1005,7 +1005,7 @@
           "cls": "public-section human-pricing",
           "rect": {
             "x": 0,
-            "y": 9009,
+            "y": 9029,
             "w": 390,
             "h": 2464
           }
@@ -1015,7 +1015,7 @@
           "cls": "public-section human-faq",
           "rect": {
             "x": 0,
-            "y": 11473,
+            "y": 11492,
             "w": 390,
             "h": 805
           }
@@ -1025,7 +1025,7 @@
           "cls": "human-final-cta",
           "rect": {
             "x": 0,
-            "y": 12278,
+            "y": 12298,
             "w": 390,
             "h": 506
           }
@@ -1042,7 +1042,7 @@
             "x": 12,
             "y": 88,
             "w": 366,
-            "h": 702
+            "h": 680
           }
         },
         {
@@ -1053,7 +1053,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 48,
-            "y": 2128,
+            "y": 2148,
             "w": 294,
             "h": 184
           }
@@ -1066,7 +1066,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 48,
-            "y": 2997,
+            "y": 3017,
             "w": 294,
             "h": 184
           }
@@ -1079,7 +1079,7 @@
           "naturalHeight": 1402,
           "rect": {
             "x": 23,
-            "y": 4870,
+            "y": 4889,
             "w": 344,
             "h": 258
           }
@@ -1092,7 +1092,7 @@
           "naturalHeight": 780,
           "rect": {
             "x": 23,
-            "y": 5371,
+            "y": 5390,
             "w": 344,
             "h": 258
           }
@@ -1105,7 +1105,7 @@
           "naturalHeight": 1038,
           "rect": {
             "x": 23,
-            "y": 5809,
+            "y": 5828,
             "w": 344,
             "h": 258
           }
@@ -1118,7 +1118,7 @@
           "naturalHeight": 780,
           "rect": {
             "x": 23,
-            "y": 6247,
+            "y": 6266,
             "w": 344,
             "h": 258
           }
@@ -1131,7 +1131,7 @@
           "naturalHeight": 900,
           "rect": {
             "x": 23,
-            "y": 7345,
+            "y": 7364,
             "w": 344,
             "h": 215
           }
@@ -1142,14 +1142,14 @@
           "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
           "rect": {
             "x": 47,
-            "y": 2127,
+            "y": 2147,
             "w": 296,
             "h": 219
           },
           "img": "/media/cia-execucao-real.jpg",
           "imgRect": {
             "x": 48,
-            "y": 2128,
+            "y": 2148,
             "w": 294,
             "h": 184
           }
@@ -1158,14 +1158,14 @@
           "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
           "rect": {
             "x": 47,
-            "y": 2996,
+            "y": 3016,
             "w": 296,
             "h": 219
           },
           "img": "/media/cia-ajuste-real.jpg",
           "imgRect": {
             "x": 48,
-            "y": 2997,
+            "y": 3017,
             "w": 294,
             "h": 184
           }
@@ -1174,7 +1174,7 @@
           "cls": "cia-media-slot cinema demo-main video-pending",
           "rect": {
             "x": 22,
-            "y": 3755,
+            "y": 3774,
             "w": 346,
             "h": 195
           },
@@ -1184,14 +1184,14 @@
           "cls": "cia-media-slot portrait  is-photographic media-kind-c",
           "rect": {
             "x": 23,
-            "y": 4870,
+            "y": 4889,
             "w": 344,
             "h": 258
           },
           "img": "/media/cia-trade-marketing.webp",
           "imgRect": {
             "x": 23,
-            "y": 4870,
+            "y": 4889,
             "w": 344,
             "h": 258
           }
@@ -1200,14 +1200,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-d",
           "rect": {
             "x": 23,
-            "y": 5371,
+            "y": 5390,
             "w": 344,
             "h": 258
           },
           "img": "/media/cia-franquias-redes.webp",
           "imgRect": {
             "x": 23,
-            "y": 5371,
+            "y": 5390,
             "w": 344,
             "h": 258
           }
@@ -1216,14 +1216,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-e",
           "rect": {
             "x": 23,
-            "y": 5809,
+            "y": 5828,
             "w": 344,
             "h": 258
           },
           "img": "/media/cia-facilities-servicos.webp",
           "imgRect": {
             "x": 23,
-            "y": 5809,
+            "y": 5828,
             "w": 344,
             "h": 258
           }
@@ -1232,14 +1232,14 @@
           "cls": "cia-media-slot square  is-photographic media-kind-f",
           "rect": {
             "x": 23,
-            "y": 6247,
+            "y": 6266,
             "w": 344,
             "h": 258
           },
           "img": "/media/cia-auditoria-campo.webp",
           "imgRect": {
             "x": 23,
-            "y": 6247,
+            "y": 6266,
             "w": 344,
             "h": 258
           }
@@ -1248,14 +1248,14 @@
           "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
           "rect": {
             "x": 22,
-            "y": 7344,
+            "y": 7363,
             "w": 346,
             "h": 250
           },
           "img": "/media/cia-relatorios-real.jpg",
           "imgRect": {
             "x": 23,
-            "y": 7345,
+            "y": 7364,
             "w": 344,
             "h": 215
           }
@@ -1268,7 +1268,7 @@
             "x": 36,
             "y": 158,
             "w": 318,
-            "h": 590
+            "h": 568
           },
           "cols": "318px"
         },
@@ -1276,7 +1276,7 @@
           "cls": "human-feature-grid",
           "rect": {
             "x": 22,
-            "y": 1845,
+            "y": 1865,
             "w": 346,
             "h": 1395
           },
@@ -1286,7 +1286,7 @@
           "cls": "demo-editorial-grid",
           "rect": {
             "x": 22,
-            "y": 3494,
+            "y": 3514,
             "w": 346,
             "h": 703
           },
@@ -1296,7 +1296,7 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 4307,
+            "y": 4327,
             "w": 390,
             "h": 2471
           },
@@ -1306,7 +1306,7 @@
           "cls": "results-stage",
           "rect": {
             "x": 22,
-            "y": 6928,
+            "y": 6947,
             "w": 346,
             "h": 666
           },
