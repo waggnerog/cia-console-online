@@ -3563,3 +3563,29 @@ body:not(.public-mode) .execution-empty .empty-actions{
  .cia-media-slot .editorial-media-line b{font-size:23px}
  .cia-media-credit{top:10px!important;right:10px!important}
 }
+
+
+/* QA 2026-10-21: stop last use-case media from collapsing on narrow viewports. */
+@media(max-width:700px){
+  .usecase-editorial article:nth-child(4){
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  .usecase-editorial article:nth-child(4) > div{
+    width:100%!important;
+    min-width:0!important;
+  }
+  .usecase-editorial article:nth-child(4) > .cia-media-slot.square{
+    display:block!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    aspect-ratio:1/1!important;
+    align-self:stretch!important;
+    margin-top:22px!important;
+  }
+}
