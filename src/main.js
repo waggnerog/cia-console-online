@@ -166,7 +166,7 @@ function publicLogin(){
 function contractPage(preselected=''){
   const plans=state.publicPlans||[];
   let step=1;
-  const draft={plan_code:preselected||plans[0]?.code||'bko',billing_interval:'monthly',company_name:'',trade_name:'',document:'',company_size:'',admin_name:'',admin_email:'',admin_phone:'',commercial_consent:false};
+  const draft={plan_code:preselected||plans[0]?.code||'bko',billing_interval:'monthly',company_name:'',trade_name:'',document:'',company_size:'',admin_name:'',admin_email:'',admin_phone:'',commercial_consent:false,legal_acceptance:false};
   app.innerHTML='<div class="public-site public-contract-page">'+publicHeader('contratar')+'<main class="contract-main"><aside class="contract-aside"><span>AVALIAÇÃO DE 14 DIAS</span><h1>Crie seu Ambiente CIA.</h1><p>Escolha o plano, cadastre a empresa e defina o primeiro Admin. O CIA provisiona o Ambiente e as licenças automaticamente.</p><ol><li class="active"><b>1</b><span>Plano</span></li><li><b>2</b><span>Empresa</span></li><li><b>3</b><span>Administrador</span></li><li><b>4</b><span>Revisão</span></li></ol><small>Cada acesso é pessoal. O plano define quantos usuários de gestão, usuários de campo e fotos mensais o Ambiente pode utilizar.</small></aside><section id="contractCard" class="contract-card"></section></main></div>';
   bindPublicNav();
   const sideSteps=[...document.querySelectorAll('.contract-aside li')];
@@ -187,7 +187,7 @@ function contractPage(preselected=''){
     }
     if(step===4){
       const priceLabel=draft.billing_interval==='annual'?money(plan?.annual_price_cents)+'/ano':money(plan?.monthly_price_cents)+'/mês';
-      card.innerHTML='<div class="contract-head"><span>PASSO 4 DE 4</span><h2>Revise antes de criar o Ambiente.</h2><p>Você terá 14 dias para avaliar o fluxo com os limites do plano escolhido.</p></div><div class="contract-review"><div><span>EMPRESA</span><b>'+esc(draft.trade_name||draft.company_name)+'</b><small>'+esc(draft.company_name)+'</small></div><div><span>PLANO</span><b>'+esc(plan?.name||draft.plan_code)+'</b><small>'+priceLabel+'</small></div><div><span>LICENÇAS</span><b>'+plan.management_seats+' gestão · '+plan.field_seats+' campo</b><small>'+new Intl.NumberFormat('pt-BR').format(plan.photo_limit_monthly)+' fotos/mês</small></div><div><span>ADMIN</span><b>'+esc(draft.admin_name)+'</b><small>'+esc(draft.admin_email)+'</small></div></div><label class="contract-consent"><input id="commercialConsent" type="checkbox" '+(draft.commercial_consent?'checked':'')+'><span>Confirmo que os dados estão corretos e autorizo a criação deste Ambiente CIA para avaliação. Os acessos são pessoais e sujeitos aos limites do plano.</span></label><div id="contractError" class="contract-error"></div><div class="contract-actions"><button id="contractBack" class="public-secondary-btn">Voltar</button><button id="contractSubmit" class="public-primary-btn">Criar Ambiente de avaliação</button></div>';
+      card.innerHTML='<div class="contract-head"><span>PASSO 4 DE 4</span><h2>Revise antes de criar o Ambiente.</h2><p>Você terá 14 dias para avaliar o fluxo com os limites do plano escolhido.</p></div><div class="contract-review"><div><span>EMPRESA</span><b>'+esc(draft.trade_name||draft.company_name)+'</b><small>'+esc(draft.company_name)+'</small></div><div><span>PLANO</span><b>'+esc(plan?.name||draft.plan_code)+'</b><small>'+priceLabel+'</small></div><div><span>LICENÇAS</span><b>'+plan.management_seats+' gestão · '+plan.field_seats+' campo</b><small>'+new Intl.NumberFormat('pt-BR').format(plan.photo_limit_monthly)+' fotos/mês</small></div><div><span>ADMIN</span><b>'+esc(draft.admin_name)+'</b><small>'+esc(draft.admin_email)+'</small></div></div><label class="contract-consent"><input id="commercialConsent" type="checkbox" '+(draft.commercial_consent?'checked':'')+'><span>Confirmo os dados e aceito os <a href="#termos" target="_blank" rel="noopener">Termos de Uso</a>, a <a href="#privacidade" target="_blank" rel="noopener">Política de Privacidade</a> e a <a href="#assinatura" target="_blank" rel="noopener">Política Comercial</a> do CIA.</span></label><div id="contractError" class="contract-error"></div><div class="contract-actions"><button id="contractBack" class="public-secondary-btn">Voltar</button><button id="contractSubmit" class="public-primary-btn">Criar Ambiente de avaliação</button></div>';
     }
     bindPublicNav();
     document.querySelectorAll('[data-billing]').forEach(b=>b.onclick=()=>{draft.billing_interval=b.dataset.billing;draw()});
@@ -215,8 +215,9 @@ function contractPage(preselected=''){
   }
   async function submit(){
     draft.commercial_consent=document.getElementById('commercialConsent').checked;
+    draft.legal_acceptance=draft.commercial_consent;
     const errorEl=document.getElementById('contractError');
-    if(!draft.commercial_consent){errorEl.textContent='Confirme os dados para continuar.';return}
+    if(!draft.commercial_consent){errorEl.textContent='Aceite os Termos, a Política de Privacidade e a Política Comercial para continuar.';return}
     const btn=document.getElementById('contractSubmit');btn.disabled=true;btn.textContent='Criando Ambiente...';errorEl.textContent='';
     const {data,error}=await supabase.functions.invoke('public-contract',{body:draft});
     if(error||data?.error){btn.disabled=false;btn.textContent='Criar Ambiente de avaliação';errorEl.textContent=data?.error||error.message||'Não foi possível concluir.';return}
