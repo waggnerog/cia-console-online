@@ -1,0 +1,81 @@
+name: CIA Product Screenshot Assets
+on:
+  push:
+    branches: [qa/landing-visual-20261021]
+    paths: [.github/workflows/generate-product-stills.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install tools
+        run: |
+          npm ci
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Create local-only capture session
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/main.js')
+          s=p.read_text()
+          needle='\nstart();'
+          assert s.count(needle)==1, 'bootstrap signature changed'
+          boot="""\nif(import.meta.env.DEV && new URLSearchParams(location.search).has('cia_capture')){\n  const mode=new URLSearchParams(location.search).get('cia_capture');\n  state.user={id:'preview-only',email:'preview@cia.example'};\n  state.membership={role:'bko',workspace_id:'preview-only',display_name:'Equipe CIA'};\n  state.environments=[{workspace_id:'preview-only',workspace_name:'Operação demonstrativa'}];\n  state.services={bko_enabled:true,field_enabled:false};\n  state.workspace={name:'Demonstração CIA',settings:{timezone:'America/Sao_Paulo'}};\n  state.rows=makeRows().map((row,i)=>({...row,client:'Marca exemplo',operation:'Execução em PDV',promoterContact:{whatsapp:'5511000000000'},supervisorContact:{whatsapp:'5511000000000'},region:['Sudeste','Sul','Nordeste'][i%3]}));\n  state.selected=state.rows[0].id;\n  state.demo=true;\n  if(mode==='reports')reports();\n  else{review();if(mode==='adjust')openAdjustment();}\n}else start();\n"""
+          p.write_text(s.replace(needle,'\n'+boot))
+          PY
+      - name: Start Vite
+        run: |
+          nohup npm run dev -- --host 127.0.0.1 > /tmp/cia-vite.log 2>&1 &
+          for i in $(seq 1 40); do if curl -fs http://127.0.0.1:5173/ >/dev/null; then exit 0; fi; sleep 1; done
+          cat /tmp/cia-vite.log
+          exit 1
+      - name: Capture actual product screens
+        run: |
+          mkdir -p public/media
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+          const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+          const tasks=[
+            {key:'execution',file:'cia-execucao-real.jpg'},
+            {key:'adjust',file:'cia-ajuste-real.jpg'},
+            {key:'reports',file:'cia-relatorios-real.jpg'}
+          ];
+          const manifest=[];
+          for(const task of tasks){
+            const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+            await page.goto('http://127.0.0.1:5173/?cia_capture='+task.key,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForTimeout(2400);
+            const target=task.key==='reports'?'.editorial-reports':task.key==='adjust'?'.modal-root':'.execution-workspace';
+            const exists=await page.locator(target).count();
+            if(!exists)throw new Error('Expected CIA interface missing: '+task.key);
+            const shots=page.locator('.cia-editorial-photo');
+            const broken=await page.locator('.execution-workspace img').evaluateAll(imgs=>imgs.filter(x=>!x.complete||!x.naturalWidth).length);
+            if(task.key==='execution'&&broken)console.log('Some external example photos did not load:',broken);
+            // A genuine screenshot of this CIA build, not an invented interface.
+            await page.screenshot({path:'public/media/'+task.file,type:'jpeg',quality:87,animations:'disabled'});
+            manifest.push({asset:task.file,route:task.key,source:'Current CIA frontend — isolated local demonstration mode',realCustomerData:false,photography:'Legacy demonstration photos',bytes:fs.statSync('public/media/'+task.file).size});
+            await page.close();
+          }
+          fs.writeFileSync('public/media/README.md','# CIA product screenshots\n\nThese three screenshots are rendered from the actual CIA frontend source in an isolated development-only capture session. They display fictional demonstration records, no customer data. They are NOT proof of integrations or real operational history.\n\n'+manifest.map(x=>'- '+x.asset+' — '+x.route).join('\n')+'\n');
+          console.log(JSON.stringify(manifest));
+          await browser.close();
+          NODE
+      - name: Commit approved build snapshots on QA branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/media
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: render current CIA execution, adjustment and reports previews [skip ci]"
+            git push origin HEAD:qa/landing-visual-20261021
+          fi
