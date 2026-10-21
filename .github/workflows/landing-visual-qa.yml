@@ -1,0 +1,89 @@
+name: CIA Landing Visual QA
+
+on:
+  push:
+    branches: [qa/landing-visual-20261021]
+    paths: [.github/workflows/landing-visual-qa.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  visual-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install headless browser
+        run: |
+          npm install --no-package-lock --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Browser journey and screenshots
+        run: |
+          mkdir -p qa-snapshots/2026-10-21
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+          const OUT='qa-snapshots/2026-10-21';
+          const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+          const cases=[{name:'desktop',width:1440,height:900},{name:'laptop',width:1024,height:768},{name:'mobile',width:390,height:844}];
+          const result={testedAt:new Date().toISOString(),url:'https://app.usecia.com/',cases:[]};
+          for(const c of cases){
+            const page=await browser.newPage({viewport:{width:c.width,height:c.height},deviceScaleFactor:1,isMobile:c.name==='mobile',hasTouch:c.name==='mobile'});
+            const errors=[],failed=[],responses=[];
+            page.on('pageerror',e=>errors.push(String(e).slice(0,400)));
+            page.on('console',m=>{if(m.type()==='error')errors.push(m.text().slice(0,400))});
+            page.on('requestfailed',r=>failed.push({url:r.url().slice(0,190),failure:r.failure()?.errorText}));
+            page.on('response',r=>{if(r.status()>=400)responses.push({url:r.url().slice(0,160),status:r.status()})});
+            try {
+              await page.goto(result.url,{waitUntil:'domcontentloaded',timeout:55000});
+              await page.waitForTimeout(2800);
+              await page.screenshot({path:OUT+'/'+c.name+'-top.jpg',type:'jpeg',quality:70,animations:'disabled'});
+              await page.screenshot({path:OUT+'/'+c.name+'-full.jpg',type:'jpeg',quality:60,fullPage:true,animations:'disabled'});
+              const audit=await page.evaluate(()=>{
+                const $=s=>document.querySelector(s);
+                const box=e=>e?{x:Math.round(e.getBoundingClientRect().x),y:Math.round(e.getBoundingClientRect().y),w:Math.round(e.getBoundingClientRect().width),h:Math.round(e.getBoundingClientRect().height)}:null;
+                const sections=[...document.querySelectorAll('section')].slice(0,35).map(e=>({id:e.id||'',cls:e.className?.toString().slice(0,90),rect:box(e)}));
+                const images=[...document.images].map(e=>({alt:e.alt,src:e.currentSrc?.slice(0,200),complete:e.complete,naturalWidth:e.naturalWidth,naturalHeight:e.naturalHeight,rect:box(e)}));
+                const media=[...document.querySelectorAll('.cia-media-slot')].map(e=>({cls:e.className,rect:box(e),img:e.querySelector('img')?.getAttribute('src'),imgRect:box(e.querySelector('img'))}));
+                const header=$('.public-header');
+                const hero=$('.human-hero');
+                const grids=[...document.querySelectorAll('.human-hero-grid,.demo-editorial-grid,.results-stage,.human-feature-grid,.human-audience')].map(e=>({cls:e.className,rect:box(e),cols:getComputedStyle(e).gridTemplateColumns}));
+                const clipped=[...document.querySelectorAll('main *')].filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.right>innerWidth+12&&!e.closest('.carousel,.scrollable,.filmstrip')}).slice(0,20).map(e=>({tag:e.tagName,cls:e.className?.toString().slice(0,60),w:Math.round(e.getBoundingClientRect().width),right:Math.round(e.getBoundingClientRect().right)}));
+                return {title:document.title,viewportWidth:innerWidth,documentWidth:document.documentElement.scrollWidth,documentHeight:document.documentElement.scrollHeight,bodyScroll:document.body.scrollHeight,header:box(header),hero:box(hero),sections,images,media,grids,clipped,scrollAnchors:[...document.querySelectorAll('[data-scroll]')].slice(0,30).map(e=>({label:e.textContent.trim().slice(0,60),target:e.dataset.scroll}))};
+              });
+              const nav=[];
+              for(const label of ['produto','para-quem','planos','faq']){
+                try{
+                  const loc=page.locator('[data-scroll="'+label+'"]').first();
+                  if(await loc.count()){
+                    await loc.click({timeout:4500});
+                    await page.waitForTimeout(450);
+                    nav.push({target:label,scrollY:await page.evaluate(()=>scrollY),hash:new URL(page.url()).hash});
+                  }else nav.push({target:label,missing:true});
+                }catch(e){nav.push({target:label,error:String(e.message).slice(0,240)})}
+              }
+              result.cases.push({...c,...audit,nav,errors:errors.slice(0,20),failed:failed.slice(0,25),httpErrors:responses.slice(0,20)});
+            }catch(e){result.cases.push({...c,fatal:String(e).slice(0,1200),errors,failed})}
+            await page.close();
+          }
+          await browser.close();
+          fs.writeFileSync(OUT+'/audit.json',JSON.stringify(result,null,2));
+          console.log('AUDIT_JSON_START');
+          console.log(JSON.stringify(result));
+          console.log('AUDIT_JSON_END');
+          NODE
+      - name: Commit audit artifacts to QA branch
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qa-snapshots || true
+          if ! git diff --cached --quiet; then
+            git commit -m "qa: record CIA landing screenshots [skip ci]"
+            git push origin HEAD:qa/landing-visual-20261021
+          fi
