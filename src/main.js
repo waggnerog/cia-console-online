@@ -207,6 +207,17 @@ function ciaEditorialImg(photo,w,q=84){
   return 'https://images.unsplash.com/photo-'+photo+'?auto=format&fit=crop&w='+w+'&q='+q;
 }
 function mediaSlot(kind,title,caption,ratio='landscape',extra=''){
+  const productPreviews={
+    'A':{file:'cia-execucao-real.jpg',alt:'Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja'},
+    'B':{file:'cia-ajuste-real.jpg',alt:'Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp'},
+    'G':{file:'cia-relatorios-real.jpg',alt:'Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional'}
+  };
+  if(productPreviews[kind]){
+    const preview=productPreviews[kind];
+    return '<figure class="cia-media-slot '+ratio+' '+extra+' cia-product-preview preview-kind-'+kind.toLowerCase()+'" role="group" aria-label="'+esc(preview.alt)+'">'+
+      '<img class="cia-product-capture" src="/media/'+preview.file+'" alt="'+esc(preview.alt)+'" loading="lazy" decoding="async" width="1440" height="900">'+
+      '<figcaption class="cia-preview-caption">INTERFACE DO CIA · DADOS DEMONSTRATIVOS</figcaption></figure>';
+  }
   if(kind==='PLAY'){
     return '<div class="cia-media-slot '+ratio+' '+extra+' video-pending" aria-label="Espaço reservado para o futuro comercial do CIA">'+
       '<div class="media-slot-grid" aria-hidden="true"></div><div class="video-pending-inner">'+
@@ -240,10 +251,10 @@ function publicLanding(){
       '<div class="human-section-label"><span>01</span><b>PRODUTO</b></div>'+
       '<div class="human-split-head"><h2>Um sistema feito para o momento entre <em>“a foto chegou”</em> e <em>“o problema foi resolvido”.</em></h2><p>Não tentamos substituir tudo. O CIA domina o trecho mais crítico da execução visual: receber, contextualizar, decidir, corrigir e aprender com o padrão.</p></div>'+
       '<div class="human-feature-grid">'+
-        '<article class="feature-large"><span>01</span><h3>Receba a execução.</h3><p>Fotos entram pelo CIA Campo ou por CSV. Quem já usa outro sistema pode manter sua operação e conectar apenas o fluxo de análise.</p>'+mediaSlot('A','Execução em loja','Acompanhamento visual da execução no PDV.','wide')+'</article>'+
+        '<article class="feature-large"><span>01</span><h3>Receba a execução.</h3><p>Fotos entram pelo CIA Campo ou por CSV. Quem já usa outro sistema pode manter sua operação e conectar apenas o fluxo de análise.</p>'+mediaSlot('A','Interface real de Execução','Fila, fotografia e contexto no mesmo lugar.','wide')+'</article>'+
         '<article><span>02</span><h3>Entenda sem perguntar.</h3><p>Loja, rede, região, tarefa, Promotor, Supervisor e histórico aparecem junto da foto.</p></article>'+
         '<article><span>03</span><h3>Decida em segundos.</h3><p>Aprove, reprove ou solicite ajuste sem abandonar o fluxo de análise.</p></article>'+
-        '<article class="feature-wide"><span>04</span><h3>Corrija com o responsável certo.</h3><p>O contato vem do Cadastro Mestre. O CIA prepara a mensagem e abre o WhatsApp para Promotor ou Supervisor.</p>'+mediaSlot('B','Da decisão ao ajuste','Registro fotográfico e contato direto com a equipe.','strip')+'</article>'+
+        '<article class="feature-wide"><span>04</span><h3>Corrija com o responsável certo.</h3><p>O contato vem do Cadastro Mestre. O CIA prepara a mensagem e abre o WhatsApp para Promotor ou Supervisor.</p>'+mediaSlot('B','Ajuste preparado no CIA','Contato escolhido e mensagem pronta para WhatsApp.','strip')+'</article>'+
       '</div>'+
     '</section>'+
     '<section id="demonstracao" class="public-section human-demo">'+
@@ -264,7 +275,7 @@ function publicLanding(){
     '</section>'+
     '<section class="public-section human-results">'+
       '<div class="human-section-label"><span>04</span><b>DO CAMPO À GESTÃO</b></div>'+
-      '<div class="results-stage"><div class="results-copy"><span>RELATÓRIOS</span><h2>O CIA não termina quando a foto é aprovada.</h2><p>Cada decisão alimenta uma leitura gerencial. Região, rede, loja, tarefa e causa passam a mostrar onde o padrão está quebrando.</p><div class="results-statements"><b>Onde agir.</b><b>Por que agir.</b><b>Em quem agir.</b></div></div>'+mediaSlot('G','Gestão à distância','Tomada de decisão baseada nas análises do CIA.','dashboard','dashboard-media')+'</div>'+
+      '<div class="results-stage"><div class="results-copy"><span>RELATÓRIOS</span><h2>O CIA não termina quando a foto é aprovada.</h2><p>Cada decisão alimenta uma leitura gerencial. Região, rede, loja, tarefa e causa passam a mostrar onde o padrão está quebrando.</p><div class="results-statements"><b>Onde agir.</b><b>Por que agir.</b><b>Em quem agir.</b></div></div>'+mediaSlot('G','Relatórios do CIA','Indicadores e prioridades extraídos das decisões.','dashboard','dashboard-media')+'</div>'+
     '</section>'+
     '<section class="brand-manifesto"><div class="manifesto-word" aria-hidden="true">CIA</div><span>VER · DECIDIR · CORRIGIR</span><h2>Menos tempo procurando evidência.<br><em>Mais tempo corrigindo execução.</em></h2><p>Essa é a função do CIA.</p></section>'+
     '<section class="public-section human-security"><div class="human-section-label"><span>05</span><b>CONTROLE</b></div><div class="security-editorial"><div><h2>Produto empresarial exige <em>controle empresarial.</em></h2><p>Acesso não é uma senha compartilhada. Cada pessoa tem sua licença, seu papel e sua sessão. Cada cliente opera em um Ambiente isolado.</p></div><div class="security-list"><article><b>01</b><span><strong>1 sessão ativa</strong><small>Novo login substitui a sessão anterior.</small></span></article><article><b>02</b><span><strong>Ambientes isolados</strong><small>Dados de clientes não se misturam.</small></span></article><article><b>03</b><span><strong>Permissões por função</strong><small>Admin, BKO, Supervisor e Promotor.</small></span></article><article><b>04</b><span><strong>Limites no backend</strong><small>Licenças e fotos seguem o plano contratado.</small></span></article></div></div></section>'+
