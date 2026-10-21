@@ -1,4 +1,4 @@
-name: CIA Landing Final QA
+name: CIA Landing Copy QA
 
 on:
   push:
@@ -101,3 +101,5 @@ jobs:
             git commit -m "qa: record CIA landing screenshots [skip ci]"
             git push origin HEAD:qa/landing-visual-20261021
           fi
+
+# COPY_QA_TRIGGER 2026-10-21-copy-v1
