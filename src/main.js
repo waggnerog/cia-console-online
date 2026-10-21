@@ -755,14 +755,40 @@ function commercialPage(){
 }
 function statusCommercial(v){return ({trialing:'Em avaliação',active:'Ativo',suspended:'Suspenso',cancelled:'Cancelado',past_due:'Pagamento pendente',pending_activation:'Aguardando ativação'})[v]||v}
 function reports(){
-  const analyzed=analyzedRows(),problems=problemRows(),approval=analyzed.length?Math.round(analyzed.filter(x=>x.status==='approved').length/analyzed.length*100):0;
+  const analyzed=analyzedRows(),problems=problemRows(),approvedCount=analyzed.filter(x=>x.status==='approved').length;
+  const approval=analyzed.length?Math.round(approvedCount/analyzed.length*100):0;
   const regions=aggregateBy('region'),networks=aggregateBy('network'),stores=aggregateBy('store'),tasks=aggregateBy('task'),reasons=reasonBreakdown();
-  const topRegion=regions[0],topReason=reasons[0];
-  app.innerHTML='<div class="page-shell">'+appHeader('relatorios')+'<main class="page-main reports-page"><div class="page-heading"><div><span>RELATÓRIOS</span><h1>Onde a execução está falhando?</h1><p>Transforme as análises das fotos em prioridade de campo. O foco aqui é mostrar onde agir primeiro.</p></div><div class="period-chip">Outubro 2026</div></div>'+
-  '<section class="report-kpis"><article><span>Execuções analisadas</span><b>'+analyzed.length+'</b><small>Base das análises concluídas</small></article><article><span>Taxa de aprovação</span><b>'+approval+'%</b><small>'+analyzed.filter(x=>x.status==='approved').length+' execuções aprovadas</small></article><article class="attention"><span>Com problema</span><b>'+problems.length+'</b><small>Ajustes + reprovações</small></article><article><span>Principal problema</span><b class="text-kpi">'+esc(topReason?.label||'Sem dados')+'</b><small>'+(topReason?.value||0)+' ocorrência'+((topReason?.value||0)===1?'':'s')+'</small></article></section>'+
-  '<section class="insight-banner"><div><span>PRIORIDADE</span><h2>'+(topRegion?esc(topRegion.label):'Sem dados suficientes')+'</h2><p>'+(topRegion?'É a região com maior incidência proporcional de problemas: '+topRegion.rate+'% das execuções analisadas precisam de atenção.':'Analise execuções para gerar uma prioridade de campo.')+'</p></div><strong>'+(topRegion?topRegion.issues:'0')+'</strong><small>problemas</small></section>'+
-  '<section class="dashboard-grid"><article class="dash-card wide"><header><div><span>POR REGIÃO</span><h3>Onde concentrar acompanhamento</h3></div><small>% de execuções com problema</small></header><div class="dash-bars">'+barRows(regions)+'</div></article><article class="dash-card"><header><div><span>POR REDE</span><h3>Redes com mais desvio</h3></div></header><div class="dash-bars compact">'+barRows(networks,5)+'</div></article><article class="dash-card"><header><div><span>CAUSAS</span><h3>Problemas mais recorrentes</h3></div></header><ol class="reason-list">'+(reasons.slice(0,6).map((r,i)=>'<li><span>'+(i+1)+'</span><b>'+esc(r.label)+'</b><strong>'+r.value+'</strong></li>').join('')||'<li class="no-data">Sem problemas classificados.</li>')+'</ol></article></section>'+
-  '<section class="dashboard-grid bottom"><article class="dash-card wide"><header><div><span>LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3></div></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article><article class="dash-card"><header><div><span>POR TAREFA</span><h3>Tipos de execução com mais falhas</h3></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article></section></main></div>';
+  const topRegion=regions[0],topNetwork=networks[0],topReason=reasons[0],topStore=stores[0];
+  const issueRate=analyzed.length?Math.round(problems.length/analyzed.length*100):0;
+  const priorityText=topRegion
+    ? esc(topRegion.label)+' concentra a maior taxa de desvio, com '+topRegion.rate+'% das execuções analisadas exigindo atenção.'
+    : 'Analise mais execuções para o CIA apontar onde a operação precisa agir primeiro.';
+  app.innerHTML='<div class="page-shell report-shell">'+appHeader('relatorios')+
+  '<main class="page-main reports-page editorial-reports">'+
+    '<section class="report-masthead"><div class="report-ghost" aria-hidden="true">RESULTADO</div><div class="report-masthead-copy"><span>RELATÓRIOS · OUTUBRO 2026</span><h1>Onde a execução <em>precisa de atenção?</em></h1><p>O CIA transforma cada decisão tomada sobre as fotos em uma leitura gerencial: onde o padrão falha, por que falha e qual frente merece prioridade.</p></div><div class="report-masthead-meta"><small>BASE ANALISADA</small><b>'+analyzed.length+'</b><span>execuções concluídas</span></div></section>'+
+    '<section class="report-kpis editorial-kpis">'+
+      '<article><span>Aprovação</span><b>'+approval+'%</b><small>'+approvedCount+' execuções validadas</small></article>'+
+      '<article><span>Com problema</span><b>'+problems.length+'</b><small>'+issueRate+'% da base analisada</small></article>'+
+      '<article><span>Região mais crítica</span><b class="text-kpi">'+esc(topRegion?.label||'Sem dados')+'</b><small>'+(topRegion?topRegion.rate+'% com problema':'—')+'</small></article>'+
+      '<article><span>Principal causa</span><b class="text-kpi">'+esc(topReason?.label||'Sem dados')+'</b><small>'+(topReason?.value||0)+' ocorrência'+((topReason?.value||0)===1?'':'s')+'</small></article>'+
+    '</section>'+
+    '<section class="report-story-grid">'+
+      '<article class="editorial-insight">'+
+        '<div class="insight-index">01</div><div class="insight-copy"><span>PRIORIDADE DO MOMENTO</span><h2>'+priorityText+'</h2><p>'+(topReason?'A causa mais recorrente é <b>'+esc(topReason.label)+'</b>. Use essa combinação para orientar cobrança, treinamento e acompanhamento de campo.':'Assim que houver desvios classificados, o CIA cruza região e causa para sugerir a prioridade.')+'</p></div>'+
+        '<div class="insight-number"><b>'+(topRegion?topRegion.issues:0)+'</b><span>problemas</span></div>'+
+      '</article>'+
+      '<article class="editorial-rank"><header><span>02 · CAUSAS</span><h3>O que mais tira a execução do padrão</h3></header><ol>'+((reasons.slice(0,5).map((r,i)=>'<li><span>0'+(i+1)+'</span><b>'+esc(r.label)+'</b><strong>'+r.value+'</strong></li>').join(''))||'<li class="no-data">Sem problemas classificados.</li>')+'</ol></article>'+
+    '</section>'+
+    '<section class="report-analysis-grid">'+
+      '<article class="analysis-panel region-panel"><header><div><span>03 · TERRITÓRIO</span><h3>Problema por região</h3><p>Taxa de execuções com ajuste ou reprovação.</p></div><strong>'+esc(topRegion?.label||'—')+'</strong></header><div class="dash-bars">'+barRows(regions)+'</div></article>'+
+      '<article class="analysis-panel network-panel"><header><div><span>04 · REDE</span><h3>Onde o padrão oscila mais</h3><p>Leitura proporcional por rede.</p></div><strong>'+esc(topNetwork?.label||'—')+'</strong></header><div class="dash-bars compact">'+barRows(networks,6)+'</div></article>'+
+    '</section>'+
+    '<section class="report-analysis-grid lower">'+
+      '<article class="analysis-panel stores-panel"><header><div><span>05 · LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3><p>Ranking por taxa de problema.</p></div><strong>'+esc(topStore?.label||'—')+'</strong></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article>'+
+      '<article class="analysis-panel task-panel"><header><div><span>06 · TAREFAS</span><h3>Tipos de execução com mais falhas</h3><p>Ajuda a identificar necessidade de instrução ou padrão melhor definido.</p></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article>'+
+    '</section>'+
+    '<section class="report-closing"><div><span>LEITURA GERENCIAL</span><h2>O relatório não termina no gráfico. Ele precisa dizer onde agir.</h2></div><p>Use os rankings para decidir se o próximo movimento é <b>cobrança de execução</b>, <b>treinamento</b>, <b>revisão de material</b> ou <b>acompanhamento de uma loja específica</b>.</p></section>'+
+  '</main></div>';
   bindGlobalNav();
 }
 function safeFileName(name){return String(name||'arquivo.csv').replace(/[^a-zA-Z0-9._-]+/g,'-')}
