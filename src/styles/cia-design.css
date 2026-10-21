@@ -4057,3 +4057,36 @@ body:not(.public-mode) .execution-empty .empty-actions{
     line-height:1.55!important;
   }
 }
+
+
+/* CIA HERO — approved premium background image focus and readable typography */
+.public-site.human-cia .cia-photo-hero .cia-hero-backdrop{
+  isolation:isolate!important;
+}
+.public-site.human-cia .cia-photo-hero .cia-hero-backdrop::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  -webkit-backdrop-filter:blur(9px);
+  backdrop-filter:blur(9px);
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 29%,rgba(0,0,0,.88) 42%,transparent 69%);
+  mask-image:linear-gradient(90deg,#000 0%,#000 29%,rgba(0,0,0,.88) 42%,transparent 69%);
+}
+.public-site.human-cia .cia-photo-hero::before{
+  background:linear-gradient(90deg,rgba(9,14,27,.86) 0%,rgba(10,17,32,.78) 30%,rgba(12,19,34,.44) 58%,rgba(12,19,34,.04) 100%),
+             linear-gradient(0deg,rgba(10,17,31,.30),transparent 70%)!important;
+}
+@media(max-width:700px){
+  .public-site.human-cia .cia-photo-hero .cia-hero-backdrop::after{
+    -webkit-backdrop-filter:blur(7px);
+    backdrop-filter:blur(7px);
+    -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.92) 62%,rgba(0,0,0,.15) 100%);
+    mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.92) 62%,rgba(0,0,0,.15) 100%);
+  }
+  .public-site.human-cia .cia-photo-hero::before{
+    background:linear-gradient(90deg,rgba(9,15,29,.85),rgba(9,15,29,.49)),
+               linear-gradient(0deg,rgba(8,14,28,.76),transparent 78%)!important;
+  }
+}
