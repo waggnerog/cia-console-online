@@ -102,4 +102,5 @@ jobs:
             git push origin HEAD:qa/landing-visual-20261021
           fi
 
-# COPY_QA_TRIGGER 2026-10-21-copy-v1
+
+# COPY_QA_TRIGGER 2026-10-21-copy-v2
