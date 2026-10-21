@@ -689,14 +689,27 @@ function guessHeader(headers,aliases){
 }
 async function importCsvToSupabase(rows,map,fileName){
   const workspaceId=state.membership.workspace_id;
-  const valid=rows.filter(r=>map.store&&map.url&&r[map.store]&&r[map.url]);
-  if(!valid.length)throw new Error('Nenhuma linha válida para importar.');
+  const candidates=rows.filter(r=>map.store&&map.url&&r[map.store]&&r[map.url]);
+  if(!candidates.length)throw new Error('Nenhuma linha válida para importar.');
+
+  const {data:storeRows,error:storeErr}=await supabase.from('stores').select('id,code,name,network,region').eq('workspace_id',workspaceId).eq('active',true);
+  if(storeErr)throw storeErr;
+  const byCode=new Map((storeRows||[]).map(s=>[norm(s.code),s]));
+  const byName=new Map((storeRows||[]).map(s=>[norm(s.name),s]));
+  const resolved=candidates.map(row=>{
+    const rawCode=map.code?row[map.code]:'',rawName=row[map.store];
+    const store=(rawCode?byCode.get(norm(rawCode)):null)||byName.get(norm(rawName))||null;
+    return {row,store,error:store?'':'Loja não encontrada no Cadastro Mestre'};
+  });
+  const valid=resolved.filter(x=>x.store);
+  const unresolved=resolved.filter(x=>!x.store);
+  if(!valid.length)throw new Error('Nenhuma loja do CSV foi encontrada no Cadastro Mestre. Atualize o Cadastro Mestre antes de importar execuções.');
 
   let {data:ops,error:opReadErr}=await supabase.from('operations').select('id,name').eq('workspace_id',workspaceId).eq('active',true).limit(1);
   if(opReadErr)throw opReadErr;
   let operationId=ops?.[0]?.id;
   if(!operationId){
-    const {data:op,error}=await supabase.from('operations').insert({workspace_id:workspaceId,name:'Importação CSV',client_name:'Cliente'}).select('id').single();
+    const {data:op,error}=await supabase.from('operations').insert({workspace_id:workspaceId,name:'Importação CSV',client_name:state.workspace?.name||'Cliente'}).select('id').single();
     if(error)throw error; operationId=op.id;
   }
 
@@ -705,53 +718,46 @@ async function importCsvToSupabase(rows,map,fileName){
   }).select('id').single();
   if(impErr)throw impErr;
 
-  const storesByKey=new Map(),tasksByTitle=new Map();
-  const storePayload=[];
-  for(const r of valid){
-    const code=(map.code&&r[map.code])||('CSV-'+r.__row);
-    const key=code.trim();
-    if(!storesByKey.has(key)){
-      const item={workspace_id:workspaceId,code:key,name:r[map.store].trim(),network:map.network?r[map.network]||null:null,region:map.region?r[map.region]||null:null};
-      storesByKey.set(key,item);storePayload.push(item);
-    }
-  }
-  const {data:storeRows,error:storeErr}=await supabase.from('stores').upsert(storePayload,{onConflict:'workspace_id,code'}).select('id,code');
-  if(storeErr)throw storeErr;
-  const storeIds=new Map((storeRows||[]).map(s=>[s.code,s.id]));
+  const storeIds=[...new Set(valid.map(x=>x.store.id))];
   const assignmentByStore=new Map();
-  if(storeRows?.length){
-    const {data:masterAssignments,error:maErr}=await supabase.from('store_assignments').select('store_id,promoter_id,supervisor_id,promoter:people!store_assignments_promoter_id_fkey(full_name,whatsapp,phone,email),supervisor:people!store_assignments_supervisor_id_fkey(full_name,whatsapp,phone,email)').eq('workspace_id',workspaceId).eq('active',true).in('store_id',storeRows.map(s=>s.id));
+  if(storeIds.length){
+    const {data:masterAssignments,error:maErr}=await supabase.from('store_assignments').select('store_id,promoter_id,supervisor_id,promoter:people!store_assignments_promoter_id_fkey(full_name,whatsapp,phone,email),supervisor:people!store_assignments_supervisor_id_fkey(full_name,whatsapp,phone,email)').eq('workspace_id',workspaceId).eq('active',true).in('store_id',storeIds);
     if(maErr)throw maErr;(masterAssignments||[]).forEach(a=>assignmentByStore.set(a.store_id,a));
   }
 
-  const titles=[...new Set(valid.map(r=>(map.task&&r[map.task]?r[map.task]:'Foto de execução').trim()))];
+  const tasksByTitle=new Map();
+  const titles=[...new Set(valid.map(x=>((map.task&&x.row[map.task])||'Foto de execução').trim()))];
   const {data:existingTasks,error:taskReadErr}=await supabase.from('photo_tasks').select('id,title').eq('workspace_id',workspaceId).eq('operation_id',operationId).in('title',titles);
   if(taskReadErr)throw taskReadErr;
   (existingTasks||[]).forEach(t=>tasksByTitle.set(t.title,t.id));
   const missing=titles.filter(t=>!tasksByTitle.has(t));
   if(missing.length){
-    const {data:newTasks,error:taskErr}=await supabase.from('photo_tasks').insert(missing.map(title=>({workspace_id:workspaceId,operation_id:operationId,title,min_photos:1,required:true}))).select('id,title');
+    const {data:newTasks,error:taskErr}=await supabase.from('photo_tasks').insert(missing.map(title=>({workspace_id:workspaceId,operation_id:operationId,title,min_photos:1,required:true,active:true,criteria:{}}))).select('id,title');
     if(taskErr)throw taskErr;(newTasks||[]).forEach(t=>tasksByTitle.set(t.title,t.id));
   }
 
-  const evidencePayload=valid.map(r=>{
-    const code=((map.code&&r[map.code])||('CSV-'+r.__row)).trim();
+  const evidencePayload=valid.map(({row:r,store})=>{
     const title=((map.task&&r[map.task])||'Foto de execução').trim();
     const rawDate=map.date?r[map.date]:'';
-    const parsedDate=rawDate&& !Number.isNaN(Date.parse(rawDate)) ? new Date(rawDate).toISOString() : null;
-    const storeId=storeIds.get(code),assignment=assignmentByStore.get(storeId);
+    const parsedDate=rawDate&&!Number.isNaN(Date.parse(rawDate))?new Date(rawDate).toISOString():null;
+    const assignment=assignmentByStore.get(store.id);
     return {
-      workspace_id:workspaceId,operation_id:operationId,store_id:storeId,photo_task_id:tasksByTitle.get(title),import_id:imp.id,
+      workspace_id:workspaceId,operation_id:operationId,store_id:store.id,photo_task_id:tasksByTitle.get(title),import_id:imp.id,
       promoter_id:assignment?.promoter_id||null,supervisor_id:assignment?.supervisor_id||null,
       source:'csv_import',status:'pending',external_url:r[map.url].trim(),captured_at:parsedDate,
-      metadata:{promoter:assignment?.promoter?.full_name||(map.promoter?r[map.promoter]||'—':'—'),supervisor:assignment?.supervisor?.full_name||(map.supervisor?r[map.supervisor]||'—':'—'),network:map.network?r[map.network]||'—':'—',csv_row:r.__row}
+      metadata:{
+        promoter:assignment?.promoter?.full_name||(map.promoter?r[map.promoter]||'—':'—'),
+        supervisor:assignment?.supervisor?.full_name||(map.supervisor?r[map.supervisor]||'—':'—'),
+        network:store.network||'—',region:store.region||'—',csv_row:r.__row
+      }
     }
   });
   const {data:inserted,error:evidenceErr}=await supabase.from('evidences').insert(evidencePayload).select('id');
-  if(evidenceErr)throw evidenceErr;
+  if(evidenceErr){await supabase.from('imports').update({status:'failed',error_rows:rows.length,completed_at:new Date().toISOString()}).eq('id',imp.id);throw evidenceErr}
 
-  await supabase.from('imports').update({status:'completed',valid_rows:inserted?.length||0,error_rows:rows.length-valid.length,completed_at:new Date().toISOString()}).eq('id',imp.id);
-  return {imported:inserted?.length||0,errors:rows.length-valid.length};
+  const errorRows=rows.length-(inserted?.length||0);
+  await supabase.from('imports').update({status:'completed',valid_rows:inserted?.length||0,error_rows:errorRows,completed_at:new Date().toISOString(),mapping:{...map,unresolved_stores:unresolved.slice(0,50).map(x=>({row:x.row.__row,store:x.row[map.store],code:map.code?x.row[map.code]:''}))}}).eq('id',imp.id);
+  return {imported:inserted?.length||0,errors:errorRows,unresolved:unresolved.length};
 }
 function openImport(){
   let step=1,fileName='',rows=[],headers=[],map={};
