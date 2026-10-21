@@ -4036,3 +4036,24 @@ body:not(.public-mode) .execution-empty .empty-actions{
   .public-site.human-cia .cia-photo-hero *,
   .public-site.human-cia .usecase-editorial *{animation:none!important;transition:none!important}
 }
+
+
+/* Final visual QA: compact the two editorial step cards on notebook widths. */
+@media(min-width:701px) and (max-width:1150px){
+  .public-site.human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide){
+    display:flex!important;
+    flex-direction:column!important;
+    justify-content:flex-start!important;
+    min-height:162px!important;
+    height:auto!important;
+    padding:24px!important;
+  }
+  .public-site.human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide) h3{
+    margin:18px 0 9px!important;
+    font-size:clamp(20px,2.1vw,26px)!important;
+  }
+  .public-site.human-cia .human-feature-grid > article:not(.feature-large):not(.feature-wide) p{
+    font-size:12px!important;
+    line-height:1.55!important;
+  }
+}
