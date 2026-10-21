@@ -605,3 +605,14 @@
   .security-section{padding-left:14px;padding-right:14px}
   .pricing-foot{flex-direction:column}
 }
+
+/* Subscription usage transparency */
+.license-card{border-color:#d8e7dd!important;background:#fbfefc!important}
+.license-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.license-grid>div{border:1px solid #e0e7e3;background:#fff;border-radius:9px;padding:10px;display:flex;flex-direction:column;gap:4px}
+.license-grid span{font-size:8px;color:#738078}
+.license-grid b{font-family:'IBM Plex Mono';font-size:12px;color:#1f2d26}
+.license-grid i{display:block;height:5px;border-radius:99px;background:#edf1ee;overflow:hidden;margin-top:3px}
+.license-grid i>em{display:block;height:100%;border-radius:99px;background:var(--green)}
+.license-note{display:block;margin-top:10px;font-size:8px;line-height:1.45;color:#738078}
+@media(max-width:700px){.license-grid{grid-template-columns:1fr}}
