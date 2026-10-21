@@ -27,7 +27,7 @@ const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'E
 const saved=localStorage.getItem('cia-evidencias-demo');
 const DEV_DEMO=import.meta.env.DEV&&new URLSearchParams(location.search).get('demo')==='1';
 const initialRows=DEV_DEMO?(saved?JSON.parse(saved):makeRows()):[];
-const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:false,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
+const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:false,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],supportRequests:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]||{}).id||null;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 let sessionGuardTimer=null;
@@ -491,7 +491,7 @@ function canUseCsv(){return state.services?.bko_enabled&&hasRole('owner','admin'
 function canUseField(){return state.services?.field_enabled&&hasRole('promoter','field')}
 function routeName(){
   const route=(location.hash||'#execucao').replace('#','');
-  return ['execucao','relatorios','configuracoes','perfil','campo','ambientes'].includes(route)?route:'execucao';
+  return ['execucao','relatorios','configuracoes','perfil','campo','ambientes','suporte-admin'].includes(route)?route:'execucao';
 }
 function initials(name){
   return String(name||'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'U';
@@ -499,7 +499,7 @@ function initials(name){
 function appHeader(active){
   const display=state.membership?.display_name||state.user?.email?.split('@')[0]||'Usuário';
   const envOptions=state.environments.map(e=>'<option value="'+e.workspace_id+'" '+(e.workspace_id===state.membership?.workspace_id?'selected':'')+'>'+esc(e.workspace_name)+'</option>').join('');
-  const nav=(canViewExecution()?'<button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button>':'')+(canReport()?'<button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button>':'')+(canSettings()?'<button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button>':'')+(canManageEnvironments()?'<button data-route="ambientes" class="'+(active==='ambientes'?'active':'')+'">Ambientes</button>':'');
+  const nav=(canViewExecution()?'<button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button>':'')+(canReport()?'<button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button>':'')+(canSettings()?'<button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button>':'')+(canManageEnvironments()?'<button data-route="ambientes" class="'+(active==='ambientes'?'active':'')+'">Ambientes</button><button data-route="suporte-admin" class="'+(active==='suporte-admin'?'active':'')+'">Suporte</button>':'');
   return '<header class="topbar app-header"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução à distância</small></div></div><div class="environment-switch"><small>AMBIENTE</small><select id="environmentSwitch" '+(state.environments.length<2?'disabled':'')+'>'+envOptions+'</select></div><nav class="main-nav">'+nav+'</nav><div class="top-actions"><button id="helpBtn" class="help-icon" title="Como funciona" aria-label="Como funciona">?</button><button data-route="perfil" class="avatar avatar-btn" title="Perfil">'+initials(display)+'</button><button id="globalLogoutBtn" class="logout-btn" title="Encerrar sessão" aria-label="Encerrar sessão"><span>↗</span><b>Sair</b></button></div></header>';
 }
 function bindGlobalNav(){
@@ -815,6 +815,35 @@ function openLicenseAddons(env,onSaved){
   const sync=()=>{const value=(Number(mg.value)||0)*(plan.extra_management_seat_cents||7900)+(Number(fd.value)||0)*(plan.extra_field_seat_cents||1900)+(Number(ph.value)||0)*(plan.extra_10000_photos_cents||14900);total.innerHTML='<span>Adicional mensal estimado</span><b>'+money(value)+'</b>'};sync();[mg,fd,ph].forEach(i=>i.oninput=sync);
   r.querySelector('#saveAddons').onclick=async()=>{const btn=r.querySelector('#saveAddons');btn.disabled=true;const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'set_license_addons',target_workspace_id:env.workspace_id,extra_management_seats:Number(mg.value)||0,extra_field_seats:Number(fd.value)||0,extra_photo_blocks:Number(ph.value)||0}});if(error||data?.error){toast(data?.error||error.message,true);btn.disabled=false;return}r.remove();toast('Licenças adicionais atualizadas');onSaved?.()};
 }
+
+const supportStatusLabel={open:'Novo',in_progress:'Em atendimento',resolved:'Resolvido',closed:'Fechado'};
+const supportCategoryLabel={support:'Suporte técnico',sales:'Comercial',privacy:'Privacidade / LGPD',billing:'Planos e cobrança',security:'Segurança',other:'Outro'};
+async function loadSupportRequests(status='all'){
+  const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'list_support',status}});
+  if(error||data?.error)throw new Error(data?.error||error?.message||'Não foi possível carregar os chamados.');
+  state.supportRequests=data.requests||[];
+  return state.supportRequests;
+}
+function supportAdminPage(){
+  app.innerHTML='<div class="page-shell">'+appHeader('suporte-admin')+'<main class="page-main support-admin-page"><div class="page-heading"><div><span>SUPORTE</span><h1>Atendimento</h1><p>Solicitações enviadas pelo site e por usuários do CIA. Priorize Segurança, Privacidade e clientes ativos.</p></div><button id="refreshSupport" class="btn ghost">Atualizar</button></div><div id="supportAdminBody"><div class="loading-card">Carregando chamados...</div></div></main></div>';
+  bindGlobalNav();
+  const draw=async()=>{
+    const body=document.getElementById('supportAdminBody');
+    try{await loadSupportRequests()}catch(err){body.innerHTML='<div class="access-denied"><b>Não foi possível carregar o suporte</b><span>'+esc(err.message)+'</span></div>';return}
+    const rows=state.supportRequests;
+    const counts={open:rows.filter(x=>x.status==='open').length,in_progress:rows.filter(x=>x.status==='in_progress').length,resolved:rows.filter(x=>x.status==='resolved').length,closed:rows.filter(x=>x.status==='closed').length};
+    body.innerHTML='<section class="support-admin-summary"><article><span>NOVOS</span><b>'+counts.open+'</b></article><article><span>EM ATENDIMENTO</span><b>'+counts.in_progress+'</b></article><article><span>RESOLVIDOS</span><b>'+counts.resolved+'</b></article><article><span>FECHADOS</span><b>'+counts.closed+'</b></article></section><section class="support-admin-toolbar"><select id="supportStatusFilter"><option value="all">Todos os status</option><option value="open">Novos</option><option value="in_progress">Em atendimento</option><option value="resolved">Resolvidos</option><option value="closed">Fechados</option></select><select id="supportCategoryFilter"><option value="all">Todas as categorias</option>'+Object.entries(supportCategoryLabel).map(([k,v])=>'<option value="'+k+'">'+esc(v)+'</option>').join('')+'</select><input id="supportSearch" placeholder="Buscar nome, empresa, e-mail ou assunto"></section><section id="supportAdminList" class="support-admin-list"></section>';
+    const statusFilter=document.getElementById('supportStatusFilter'),categoryFilter=document.getElementById('supportCategoryFilter'),search=document.getElementById('supportSearch'),listEl=document.getElementById('supportAdminList');
+    const renderList=()=>{
+      const q=search.value.trim().toLowerCase();
+      const filtered=rows.filter(x=>(statusFilter.value==='all'||x.status===statusFilter.value)&&(categoryFilter.value==='all'||x.category===categoryFilter.value)&&(!q||[x.name,x.email,x.company,x.subject,x.message,x.workspace?.name].some(v=>String(v||'').toLowerCase().includes(q))));
+      listEl.innerHTML=filtered.length?filtered.map(x=>'<article class="support-ticket '+x.status+'"><div class="support-ticket-meta"><span class="support-status '+x.status+'">'+esc(supportStatusLabel[x.status]||x.status)+'</span><span>'+esc(supportCategoryLabel[x.category]||x.category)+'</span><time>'+date(x.created_at)+' · '+time(x.created_at)+'</time></div><div class="support-ticket-main"><div><h2>'+esc(x.subject)+'</h2><p>'+esc(x.message)+'</p></div><aside><b>'+esc(x.name)+'</b><span>'+esc(x.email)+'</span><span>'+esc(x.company||x.workspace?.name||'Sem empresa informada')+'</span></aside></div><div class="support-ticket-actions"><button data-support-status="in_progress" data-support-id="'+x.id+'" '+(x.status==='in_progress'?'disabled':'')+'>Em atendimento</button><button data-support-status="resolved" data-support-id="'+x.id+'" '+(x.status==='resolved'?'disabled':'')+'>Resolver</button><button data-support-status="closed" data-support-id="'+x.id+'" '+(x.status==='closed'?'disabled':'')+'>Fechar</button></div></article>').join(''):'<div class="empty">Nenhum chamado neste filtro.</div>';
+      listEl.querySelectorAll('[data-support-status]').forEach(b=>b.onclick=async()=>{b.disabled=true;const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'update_support_status',request_id:b.dataset.supportId,status:b.dataset.supportStatus}});if(error||data?.error){toast(data?.error||error.message,true);b.disabled=false;return}const item=rows.find(x=>x.id===b.dataset.supportId);if(item)item.status=b.dataset.supportStatus;toast('Status do chamado atualizado');renderList()});
+    };
+    statusFilter.onchange=renderList;categoryFilter.onchange=renderList;search.oninput=renderList;renderList();
+  };
+  document.getElementById('refreshSupport').onclick=draw;draw();
+}
 function commercialPage(){
   app.innerHTML='<div class="page-shell">'+appHeader('ambientes')+'<main class="page-main commercial-page"><div class="page-heading"><div><span>AMBIENTES</span><h1>Clientes e contratos</h1><p>Acompanhe os Ambientes criados pela landing, o plano contratado e as licenças concedidas.</p></div><button id="refreshCommercial" class="btn ghost">Atualizar</button></div><div id="commercialBody"><div class="loading-card">Carregando Ambientes...</div></div></main></div>';
   bindGlobalNav();
@@ -1103,6 +1132,7 @@ function render(){
   if(route==='configuracoes'){if(canSettings()){settings();return}accessDenied('Configurações indisponíveis','Sua função não administra configurações deste Ambiente.');return}
   if(route==='perfil'){profile();return}
   if(route==='ambientes'){if(canManageEnvironments()){commercialPage();return}accessDenied('Ambientes indisponíveis','Apenas o proprietário da plataforma pode acessar esta área.');return}
+  if(route==='suporte-admin'){if(canManageEnvironments()){supportAdminPage();return}accessDenied('Suporte indisponível','Apenas o proprietário da plataforma pode acessar esta área.');return}
   if(canViewExecution()){review();return}
   if(canUseField()){location.hash='campo';return}
   if(canSettings()){location.hash='configuracoes';return}
