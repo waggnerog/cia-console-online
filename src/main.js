@@ -24,7 +24,7 @@ const seed=[
 const statusLabel={pending:'Pendente',approved:'Aprovada',adjustment_requested:'Ajuste solicitado',resubmitted:'Reenviada',rejected:'Reprovada'};
 const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',whatsapp:'',network:r[3],region:i===2?'Zona Norte':i===3?'Zona Oeste':i===4?'Zona Leste':'Zona Sul',source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Execução recebida'],reviews:r[5]==='adjustment_requested'?[{decision:'adjustment_requested',reason:'Produto sem preço'}]:r[5]==='rejected'?[{decision:'rejected',reason:'Imagem ilegível'}]:[],_metadata:{}}));
 const saved=localStorage.getItem('cia-evidencias-demo');
-const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],publicPlans:[],commercial:[]};
+const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]).id;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 let sessionGuardTimer=null;
@@ -200,18 +200,20 @@ async function switchEnvironment(workspaceId){
 async function loadWorkspaceContext(){
   const workspaceId=state.membership.workspace_id;
   const canAdmin=['owner','admin'].includes(state.membership.role);
-  const [{data:ws,error:wsErr},{data:imports,error:impErr},{data:services,error:svcErr},{data:subscription,error:subErr},{data:masterImports,error:miErr},{data:people,error:pErr},{data:assignments,error:aErr},{data:{user},error:userErr}]=await Promise.all([
+  const period=new Date();period.setDate(1);const periodKey=period.toISOString().slice(0,10);
+  const [{data:ws,error:wsErr},{data:imports,error:impErr},{data:services,error:svcErr},{data:subscription,error:subErr},{data:usage,error:usageErr},{data:masterImports,error:miErr},{data:people,error:pErr},{data:assignments,error:aErr},{data:{user},error:userErr}]=await Promise.all([
     supabase.from('workspaces').select('id,name,settings').eq('id',workspaceId).single(),
     supabase.from('imports').select('id,file_name,status,valid_rows,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
     supabase.from('environment_services').select('bko_enabled,field_enabled').eq('workspace_id',workspaceId).single(),
-    supabase.from('environment_subscriptions').select('workspace_id,plan_code,status,billing_provider,trial_started_at,trial_ends_at,active_since,suspended_at,cancelled_at,plan:service_plans(code,name,bko_enabled,field_enabled)').eq('workspace_id',workspaceId).maybeSingle(),
+    supabase.from('environment_subscriptions').select('workspace_id,plan_code,status,billing_provider,billing_interval,contracted_price_cents,licensed_management_seats,licensed_field_seats,photo_limit_monthly,trial_started_at,trial_ends_at,active_since,suspended_at,cancelled_at,plan:service_plans(code,name,bko_enabled,field_enabled,management_seats,field_seats,photo_limit_monthly,monthly_price_cents,annual_price_cents)').eq('workspace_id',workspaceId).maybeSingle(),
+    supabase.from('environment_usage_monthly').select('photos_count,period').eq('workspace_id',workspaceId).eq('period',periodKey).maybeSingle(),
     supabase.from('master_imports').select('id,file_name,status,stores_count,promoters_count,supervisors_count,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
     supabase.from('people').select('id,external_code,full_name,person_role,phone,whatsapp,email,auth_user_id,active').eq('workspace_id',workspaceId).eq('active',true),
     supabase.from('store_assignments').select('id,store_id,promoter_id,supervisor_id,active,store:stores(id,code,name),promoter:people!store_assignments_promoter_id_fkey(id,full_name,whatsapp,phone,email),supervisor:people!store_assignments_supervisor_id_fkey(id,full_name,whatsapp,phone,email)').eq('workspace_id',workspaceId).eq('active',true),
     supabase.auth.getUser()
   ]);
-  if(wsErr)throw wsErr;if(impErr)throw impErr;if(svcErr)throw svcErr;if(subErr)throw subErr;if(miErr)throw miErr;if(pErr)throw pErr;if(aErr)throw aErr;if(userErr)throw userErr;
-  state.workspace=ws||state.workspace;state.imports=imports||[];state.services=services||{bko_enabled:true,field_enabled:false};state.subscription=subscription||null;state.masterImports=masterImports||[];state.people=people||[];state.assignments=assignments||[];state.user=user;
+  if(wsErr)throw wsErr;if(impErr)throw impErr;if(svcErr)throw svcErr;if(subErr)throw subErr;if(usageErr)throw usageErr;if(miErr)throw miErr;if(pErr)throw pErr;if(aErr)throw aErr;if(userErr)throw userErr;
+  state.workspace=ws||state.workspace;state.imports=imports||[];state.services=services||{bko_enabled:true,field_enabled:false};state.subscription=subscription||null;state.usage=usage||{photos_count:0,period:periodKey};state.masterImports=masterImports||[];state.people=people||[];state.assignments=assignments||[];state.user=user;
   state.assignmentMap=new Map();
   for(const a of state.assignments){if(a.store?.code)state.assignmentMap.set(String(a.store.code),a);if(a.store_id)state.assignmentMap.set(String(a.store_id),a)}
   state.users=[];
