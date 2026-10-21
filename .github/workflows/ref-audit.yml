@@ -37,6 +37,10 @@ jobs:
           html=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
           blob=css+'\n'+html
 
+          print("=== BOLDONSE USAGE CONTEXT ===")
+          for m in re.finditer(r'Boldonse',css,re.I):
+              print(css[max(0,m.start()-600):min(len(css),m.end()+600)])
+              print("\n---\n")
           print("=== EXACT FONT FACES ===")
           for b in re.findall(r'@font-face\s*\{[^}]+\}',css,re.I):
               if re.search(r'(Google Sans|Boldonse)',b,re.I):
