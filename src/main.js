@@ -127,8 +127,104 @@ function setupLandingNavigation(){
   window.__ciaLandingScroll=updateTop;updateTop();window.addEventListener('scroll',updateTop,{passive:true});
 }
 
+/* CIA / Unsplash editorial collection — each photo individually licensed as free on Unsplash.
+   They illustrate operational contexts, not actual screenshots of the product. */
+const CIA_EDITORIAL_MEDIA={
+  '01':{
+    photo:'1774978612809-b11695740f7a',
+    alt:'Profissional repondo produtos frescos em um supermercado — execução em campo',
+    caption:'Execução real. Visibilidade à distância.',
+    credit:'Adhitya Sibikumar',
+    page:'https://unsplash.com/photos/worker-stocking-produce-in-a-supermarket-aisle-aL6mtBt6gds',
+    focus:'center center',width:1440
+  },
+  'A':{
+    photo:'1773946836383-96bc6114beb8',
+    alt:'Prateleiras de uma loja de conveniência, ilustrando o registro fotográfico da execução no PDV',
+    caption:'O trabalho acontece no PDV. O contexto chega organizado.',
+    credit:'Bruno BD',
+    page:'https://unsplash.com/photos/interior-of-a-small-convenience-store-with-shelves-stocked-DOycDWzx-dQ',
+    focus:'center center',width:1260
+  },
+  'B':{
+    photo:'1784039960370-de024635e83b',
+    alt:'Pessoa usando celular diante de produtos em uma loja — contexto de comunicação com o campo',
+    caption:'Uma identificação. Uma decisão. Um contato direto.',
+    credit:'Compagnons',
+    page:'https://unsplash.com/photos/customer-holding-phone-near-a-refrigerated-fresh-food-display-lG_jh8vC1kk',
+    focus:'center 50%',width:1340
+  },
+  'C':{
+    photo:'1774978612572-9ad8abb3027f',
+    alt:'Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução',
+    caption:'Trade Marketing & Merchandising',
+    credit:'Adhitya Sibikumar',
+    page:'https://unsplash.com/photos/man-arranging-cleaning-supplies-in-a-store-V_isgW3g-DE',
+    focus:'center 46%',width:1040
+  },
+  'D':{
+    photo:'1770012117416-110a6c84809d',
+    alt:'Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia',
+    caption:'Padrão visual em cada unidade.',
+    credit:'Long Chung',
+    page:'https://unsplash.com/photos/modern-cafe-interior-with-wooden-counter-and-baristas-kgiyCobwS-Y',
+    focus:'center center',width:900
+  },
+  'E':{
+    photo:'1775178120132-f0ff7fd5cb40',
+    alt:'Profissional de limpeza realizando serviço em ambiente envidraçado',
+    caption:'Serviço executado. Validação à distância.',
+    credit:'jerry chen',
+    page:'https://unsplash.com/photos/worker-in-blue-uniform-cleans-window-with-spray-bottle-FyJqgxd5V1g',
+    focus:'center center',width:900
+  },
+  'F':{
+    photo:'1777026321659-64941fb943dd',
+    alt:'Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria',
+    caption:'Inspeções e padrões verificáveis.',
+    credit:'Phillip Flores',
+    page:'https://unsplash.com/photos/warehouse-storage-aisles-with-shelves-full-of-boxes-gjZTDr6E4vQ',
+    focus:'center center',width:1000
+  },
+  'G':{
+    photo:'1748609160056-7b95f30041f0',
+    alt:'Profissional analisando indicadores em uma tela — contexto de gestão e dados operacionais',
+    caption:'Os números mostram onde agir.',
+    credit:'Jakub Żerdzicki',
+    page:'https://unsplash.com/photos/someone-analyzes-financial-data-on-a-tablet-EL16ACtwLxg',
+    focus:'center center',width:1160
+  },
+  'LOGIN':{
+    photo:'1758876017801-f5a892ee460a',
+    alt:'Profissional trabalhando com computador em escritório moderno — acompanhamento remoto da operação',
+    caption:'Sua operação em uma só visão.',
+    credit:'Vitaly Gariev',
+    page:'https://unsplash.com/photos/woman-working-on-a-laptop-in-a-modern-office-WrlIRaC9t-A',
+    focus:'center center',width:1300
+  }
+};
+function ciaEditorialImg(photo,w,q=84){
+  return 'https://images.unsplash.com/photo-'+photo+'?auto=format&fit=crop&w='+w+'&q='+q;
+}
 function mediaSlot(kind,title,caption,ratio='landscape',extra=''){
-  return '<div class="cia-media-slot '+ratio+' '+extra+'" data-media-kind="'+esc(kind)+'"><div class="media-slot-grid" aria-hidden="true"></div><div class="media-slot-content"><span class="media-slot-index">'+esc(kind)+'</span><div><b>'+esc(title)+'</b><small>'+esc(caption)+'</small></div><em>CONTEÚDO A PRODUZIR</em></div></div>';
+  if(kind==='PLAY'){
+    return '<div class="cia-media-slot '+ratio+' '+extra+' video-pending" aria-label="Espaço reservado para o futuro comercial do CIA">'+
+      '<div class="media-slot-grid" aria-hidden="true"></div><div class="video-pending-inner">'+
+      '<span class="video-pending-mark">CIA / FILME</span>'+
+      '<div class="video-pending-play" aria-hidden="true">▶</div>'+
+      '<b>O comercial do CIA começa aqui.</b>'+
+      '<p>Em produção. Um filme sobre ver, decidir e corrigir à distância.</p></div></div>';
+  }
+  const photo=CIA_EDITORIAL_MEDIA[kind];
+  if(!photo)return '';
+  const mediaTitle=kind==='01'?'O campo acontece agora.':(kind==='A'?'A execução começa na loja.':kind==='B'?'A distância deixa de ser obstáculo.':kind==='G'?'Decida com contexto.':'');
+  const source=ciaEditorialImg(photo.photo,photo.width);
+  const sourceSet=[720,1040,1600].map(w=>ciaEditorialImg(photo.photo,w,w===1600?82:80)+' '+w+'w').join(', ');
+  const overlay=mediaTitle?'<div class="editorial-media-line"><span>CIA · '+(kind==='01'?'CAMPO':kind==='G'?'GESTÃO':'EXECUÇÃO')+'</span><b>'+esc(mediaTitle)+'</b></div>':'';
+  return '<figure class="cia-media-slot '+ratio+' '+extra+' is-photographic media-kind-'+kind.toLowerCase()+'" data-media-kind="'+kind+'">'+
+    '<img class="cia-editorial-photo" src="'+source+'" srcset="'+sourceSet+'" sizes="(max-width:700px) 100vw, (max-width:1100px) 55vw, 650px" alt="'+esc(photo.alt)+'" decoding="async" loading="'+(kind==='01'?'eager':'lazy')+'" '+(kind==='01'?'fetchpriority="high"':'')+' style="object-position:'+photo.focus+'">'+
+    overlay+'<a class="cia-media-credit" href="'+photo.page+'" target="_blank" rel="noopener noreferrer" aria-label="Fotografia de '+esc(photo.credit)+' no Unsplash">Foto · Unsplash ↗</a>'+
+    '</figure>';
 }
 function publicLanding(){
   const plans=state.publicPlans||[];
@@ -136,39 +232,39 @@ function publicLanding(){
   '<main>'+
     '<section class="public-hero human-hero">'+
       '<div class="hero-ghost-word" aria-hidden="true">EXECUÇÃO</div>'+
-      '<div class="human-hero-grid"><div class="hero-copy"><span class="hero-kicker">CONTROLE DE EXECUÇÃO À DISTÂNCIA</span><h1>Veja o campo.<br><span class="gradient-text">Decida antes.</span><br>Corrija enquanto importa.</h1><p>O CIA transforma fotos de execução em contexto, decisão e ação. Para quem precisa acompanhar lojas, equipes e padrões sem estar fisicamente em cada ponto.</p><div class="hero-actions"><button data-public-route="contratar" class="public-primary-btn large">Começar avaliação <span>→</span></button><button data-scroll="demonstracao" class="public-secondary-btn large">Ver o produto</button></div><div class="hero-proof"><span>14 dias de avaliação</span><span>Acessos nomeados</span><span>Campo + BKO + CSV</span></div></div>'+
-      '<div class="hero-visual">'+mediaSlot('01','Filme manifesto do CIA','Cena de execução em loja + interface real do CIA sobreposta. Desejo, contexto e produto no mesmo filme.','hero-media','primary-media')+'</div></div>'+
+      '<div class="human-hero-grid"><div class="hero-copy"><span class="hero-kicker">CONTROLE DE EXECUÇÃO À DISTÂNCIA</span><h1>Veja o campo.<br><span class="gradient-text">Decida antes.</span><br>Corrija enquanto importa.</h1><p>O CIA transforma fotos de execução em contexto, decisão e ação. Para quem precisa acompanhar lojas, equipes e padrões sem estar fisicamente em cada ponto.</p><div class="hero-actions"><button data-public-route="contratar" class="public-primary-btn large">Começar avaliação <span>→</span></button><button data-scroll="produto" class="public-secondary-btn large">Ver o produto</button></div><div class="hero-proof"><span>14 dias de avaliação</span><span>Acessos nomeados</span><span>Campo + BKO + CSV</span></div></div>'+
+      '<div class="hero-visual">'+mediaSlot('01','Execução no PDV','O CIA conecta operação em campo com decisões à distância.','hero-media','primary-media')+'</div></div>'+
     '</section>'+
     '<section class="human-intro-band"><div><span>O PROBLEMA</span><h2>Seu time já produz fotos.<br>O que falta é <em>transformá-las em decisão.</em></h2></div><p>Quando a execução vive entre WhatsApp, planilhas, drives e galerias, o BKO perde tempo procurando contexto. O CIA organiza o que aconteceu, quem é responsável e qual ação precisa acontecer agora.</p></section>'+
     '<section id="produto" class="public-section human-product">'+
       '<div class="human-section-label"><span>01</span><b>PRODUTO</b></div>'+
       '<div class="human-split-head"><h2>Um sistema feito para o momento entre <em>“a foto chegou”</em> e <em>“o problema foi resolvido”.</em></h2><p>Não tentamos substituir tudo. O CIA domina o trecho mais crítico da execução visual: receber, contextualizar, decidir, corrigir e aprender com o padrão.</p></div>'+
       '<div class="human-feature-grid">'+
-        '<article class="feature-large"><span>01</span><h3>Receba a execução.</h3><p>Fotos entram pelo CIA Campo ou por CSV. Quem já usa outro sistema pode manter sua operação e conectar apenas o fluxo de análise.</p>'+mediaSlot('A','Interface real — fila de análise','Screenshot do BKO com fila, foto principal e contexto.','wide')+'</article>'+
+        '<article class="feature-large"><span>01</span><h3>Receba a execução.</h3><p>Fotos entram pelo CIA Campo ou por CSV. Quem já usa outro sistema pode manter sua operação e conectar apenas o fluxo de análise.</p>'+mediaSlot('A','Execução em loja','Acompanhamento visual da execução no PDV.','wide')+'</article>'+
         '<article><span>02</span><h3>Entenda sem perguntar.</h3><p>Loja, rede, região, tarefa, Promotor, Supervisor e histórico aparecem junto da foto.</p></article>'+
         '<article><span>03</span><h3>Decida em segundos.</h3><p>Aprove, reprove ou solicite ajuste sem abandonar o fluxo de análise.</p></article>'+
-        '<article class="feature-wide"><span>04</span><h3>Corrija com o responsável certo.</h3><p>O contato vem do Cadastro Mestre. O CIA prepara a mensagem e abre o WhatsApp para Promotor ou Supervisor.</p>'+mediaSlot('B','Momento da correção','Foto de execução + modal de ajuste + WhatsApp, em composição editorial.','strip')+'</article>'+
+        '<article class="feature-wide"><span>04</span><h3>Corrija com o responsável certo.</h3><p>O contato vem do Cadastro Mestre. O CIA prepara a mensagem e abre o WhatsApp para Promotor ou Supervisor.</p>'+mediaSlot('B','Da decisão ao ajuste','Registro fotográfico e contato direto com a equipe.','strip')+'</article>'+
       '</div>'+
     '</section>'+
     '<section id="demonstracao" class="public-section human-demo">'+
-      '<div class="human-section-label"><span>02</span><b>DEMONSTRAÇÃO</b></div>'+
-      '<div class="demo-editorial-grid"><div class="demo-title"><h2>De foto a ação.<br><em>Em quatro movimentos.</em></h2><p>Uma demonstração curta deve mostrar o CIA trabalhando — sem apresentação longa, sem slides e sem esconder o produto.</p></div>'+
-      mediaSlot('PLAY','Demonstração do produto','Walkthrough de 60–90 segundos: fila → análise → ajuste → relatório.','cinema','demo-main')+
+      '<div class="human-section-label"><span>02</span><b>O FILME CIA</b></div>'+
+      '<div class="demo-editorial-grid"><div class="demo-title"><h2>Ver, decidir e corrigir.<br><em>De onde você estiver.</em></h2><p>Em breve, um filme comercial sobre a transformação da execução no campo em decisões que acontecem no momento certo.</p></div>'+
+      mediaSlot('PLAY','Comercial do CIA','Filme comercial sobre o valor do acompanhamento à distância.','cinema','demo-main')+
       '<div class="demo-steps"><article><b>01</b><span><strong>Receba</strong><small>Campo ou CSV.</small></span></article><article><b>02</b><span><strong>Analise</strong><small>Foto + contexto.</small></span></article><article><b>03</b><span><strong>Corrija</strong><small>WhatsApp certo.</small></span></article><article><b>04</b><span><strong>Aprenda</strong><small>Relatórios mostram o padrão.</small></span></article></div></div>'+
     '</section>'+
     '<section id="para-quem" class="public-section human-audience">'+
       '<div class="human-section-label"><span>03</span><b>PARA QUEM</b></div>'+
       '<div class="human-split-head"><h2>Se alguém executa longe e outra pessoa precisa <em>validar à distância</em>, o CIA pode entrar no fluxo.</h2><p>Trade Marketing é o mercado de entrada. A lógica do produto se estende a qualquer operação distribuída em que uma imagem prova o trabalho e o tempo de correção importa.</p></div>'+
       '<div class="usecase-editorial">'+
-        '<article class="usecase-primary"><div><span>FOCO PRINCIPAL</span><h3>Trade Marketing<br>& Merchandising</h3><p>Exposição, precificação, MPDV, ponto extra, campanha, ruptura visual e auditoria rápida de execução.</p></div>'+mediaSlot('C','Caso de uso — Trade','Promotor em loja + execução real + interface do CIA no BKO.','portrait')+'</article>'+
-        '<article><div><span>02</span><h3>Franquias & redes</h3><p>Padrão visual, campanhas, comunicação e conformidade entre unidades.</p></div>'+mediaSlot('D','Caso de uso — Franquias','Antes/depois de unidade + padrão esperado.','square')+'</article>'+
-        '<article><div><span>03</span><h3>Facilities & serviços</h3><p>Limpeza, instalação, manutenção e comprovação visual em múltiplos locais.</p></div>'+mediaSlot('E','Caso de uso — Facilities','Execução técnica documentada com foto.','square')+'</article>'+
-        '<article><div><span>04</span><h3>Auditorias de campo</h3><p>Inspeções, antes/depois e qualidade de execução com histórico rastreável.</p></div>'+mediaSlot('F','Caso de uso — Auditoria','Sequência visual de conformidade e não conformidade.','square')+'</article>'+
+        '<article class="usecase-primary"><div><span>FOCO PRINCIPAL</span><h3>Trade Marketing<br>& Merchandising</h3><p>Exposição, precificação, MPDV, ponto extra, campanha, ruptura visual e auditoria rápida de execução.</p></div>'+mediaSlot('C','Trade Marketing','Merchandising e exposição em loja.','portrait')+'</article>'+
+        '<article><div><span>02</span><h3>Franquias & redes</h3><p>Padrão visual, campanhas, comunicação e conformidade entre unidades.</p></div>'+mediaSlot('D','Franquias e redes','Padronização de operações em múltiplas unidades.','square')+'</article>'+
+        '<article><div><span>03</span><h3>Facilities & serviços</h3><p>Limpeza, instalação, manutenção e comprovação visual em múltiplos locais.</p></div>'+mediaSlot('E','Facilities e Serviços','Execução de serviços em campo.','square')+'</article>'+
+        '<article><div><span>04</span><h3>Auditorias de campo</h3><p>Inspeções, antes/depois e qualidade de execução com histórico rastreável.</p></div>'+mediaSlot('F','Auditoria de campo','Documentação visual em ambientes operacionais.','square')+'</article>'+
       '</div>'+
     '</section>'+
     '<section class="public-section human-results">'+
       '<div class="human-section-label"><span>04</span><b>DO CAMPO À GESTÃO</b></div>'+
-      '<div class="results-stage"><div class="results-copy"><span>RELATÓRIOS</span><h2>O CIA não termina quando a foto é aprovada.</h2><p>Cada decisão alimenta uma leitura gerencial. Região, rede, loja, tarefa e causa passam a mostrar onde o padrão está quebrando.</p><div class="results-statements"><b>Onde agir.</b><b>Por que agir.</b><b>Em quem agir.</b></div></div>'+mediaSlot('G','Relatórios do CIA','Screenshot editorial da página de Relatórios com KPIs, insight e ranking.','dashboard','dashboard-media')+'</div>'+
+      '<div class="results-stage"><div class="results-copy"><span>RELATÓRIOS</span><h2>O CIA não termina quando a foto é aprovada.</h2><p>Cada decisão alimenta uma leitura gerencial. Região, rede, loja, tarefa e causa passam a mostrar onde o padrão está quebrando.</p><div class="results-statements"><b>Onde agir.</b><b>Por que agir.</b><b>Em quem agir.</b></div></div>'+mediaSlot('G','Gestão à distância','Tomada de decisão baseada nas análises do CIA.','dashboard','dashboard-media')+'</div>'+
     '</section>'+
     '<section class="brand-manifesto"><div class="manifesto-word" aria-hidden="true">CIA</div><span>VER · DECIDIR · CORRIGIR</span><h2>Menos tempo procurando evidência.<br><em>Mais tempo corrigindo execução.</em></h2><p>Essa é a função do CIA.</p></section>'+
     '<section class="public-section human-security"><div class="human-section-label"><span>05</span><b>CONTROLE</b></div><div class="security-editorial"><div><h2>Produto empresarial exige <em>controle empresarial.</em></h2><p>Acesso não é uma senha compartilhada. Cada pessoa tem sua licença, seu papel e sua sessão. Cada cliente opera em um Ambiente isolado.</p></div><div class="security-list"><article><b>01</b><span><strong>1 sessão ativa</strong><small>Novo login substitui a sessão anterior.</small></span></article><article><b>02</b><span><strong>Ambientes isolados</strong><small>Dados de clientes não se misturam.</small></span></article><article><b>03</b><span><strong>Permissões por função</strong><small>Admin, BKO, Supervisor e Promotor.</small></span></article><article><b>04</b><span><strong>Limites no backend</strong><small>Licenças e fotos seguem o plano contratado.</small></span></article></div></div></section>'+
