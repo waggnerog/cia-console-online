@@ -3494,3 +3494,72 @@ body:not(.public-mode) .execution-empty .empty-actions{
     justify-self:end!important;
   }
 }
+
+
+/* Unsplash editorial photography: preserve the approved white CIA visual identity. */
+.cia-media-slot.is-photographic{
+  position:relative!important;
+  display:block!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  background:#f4f4f5!important;
+  overflow:hidden!important;
+  isolation:isolate;
+}
+.cia-media-slot.is-photographic:after{
+  content:""!important;
+  position:absolute!important;
+  inset:35% 0 0!important;
+  background:linear-gradient(180deg,transparent,rgba(12,17,26,.35))!important;
+  z-index:1!important;
+  pointer-events:none!important;
+}
+.cia-media-slot .cia-editorial-photo{
+  width:100%!important;
+  height:100%!important;
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  object-fit:cover!important;
+  transform:none!important;
+}
+.cia-media-slot .editorial-media-line{
+  position:absolute;z-index:2;bottom:27px;left:27px;right:27px;
+  color:#fff;display:flex;flex-direction:column;gap:7px;
+  text-shadow:0 1px 10px rgba(0,0,0,.20);
+}
+.editorial-media-line span{
+  font-family:var(--cia-font-body);font-size:9px;font-weight:700;
+  letter-spacing:.13em;color:rgba(255,255,255,.84);
+}
+.editorial-media-line b{
+  font-family:var(--cia-font-display);font-size:clamp(19px,2.1vw,32px);
+  line-height:1.04;letter-spacing:-.04em;max-width:350px;
+}
+.cia-media-credit{
+  position:absolute!important;z-index:3!important;top:12px;right:12px;
+  padding:6px 10px!important;border:1px solid rgba(255,255,255,.38)!important;
+  background:rgba(10,16,25,.25)!important;backdrop-filter:blur(14px);
+  color:#fff!important;text-decoration:none!important;
+  font-size:8px!important;letter-spacing:.03em;border-radius:999px;
+}
+.cia-media-credit:hover{background:rgba(10,16,25,.55)!important}
+.cia-media-slot.video-pending{
+  display:grid!important;place-items:center!important;
+  background:#171c25!important;color:#fff!important;
+}
+.video-pending-inner{z-index:2;text-align:center;padding:32px;max-width:460px}
+.video-pending-mark{display:block;font-size:9px;letter-spacing:.16em;color:#c9c8d9}
+.video-pending-play{
+  display:grid;place-items:center;width:62px;height:62px;margin:22px auto;
+  border:1px solid rgba(255,255,255,.36);border-radius:50%;
+  background:rgba(255,255,255,.12);font-size:16px;
+}
+.video-pending-inner b{display:block;font-size:clamp(19px,2.4vw,30px);letter-spacing:-.045em}
+.video-pending-inner p{margin:9px auto 0;font-size:11px;line-height:1.6;color:#d1d2dd}
+.cia-media-slot.video-pending:after{display:none!important}
+@media(max-width:700px){
+ .cia-media-slot .editorial-media-line{bottom:19px;left:18px;right:18px}
+ .cia-media-slot .editorial-media-line b{font-size:23px}
+ .cia-media-credit{top:10px!important;right:10px!important}
+}
