@@ -24,7 +24,7 @@ const seed=[
 const statusLabel={pending:'Pendente',approved:'Aprovada',adjustment_requested:'Ajuste solicitado',resubmitted:'Reenviada',rejected:'Reprovada'};
 const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',whatsapp:'',network:r[3],region:i===2?'Zona Norte':i===3?'Zona Oeste':i===4?'Zona Leste':'Zona Sul',source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Execução recebida'],reviews:r[5]==='adjustment_requested'?[{decision:'adjustment_requested',reason:'Produto sem preço'}]:r[5]==='rejected'?[{decision:'rejected',reason:'Imagem ilegível'}]:[],_metadata:{}}));
 const saved=localStorage.getItem('cia-evidencias-demo');
-const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,user:null,workspace:{name:'Principal',settings:{data_source:'csv_import',timezone:'America/Sao_Paulo'}},imports:[]};
+const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]).id;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -49,29 +49,52 @@ function analysis(x){
   '<details class="history-card"><summary>Histórico da execução <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
 }
 function loginScreen(){
-  app.innerHTML='<div class="login-shell"><section class="login-card"><div class="login-brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><h1>Acesse o CIA</h1><p>Acompanhe e valide a execução no ponto de venda à distância.</p><form id="authForm"><label>E-mail<input id="authEmail" type="email" autocomplete="email" required></label><label>Senha<input id="authPass" type="password" autocomplete="current-password" minlength="6" required></label><button class="primary" type="submit">Entrar</button><button id="signupBtn" type="button">Primeiro acesso · criar meu acesso</button><small id="authMsg"></small></form></section></div>';
-  const form=document.getElementById('authForm'),msg=document.getElementById('authMsg');
-  form.onsubmit=async e=>{e.preventDefault();msg.textContent='Entrando...';const {error}=await supabase.auth.signInWithPassword({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPass').value});if(error){msg.textContent=error.message?.toLowerCase().includes('invalid login credentials')?'Esse acesso ainda não existe no novo CIA. Use “Primeiro acesso · criar meu acesso”.':error.message;return}await start()};
-  document.getElementById('signupBtn').onclick=async()=>{msg.textContent='Criando conta...';const {data,error}=await supabase.auth.signUp({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPass').value});if(error){msg.textContent=error.message;return}if(!data.session){msg.textContent='Acesso criado. Confirme o e-mail que o Supabase enviou e depois entre normalmente.';return}await start()};
+  app.innerHTML='<div class="login-shell"><section class="login-card"><div class="login-brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><h1>Acesse o CIA</h1><p>O acesso é liberado pelo administrador do seu Ambiente.</p><form id="authForm"><label>E-mail<input id="authEmail" type="email" autocomplete="email" required></label><label>Senha<input id="authPass" type="password" autocomplete="current-password" minlength="6" required></label><button class="primary" type="submit">Entrar</button><button id="magicBtn" type="button">Receber link de acesso por e-mail</button><small id="authMsg">Primeiro acesso? Use o convite recebido por e-mail.</small></form></section></div>';
+  const form=document.getElementById('authForm'),msg=document.getElementById('authMsg'),email=()=>document.getElementById('authEmail').value.trim();
+  form.onsubmit=async e=>{e.preventDefault();msg.textContent='Entrando...';const {error}=await supabase.auth.signInWithPassword({email:email(),password:document.getElementById('authPass').value});if(error){msg.textContent='Não foi possível entrar. Confira a senha ou use o link de acesso.';return}await start()};
+  document.getElementById('magicBtn').onclick=async()=>{if(!email()){msg.textContent='Informe seu e-mail primeiro.';return}msg.textContent='Enviando link...';const {error}=await supabase.auth.signInWithOtp({email:email(),options:{shouldCreateUser:false,emailRedirectTo:'https://app.usecia.com'}});msg.textContent=error?error.message:'Link enviado. Verifique seu e-mail.'};
 }
 async function ensureWorkspace(){
-  const {data,error}=await supabase.from('memberships').select('workspace_id,role,display_name').limit(1);
+  const {data,error}=await supabase.from('memberships').select('workspace_id,role,display_name,created_at,workspace:workspaces(id,name,settings)').order('created_at');
   if(error) throw error;
-  if(data?.length) return data[0];
-  const {data:boot,error:bootErr}=await supabase.functions.invoke('bootstrap-workspace',{body:{org_name:'Minha organização',workspace_name:'Principal'}});
-  if(bootErr) throw bootErr;
-  if(boot?.error) throw new Error(boot.error);
-  return boot;
+  if(!data?.length){
+    const {data:boot,error:bootErr}=await supabase.functions.invoke('bootstrap-workspace',{body:{}});
+    if(bootErr)throw bootErr;throw new Error(boot?.error||'Seu usuário ainda não foi vinculado a um Ambiente.');
+  }
+  state.environments=data.map(m=>({...m,workspace_name:m.workspace?.name||'Ambiente'}));
+  const savedId=localStorage.getItem('cia-active-environment');
+  const chosen=state.environments.find(x=>x.workspace_id===savedId)||state.environments[0];
+  localStorage.setItem('cia-active-environment',chosen.workspace_id);
+  return chosen;
+}
+async function switchEnvironment(workspaceId){
+  const next=state.environments.find(x=>x.workspace_id===workspaceId);
+  if(!next)return;
+  state.membership=next;localStorage.setItem('cia-active-environment',workspaceId);
+  state.rows=makeRows();state.selected=state.rows[0]?.id||null;
+  await loadWorkspaceContext();await loadCloudRows();render();
 }
 async function loadWorkspaceContext(){
   const workspaceId=state.membership.workspace_id;
-  const [{data:ws,error:wsErr},{data:imports,error:impErr},{data:{user},error:userErr}]=await Promise.all([
+  const canAdmin=['owner','admin'].includes(state.membership.role);
+  const [{data:ws,error:wsErr},{data:imports,error:impErr},{data:services,error:svcErr},{data:masterImports,error:miErr},{data:people,error:pErr},{data:assignments,error:aErr},{data:{user},error:userErr}]=await Promise.all([
     supabase.from('workspaces').select('id,name,settings').eq('id',workspaceId).single(),
     supabase.from('imports').select('id,file_name,status,valid_rows,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
+    supabase.from('environment_services').select('bko_enabled,field_enabled').eq('workspace_id',workspaceId).single(),
+    supabase.from('master_imports').select('id,file_name,status,stores_count,promoters_count,supervisors_count,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
+    supabase.from('people').select('id,external_code,full_name,person_role,phone,whatsapp,email,auth_user_id,active').eq('workspace_id',workspaceId).eq('active',true),
+    supabase.from('store_assignments').select('id,store_id,promoter_id,supervisor_id,active,store:stores(id,code,name),promoter:people!store_assignments_promoter_id_fkey(id,full_name,whatsapp,phone,email),supervisor:people!store_assignments_supervisor_id_fkey(id,full_name,whatsapp,phone,email)').eq('workspace_id',workspaceId).eq('active',true),
     supabase.auth.getUser()
   ]);
-  if(wsErr)throw wsErr;if(impErr)throw impErr;if(userErr)throw userErr;
-  state.workspace=ws||state.workspace;state.imports=imports||[];state.user=user;
+  if(wsErr)throw wsErr;if(impErr)throw impErr;if(svcErr)throw svcErr;if(miErr)throw miErr;if(pErr)throw pErr;if(aErr)throw aErr;if(userErr)throw userErr;
+  state.workspace=ws||state.workspace;state.imports=imports||[];state.services=services||{bko_enabled:true,field_enabled:false};state.masterImports=masterImports||[];state.people=people||[];state.assignments=assignments||[];state.user=user;
+  state.assignmentMap=new Map();
+  for(const a of state.assignments){if(a.store?.code)state.assignmentMap.set(String(a.store.code),a);if(a.store_id)state.assignmentMap.set(String(a.store_id),a)}
+  state.users=[];
+  if(canAdmin){
+    const {data}=await supabase.functions.invoke('environment-admin',{body:{action:'list_users',workspace_id:workspaceId}});
+    if(data?.users)state.users=data.users;
+  }
 }
 async function saveWorkspaceSettings(nextSettings,name){
   const workspaceId=state.membership.workspace_id;
@@ -128,6 +151,16 @@ async function start(){
   if(!session){loginScreen();return}
   try{state.membership=await ensureWorkspace();await loadWorkspaceContext();await loadCloudRows();render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
 }
+const roleLabel={owner:'Proprietário CIA',admin:'Admin',bko:'BKO',supervisor:'Supervisor',promoter:'Promotor',analyst:'BKO',field:'Promotor',viewer:'Supervisor'};
+function hasRole(...roles){return roles.includes(state.membership?.role)}
+function canAnalyze(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst')}
+function canReport(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst','supervisor','viewer')}
+function canSettings(){return hasRole('owner','admin','bko','analyst')}
+function canMaster(){return hasRole('owner','admin')}
+function canManageUsers(){return hasRole('owner','admin')}
+function canManageEnvironments(){return hasRole('owner')}
+function canUseCsv(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst')}
+function canUseField(){return state.services?.field_enabled&&hasRole('promoter','field')}
 function routeName(){
   const route=(location.hash||'#execucao').replace('#','');
   return ['execucao','relatorios','configuracoes','perfil','campo'].includes(route)?route:'execucao';
@@ -137,11 +170,14 @@ function initials(name){
 }
 function appHeader(active){
   const display=state.membership?.display_name||state.user?.email?.split('@')[0]||'Usuário';
-  return '<header class="topbar app-header"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><nav class="main-nav"><button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button><button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button><button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button></nav><div class="top-actions"><button id="helpBtn" class="help-icon" title="Como funciona" aria-label="Como funciona">?</button><button data-route="perfil" class="avatar avatar-btn" title="Perfil">'+initials(display)+'</button></div></header>';
+  const envOptions=state.environments.map(e=>'<option value="'+e.workspace_id+'" '+(e.workspace_id===state.membership?.workspace_id?'selected':'')+'>'+esc(e.workspace_name)+'</option>').join('');
+  const nav=(canAnalyze()?'<button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button>':'')+(canReport()?'<button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button>':'')+(canSettings()?'<button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button>':'');
+  return '<header class="topbar app-header"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><div class="environment-switch"><small>AMBIENTE</small><select id="environmentSwitch" '+(state.environments.length<2?'disabled':'')+'>'+envOptions+'</select></div><nav class="main-nav">'+nav+'</nav><div class="top-actions"><button id="helpBtn" class="help-icon" title="Como funciona" aria-label="Como funciona">?</button><button data-route="perfil" class="avatar avatar-btn" title="Perfil">'+initials(display)+'</button></div></header>';
 }
 function bindGlobalNav(){
   document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>{location.hash=b.dataset.route});
   document.getElementById('helpBtn')?.addEventListener('click',openHelp);
+  document.getElementById('environmentSwitch')?.addEventListener('change',e=>switchEnvironment(e.target.value));
 }
 function issueReason(row){
   const review=(row.reviews||[]).find(r=>r.reason);
