@@ -1232,18 +1232,37 @@ async function fieldCheckIn(visit){
   const {error}=await supabase.from('visits').update({status:'in_progress',check_in_at:visit.check_in_at||now,check_in_latitude:pos.latitude,check_in_longitude:pos.longitude}).eq('id',visit.id);
   if(error)throw error;
 }
+async function optimizeEvidenceImage(file){
+  if(!file?.type?.startsWith('image/')||file.size<=2200000)return file;
+  try{
+    const bitmap=await createImageBitmap(file);
+    const maxSide=2560,scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+    if(scale===1&&file.size<=3200000){bitmap.close?.();return file}
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext('2d',{alpha:false});
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close?.();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));
+    if(!blob||blob.size>=file.size)return file;
+    const base=(file.name||'execucao').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'-').slice(0,80)||'execucao';
+    return new File([blob],base+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+  }catch{return file}
+}
 async function fieldUploadEvidence(visit,task,file){
   const workspaceId=state.membership.workspace_id,userId=state.user.id;
-  const ext=(file.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
+  const originalSize=file.size||0,uploadFile=await optimizeEvidenceImage(file);
+  const ext=(uploadFile.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
   const path=workspaceId+'/'+userId+'/'+visit.id+'/'+task.id+'/'+crypto.randomUUID()+'.'+ext;
-  const {error:uploadError}=await supabase.storage.from('cia-evidencias').upload(path,file,{contentType:file.type||'image/jpeg',upsert:false});
+  const {error:uploadError}=await supabase.storage.from('cia-evidencias').upload(path,uploadFile,{contentType:uploadFile.type||'image/jpeg',upsert:false});
   if(uploadError)throw uploadError;
   const assignment=state.assignmentMap.get(String(visit.store_id));
   const payload={
     workspace_id:workspaceId,operation_id:visit.operation_id,visit_id:visit.id,store_id:visit.store_id,photo_task_id:task.id,
     field_user_id:userId,promoter_id:assignment?.promoter_id||null,supervisor_id:assignment?.supervisor_id||null,
     source:'mobile_app',status:'pending',storage_path:path,original_file_name:file.name,captured_at:new Date().toISOString(),
-    metadata:{task:task.title,criteria:task.criteria||{},history:['Execução recebida via CIA Campo']}
+    metadata:{task:task.title,criteria:task.criteria||{},history:['Execução recebida via CIA Campo'],original_bytes:originalSize,uploaded_bytes:uploadFile.size||0,optimized:(uploadFile!==file)}
   };
   const {error}=await supabase.from('evidences').insert(payload);if(error){await supabase.storage.from('cia-evidencias').remove([path]).catch(()=>{});throw error}
 }
