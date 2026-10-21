@@ -128,28 +128,69 @@ async function start(){
   if(!session){loginScreen();return}
   try{state.membership=await ensureWorkspace();await loadWorkspaceContext();await loadCloudRows();render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
 }
+function routeName(){
+  const route=(location.hash||'#execucao').replace('#','');
+  return ['execucao','relatorios','configuracoes','perfil','campo'].includes(route)?route:'execucao';
+}
+function initials(name){
+  return String(name||'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'U';
+}
+function appHeader(active){
+  const display=state.membership?.display_name||state.user?.email?.split('@')[0]||'Usuário';
+  return '<header class="topbar app-header"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><nav class="main-nav"><button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button><button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button><button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button></nav><div class="top-actions"><button id="helpBtn" class="help-icon" title="Como funciona" aria-label="Como funciona">?</button><button data-route="perfil" class="avatar avatar-btn" title="Perfil">'+initials(display)+'</button></div></header>';
+}
+function bindGlobalNav(){
+  document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>{location.hash=b.dataset.route});
+  document.getElementById('helpBtn')?.addEventListener('click',openHelp);
+}
+function issueReason(row){
+  const review=(row.reviews||[]).find(r=>r.reason);
+  if(review?.reason)return review.reason;
+  const h=(row.history||[]).slice().reverse().find(x=>String(x).includes(':'));
+  return h?String(h).split(':').slice(1).join(':').trim():'Sem motivo classificado';
+}
+function analyzedRows(){return state.rows.filter(r=>['approved','adjustment_requested','rejected'].includes(r.status))}
+function problemRows(){return state.rows.filter(r=>['adjustment_requested','rejected'].includes(r.status))}
+function aggregateBy(key){
+  const map=new Map();
+  for(const row of analyzedRows()){
+    const label=String(row[key]||'Não informado');
+    if(!map.has(label))map.set(label,{label,total:0,issues:0,approved:0,adjust:0,rejected:0});
+    const x=map.get(label);x.total++;
+    if(row.status==='approved')x.approved++;
+    if(row.status==='adjustment_requested'){x.adjust++;x.issues++}
+    if(row.status==='rejected'){x.rejected++;x.issues++}
+  }
+  return [...map.values()].map(x=>({...x,rate:x.total?Math.round(x.issues/x.total*100):0})).sort((a,b)=>b.rate-a.rate||b.issues-a.issues);
+}
+function reasonBreakdown(){
+  const map=new Map();
+  for(const row of problemRows()){const reason=issueReason(row);map.set(reason,(map.get(reason)||0)+1)}
+  return [...map.entries()].map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+}
+function riskTone(rate){return rate>=50?'high':rate>=25?'medium':'low'}
+function barRows(rows,limit=7){
+  const max=Math.max(1,...rows.slice(0,limit).map(x=>x.rate));
+  return rows.slice(0,limit).map(x=>'<div class="dash-bar-row"><div class="dash-bar-label"><b>'+esc(x.label)+'</b><span>'+x.issues+' problema'+(x.issues===1?'':'s')+' em '+x.total+' análises</span></div><div class="dash-bar-track"><i class="'+riskTone(x.rate)+'" style="width:'+Math.max(4,Math.round(x.rate/max*100))+'%"></i></div><strong>'+x.rate+'%</strong></div>').join('');
+}
 function review(){
   const x=current(),k=metrics(),a=list(),nets=[...new Set(state.rows.map(v=>v.network))];
   const pendingCount=state.rows.filter(v=>v.status==='pending').length;
   const resubmittedCount=state.rows.filter(v=>v.status==='resubmitted').length;
-  app.innerHTML='<div class="shell"><header class="topbar"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><div class="operation-context"><small>ACOMPANHAMENTO REMOTO</small><b>Amazon · Execução Echo · Outubro 2026</b><span>Acompanhe a execução no PDV à distância: escolha uma loja, confira a foto e decida.</span></div><div class="top-actions"><button id="helpBtn" class="btn help-btn">? Como funciona</button><button id="fieldBtn" class="btn ghost">CIA Campo</button><button id="importBtn" class="btn primary">Importar CSV</button><span class="avatar">LW</span></div></header>'+
+  app.innerHTML='<div class="shell">'+appHeader('execucao')+
   '<section class="metrics"><div title="Total de execuções recebidas no período"><span><small>Execuções</small><em>Total no período</em></span><b>'+k.all+'</b></div><div title="Execuções que ainda precisam de decisão"><span><small>A analisar</small><em>Aguardam decisão</em></span><b>'+k.pending+'</b></div><div title="Execuções validadas como corretas"><span><small>Aprovadas</small><em>Execução validada</em></span><b>'+k.approved+'</b></div><div title="Execuções devolvidas ao campo para correção"><span><small>Com ajuste</small><em>Retorno ao campo</em></span><b>'+k.adjust+'</b></div><div title="Execuções não aceitas"><span><small>Reprovadas</small><em>Não aceitas</em></span><b>'+k.rejected+'</b></div><div title="Percentual de execuções aprovadas"><span><small>Taxa de aprovação</small><em>Aprovadas ÷ total</em></span><b>'+(k.all?Math.round(k.approved/k.all*100):0)+'%</b></div></section>'+
-  '<section class="filters"><input id="search" value="'+esc(state.search)+'" placeholder="Buscar loja, tarefa ou promotor"><select id="networkFilter"><option value="all">Todas as redes</option>'+nets.map(n=>'<option '+(state.network===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select><select id="sourceFilter"><option value="all">Todas as origens</option><option value="mobile_app" '+(state.source==='mobile_app'?'selected':'')+'>CIA Campo</option><option value="csv_import" '+(state.source==='csv_import'?'selected':'')+'>Importação CSV</option></select></section>'+
+  '<section class="filters"><div class="filter-context"><b>Amazon · Execução Echo</b><span>Outubro 2026</span></div><input id="search" value="'+esc(state.search)+'" placeholder="Buscar loja, tarefa ou promotor"><select id="networkFilter"><option value="all">Todas as redes</option>'+nets.map(n=>'<option '+(state.network===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select><select id="sourceFilter"><option value="all">Todas as origens</option><option value="mobile_app" '+(state.source==='mobile_app'?'selected':'')+'>CIA Campo</option><option value="csv_import" '+(state.source==='csv_import'?'selected':'')+'>Importação CSV</option></select></section>'+
   '<main class="workspace"><aside class="queue pane '+(state.mobile==='queue'?'active':'')+'"><div class="pane-title"><span>1 · FILA DE ANÁLISE</span><b>O que precisa da sua atenção</b><small>Clique em uma execução abaixo para abrir a foto.</small></div><div class="queue-guide"><b>Como funciona</b><span><i class="guide-dot pending"></i><strong>Pendentes</strong> ainda não foram analisadas.</span><span><i class="guide-dot resubmitted"></i><strong>Reenviadas</strong> voltaram após um ajuste.</span></div><div class="tabs"><button data-q="pending" class="'+(state.queue==='pending'?'active':'')+'">Pendentes <b>'+pendingCount+'</b></button><button data-q="resubmitted" class="'+(state.queue==='resubmitted'?'active':'')+'">Reenviadas <b>'+resubmittedCount+'</b></button><button data-q="all" class="'+(state.queue==='all'?'active':'')+'">Todas <b>'+state.rows.length+'</b></button></div><div class="queue-list">'+(a.map(qcard).join('')||'<div class="empty">Nenhuma execução neste filtro.</div>')+'</div></aside><section class="viewer pane '+(state.mobile==='viewer'?'active':'')+'">'+viewer(x)+'</section><aside class="analysis pane '+(state.mobile==='analysis'?'active':'')+'">'+analysis(x)+'</aside></main>'+
   '<nav class="mobile-nav"><button data-tab="queue" class="'+(state.mobile==='queue'?'active':'')+'">1 · Fila</button><button data-tab="viewer" class="'+(state.mobile==='viewer'?'active':'')+'">2 · Execução</button><button data-tab="analysis" class="'+(state.mobile==='analysis'?'active':'')+'">Contexto</button></nav></div>';
-  bindReview();
+  bindGlobalNav();bindReview();
 }
 function bindReview(){
-  document.getElementById('fieldBtn').onclick=()=>{state.mode='field';location.hash='campo';render()};
-  document.getElementById('importBtn').onclick=openImport;
-  document.getElementById('helpBtn').onclick=openHelp;
   document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{state.queue=b.dataset.q;render()});
   document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{state.selected=b.dataset.id;state.zoom=1;state.rotation=0;if(innerWidth<900)state.mobile='viewer';render()});
   document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.mobile=b.dataset.tab;render()});
   document.getElementById('search').oninput=e=>{state.search=e.target.value;render();setTimeout(()=>{const i=document.getElementById('search');i?.focus();i?.setSelectionRange(i.value.length,i.value.length)},0)};
   document.getElementById('networkFilter').onchange=e=>{state.network=e.target.value;render()};
   document.getElementById('sourceFilter').onchange=e=>{state.source=e.target.value;render()};
-  document.querySelectorAll('[data-c]').forEach(i=>i.onchange=()=>{current().criteria[i.dataset.c]=i.checked;persist()});
   document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>decision(b.dataset.action));
   document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>navigate(+b.dataset.nav));
   document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>zoom(b.dataset.z));
@@ -168,7 +209,7 @@ async function decision(a){
 }
 function modal(body){const r=document.createElement('div');r.className='modal-root';r.innerHTML='<div class="backdrop" data-close></div><section class="modal">'+body+'</section>';document.body.append(r);r.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>r.remove());return r}
 function openHelp(){
-  modal('<header><div><small>COMO FUNCIONA</small><h2>Acompanhe a execução no PDV à distância</h2></div><button data-close>×</button></header><div class="modal-body help-flow"><div class="help-step"><span>1</span><div><b>Escolha na fila</b><p>A coluna da esquerda é sua fila de trabalho. Pendentes ainda precisam de decisão; reenviadas voltaram depois de uma correção.</p></div></div><div class="help-step"><span>2</span><div><b>Confira a execução</b><p>A foto principal mostra o que aconteceu no PDV. O painel à direita traz loja, tarefa, equipe e critérios para dar contexto à análise.</p></div></div><div class="help-step"><span>3</span><div><b>Decida</b><p><strong>Aprovar</strong> valida a execução. <strong>Solicitar ajuste</strong> gera a mensagem pronta e abre o WhatsApp. <strong>Reprovar</strong> marca a execução como não aceita.</p></div></div><div class="status-guide"><b>Status</b><div><span class="pill pending">Pendente</span><small>Aguardando análise</small></div><div><span class="pill adjustment_requested">Ajuste solicitado</span><small>Correção enviada ao campo</small></div><div><span class="pill resubmitted">Reenviada</span><small>Nova foto aguardando revisão</small></div><div><span class="pill approved">Aprovada</span><small>Execução validada</small></div><div><span class="pill rejected">Reprovada</span><small>Execução não aceita</small></div></div></div><footer><button data-close class="primary">Entendi</button></footer>');
+  modal('<header><div><small>COMO FUNCIONA</small><h2>Acompanhe a execução no PDV à distância</h2></div><button data-close>×</button></header><div class="modal-body help-flow"><div class="help-step"><span>1</span><div><b>Escolha na fila</b><p>A coluna da esquerda é sua fila de trabalho. Pendentes ainda precisam de decisão; reenviadas voltaram depois de uma correção.</p></div></div><div class="help-step"><span>2</span><div><b>Confira a execução</b><p>A foto principal mostra o que aconteceu no PDV. O painel à direita traz loja, tarefa e equipe responsável para dar contexto à análise.</p></div></div><div class="help-step"><span>3</span><div><b>Decida</b><p><strong>Aprovar</strong> valida a execução. <strong>Solicitar ajuste</strong> gera a mensagem pronta e abre o WhatsApp. <strong>Reprovar</strong> marca a execução como não aceita.</p></div></div><div class="status-guide"><b>Status</b><div><span class="pill pending">Pendente</span><small>Aguardando análise</small></div><div><span class="pill adjustment_requested">Ajuste solicitado</span><small>Correção enviada ao campo</small></div><div><span class="pill resubmitted">Reenviada</span><small>Nova foto aguardando revisão</small></div><div><span class="pill approved">Aprovada</span><small>Execução validada</small></div><div><span class="pill rejected">Reprovada</span><small>Execução não aceita</small></div></div></div><footer><button data-close class="primary">Entendi</button></footer>');
 }
 function normalizeWhats(value){
   let d=String(value||'').replace(/\D/g,'');
@@ -365,9 +406,50 @@ function openImport(){
     b.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>{r.remove();render()})
   }draw()
 }
+function reports(){
+  const analyzed=analyzedRows(),problems=problemRows(),approval=analyzed.length?Math.round(analyzed.filter(x=>x.status==='approved').length/analyzed.length*100):0;
+  const regions=aggregateBy('region'),networks=aggregateBy('network'),stores=aggregateBy('store'),tasks=aggregateBy('task'),reasons=reasonBreakdown();
+  const topRegion=regions[0],topReason=reasons[0];
+  app.innerHTML='<div class="page-shell">'+appHeader('relatorios')+'<main class="page-main reports-page"><div class="page-heading"><div><span>RELATÓRIOS</span><h1>Onde a execução está falhando?</h1><p>Transforme as análises das fotos em prioridade de campo. O foco aqui é mostrar onde agir primeiro.</p></div><div class="period-chip">Outubro 2026</div></div>'+
+  '<section class="report-kpis"><article><span>Execuções analisadas</span><b>'+analyzed.length+'</b><small>Base das análises concluídas</small></article><article><span>Taxa de aprovação</span><b>'+approval+'%</b><small>'+analyzed.filter(x=>x.status==='approved').length+' execuções aprovadas</small></article><article class="attention"><span>Com problema</span><b>'+problems.length+'</b><small>Ajustes + reprovações</small></article><article><span>Principal problema</span><b class="text-kpi">'+esc(topReason?.label||'Sem dados')+'</b><small>'+(topReason?.value||0)+' ocorrência'+((topReason?.value||0)===1?'':'s')+'</small></article></section>'+
+  '<section class="insight-banner"><div><span>PRIORIDADE</span><h2>'+(topRegion?esc(topRegion.label):'Sem dados suficientes')+'</h2><p>'+(topRegion?'É a região com maior incidência proporcional de problemas: '+topRegion.rate+'% das execuções analisadas precisam de atenção.':'Analise execuções para gerar uma prioridade de campo.')+'</p></div><strong>'+(topRegion?topRegion.issues:'0')+'</strong><small>problemas</small></section>'+
+  '<section class="dashboard-grid"><article class="dash-card wide"><header><div><span>POR REGIÃO</span><h3>Onde concentrar acompanhamento</h3></div><small>% de execuções com problema</small></header><div class="dash-bars">'+barRows(regions)+'</div></article><article class="dash-card"><header><div><span>POR REDE</span><h3>Redes com mais desvio</h3></div></header><div class="dash-bars compact">'+barRows(networks,5)+'</div></article><article class="dash-card"><header><div><span>CAUSAS</span><h3>Problemas mais recorrentes</h3></div></header><ol class="reason-list">'+(reasons.slice(0,6).map((r,i)=>'<li><span>'+(i+1)+'</span><b>'+esc(r.label)+'</b><strong>'+r.value+'</strong></li>').join('')||'<li class="no-data">Sem problemas classificados.</li>')+'</ol></article></section>'+
+  '<section class="dashboard-grid bottom"><article class="dash-card wide"><header><div><span>LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3></div></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article><article class="dash-card"><header><div><span>POR TAREFA</span><h3>Tipos de execução com mais falhas</h3></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article></section></main></div>';
+  bindGlobalNav();
+}
+function settings(){
+  const settings=state.workspace?.settings||{},source=settings.data_source||'csv_import',canManage=['owner','admin'].includes(state.membership?.role);
+  const imports=state.imports||[];
+  app.innerHTML='<div class="page-shell">'+appHeader('configuracoes')+'<main class="page-main settings-page"><div class="page-heading"><div><span>CONFIGURAÇÕES</span><h1>Como esta operação funciona</h1><p>Defina a origem dos dados e mantenha a entrada de fotos separada da rotina de análise.</p></div></div>'+
+  '<section class="settings-layout"><div class="settings-stack"><article class="settings-card"><header><span>ORIGEM DOS DADOS</span><h2>Como as fotos chegam ao CIA?</h2><p>Esta escolha não dá acesso ao CIA Campo; apenas define a integração usada pela operação.</p></header><div class="source-options"><label class="'+(source==='csv_import'?'selected':'')+'"><input type="radio" name="source" value="csv_import" '+(source==='csv_import'?'checked':'')+' '+(!canManage?'disabled':'')+'><span class="source-icon">CSV</span><div><b>Arquivo CSV + links das fotos</b><small>Ideal para clientes que já possuem aplicativo ou sistema de campo.</small></div></label><label class="'+(source==='mobile_app'?'selected':'')+'"><input type="radio" name="source" value="mobile_app" '+(source==='mobile_app'?'checked':'')+' '+(!canManage?'disabled':'')+'><span class="source-icon">APP</span><div><b>CIA Campo</b><small>As fotos chegam automaticamente das visitas executadas no aplicativo de campo.</small></div></label></div><footer><button id="saveSource" class="btn primary" '+(!canManage?'disabled':'')+'>Salvar origem</button></footer></article>'+
+  '<article class="settings-card"><header><span>IMPORTAÇÃO</span><h2>Enviar novo arquivo</h2><p>A importação manual fica aqui para não competir com a análise diária.</p></header><div class="import-action"><div><b>CSV de execução</b><small>Mapeie loja, rede, região, equipe, tarefa e URL da foto.</small></div><button id="settingsImport" class="btn primary">Importar CSV</button></div><div class="import-history"><h3>Últimas importações</h3>'+(imports.length?imports.map(i=>'<div><span><b>'+esc(i.file_name)+'</b><small>'+date(i.created_at)+' · '+esc(i.status)+'</small></span><strong>'+i.valid_rows+' linhas</strong></div>').join(''):'<p>Nenhuma importação realizada ainda.</p>')+'</div></article></div>'+
+  '<aside class="settings-stack"><article class="settings-card"><header><span>WORKSPACE</span><h2>Identificação</h2></header><label class="settings-field">Nome do ambiente<input id="workspaceName" value="'+esc(state.workspace?.name||'Principal')+'" '+(!canManage?'disabled':'')+'></label><label class="settings-field">Fuso horário<select id="timezone" '+(!canManage?'disabled':'')+'><option value="America/Sao_Paulo" '+((settings.timezone||'America/Sao_Paulo')==='America/Sao_Paulo'?'selected':'')+'>São Paulo (BRT)</option></select></label><button id="saveWorkspace" class="btn ghost full" '+(!canManage?'disabled':'')+'>Salvar identificação</button></article><article class="settings-card"><header><span>SEGURANÇA</span><h2>Acesso por função</h2><p>O CIA separa analistas, supervisores e usuários de campo por permissões no backend.</p></header><div class="security-note"><b>Seu perfil</b><span>'+esc(state.membership?.role||'—')+'</span></div><div class="security-note"><b>Isolamento</b><span>RLS ativo por workspace</span></div></article></aside></section></main></div>';
+  bindGlobalNav();
+  document.querySelectorAll('input[name=source]').forEach(i=>i.onchange=()=>{document.querySelectorAll('.source-options label').forEach(l=>l.classList.remove('selected'));i.closest('label').classList.add('selected')});
+  document.getElementById('settingsImport').onclick=openImport;
+  document.getElementById('saveSource')?.addEventListener('click',async()=>{try{const value=document.querySelector('input[name=source]:checked').value;await saveWorkspaceSettings({data_source:value});toast('Origem dos dados salva');render()}catch(err){toast(err.message,true)}});
+  document.getElementById('saveWorkspace')?.addEventListener('click',async()=>{try{await saveWorkspaceSettings({timezone:document.getElementById('timezone').value},document.getElementById('workspaceName').value);toast('Configurações salvas');render()}catch(err){toast(err.message,true)}});
+}
+function profile(){
+  const display=state.membership?.display_name||'',email=state.user?.email||'—';
+  app.innerHTML='<div class="page-shell">'+appHeader('perfil')+'<main class="page-main profile-page"><div class="page-heading"><div><span>PERFIL</span><h1>Sua conta no CIA</h1><p>Informações pessoais e sessão de acesso.</p></div></div><section class="profile-grid"><article class="profile-card identity-card"><div class="profile-avatar">'+initials(display||email)+'</div><h2>'+esc(display||email.split('@')[0])+'</h2><p>'+esc(email)+'</p><span class="role-badge">'+esc(state.membership?.role||'—')+'</span></article><article class="profile-card"><h2>Dados pessoais</h2><label class="settings-field">Nome de exibição<input id="profileName" value="'+esc(display)+'" placeholder="Seu nome"></label><label class="settings-field">E-mail<input value="'+esc(email)+'" disabled></label><button id="saveProfile" class="btn primary full">Salvar perfil</button></article><article class="profile-card session-card"><h2>Sessão</h2><p>Você está autenticado neste navegador. Ao sair, será necessário entrar novamente.</p><button id="logoutBtn" class="btn danger-outline full">Sair do CIA</button></article></section></main></div>';
+  bindGlobalNav();
+  document.getElementById('saveProfile').onclick=async()=>{try{await saveProfileName(document.getElementById('profileName').value);toast('Perfil atualizado');render()}catch(err){toast(err.message,true)}};
+  document.getElementById('logoutBtn').onclick=async()=>{await supabase.auth.signOut();location.hash='execucao';loginScreen()};
+}
 function field(){const stores=[['Vivo Shopping Ibirapuera','Vivo',4,2],['Fast Shop Morumbi','Fast Shop',5,0],['Claro Center Norte','Claro',3,0]];app.innerHTML='<div class="field"><header><button id="reviewBtn"><span>C</span><b>CIA Campo</b></button><i>JS</i></header><section class="field-hero"><small>Terça, 20 de outubro</small><h1>Bom dia, João.</h1><p>Hoje você tem 3 lojas e 12 fotos de execução previstas.</p></section><section class="field-stats"><div><b>3</b><span>Lojas</span></div><div><b>12</b><span>Fotos</span></div><div><b>2</b><span>Concluídas</span></div></section><main><div class="route-title"><h2>Rota de hoje</h2><span>São Paulo</span></div>'+stores.map((s,i)=>'<article class="store"><strong>'+(i+1)+'</strong><div><small>'+s[1]+'</small><h3>'+s[0]+'</h3><p>'+(i?3+i:'0,2')+' km de distância</p><div class="bar"><i style="width:'+Math.round(s[3]/s[2]*100)+'%"></i></div><em>'+s[3]+'/'+s[2]+' tarefas concluídas</em></div><button data-store="'+i+'">'+(i===0?'Continuar':'Abrir')+'</button></article>').join('')+'</main><button id="cameraFab" class="camera-fab">＋ Nova foto de execução</button></div>';document.getElementById('reviewBtn').onclick=()=>{state.mode='review';location.hash='';render()};document.querySelectorAll('[data-store],#cameraFab').forEach(b=>b.onclick=openVisit)}
 function openVisit(){let checked=false;const r=modal('<header><div><small>VIVO · SHOPPING IBIRAPUERA</small><h2>Visita em campo</h2></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>Registre sua chegada à loja.</span></div><button id="checkin" class="primary">Fazer check-in</button></div><div class="tasks">'+['Fachada da loja','Exposição Echo','Precificação','Material promocional'].map((t,i)=>'<article><strong>'+(i+1)+'</strong><div><b>'+t+'</b><small>'+(i===1?'3 fotos':'1 foto')+' obrigatória'+(i===1?'s':'')+'</small></div><button data-photo>Fotografar</button></article>').join('')+'</div><button id="checkout" class="checkout" disabled>Finalizar visita · Check-out</button></div>');r.querySelector('#checkin').onclick=e=>{checked=true;e.target.disabled=true;e.target.textContent='Check-in realizado';r.querySelector('#checkout').disabled=false;toast('Check-in registrado')};r.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{if(!checked){toast('Faça o check-in primeiro',true);return}const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';i.onchange=()=>{if(i.files?.[0]){b.textContent='Foto adicionada ✓';b.closest('article').classList.add('done');toast('Foto de execução adicionada')}};i.click()});r.querySelector('#checkout').onclick=()=>{toast('Visita finalizada');r.remove()}}
-function render(){state.mode==='field'?field():review()}
-window.addEventListener('hashchange',()=>{state.mode=location.hash==='#campo'?'field':'review';render()});
-window.addEventListener('keydown',e=>{if(state.mode!=='review'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.querySelector('.modal-root'))return;const k=e.key.toLowerCase();if(k==='a')decision('approve');if(k==='j')decision('adjust');if(k==='r')decision('reject');if(e.key==='ArrowRight')navigate(1);if(e.key==='ArrowLeft')navigate(-1)});
+function render(){
+  const route=routeName();
+  if(route==='campo'){field();return}
+  if(route==='relatorios'){reports();return}
+  if(route==='configuracoes'){settings();return}
+  if(route==='perfil'){profile();return}
+  review();
+}
+window.addEventListener('hashchange',render);
+window.addEventListener('keydown',e=>{
+  if(routeName()!=='execucao'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.querySelector('.modal-root'))return;
+  const k=e.key.toLowerCase();if(k==='a')decision('approve');if(k==='j')decision('adjust');if(k==='r')decision('reject');if(e.key==='ArrowRight')navigate(1);if(e.key==='ArrowLeft')navigate(-1)
+});
 start();
