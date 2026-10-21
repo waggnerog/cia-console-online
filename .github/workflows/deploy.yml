@@ -19,6 +19,51 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - name: Audit Human visual reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://black.humanacademy.ai/black-2026"
+          mkdir -p /tmp/human-ref
+          curl -L --compressed -A "Mozilla/5.0" "$URL" -o /tmp/human-ref/page.html
+          python - <<'PY' > /tmp/human-ref/css_urls.txt
+          from pathlib import Path
+          import re, urllib.parse
+          s=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
+          print('HTML_BYTES',len(s))
+          for u in re.findall(r'<link[^>]+href=["\\']([^"\\']+\\.css[^"\\']*)["\\']', s, re.I):
+              print(urllib.parse.urljoin('https://black.humanacademy.ai/black-2026',u))
+          PY
+          echo "=== CSS URLS ==="
+          cat /tmp/human-ref/css_urls.txt
+          grep '^http' /tmp/human-ref/css_urls.txt > /tmp/human-ref/urls-only.txt || true
+          n=0
+          while IFS= read -r css; do
+            [ -z "$css" ] && continue
+            curl -L --compressed -A "Mozilla/5.0" "$css" -o "/tmp/human-ref/style-$n.css"
+            n=$((n+1))
+          done < /tmp/human-ref/urls-only.txt
+          cat /tmp/human-ref/style-*.css > /tmp/human-ref/all.css 2>/dev/null || true
+          echo "=== HUMAN FONTS ==="
+          python - <<'PY'
+          from pathlib import Path
+          import re,collections
+          h=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
+          s=Path('/tmp/human-ref/all.css').read_text(errors='ignore') if Path('/tmp/human-ref/all.css').exists() else ''
+          blob=h+'\n'+s
+          fams=[]
+          for pat in [r'font-family\\s*:\\s*([^;}{]+)',r'fontFamily["\\']?\\s*[:=]\\s*["\\']([^"\\']+)']:
+              fams += re.findall(pat,blob,re.I)
+          for x in sorted(set(x.strip() for x in fams))[:160]: print(x[:240])
+          print('=== HUMAN HEX COLORS ===')
+          cnt=collections.Counter(x.lower() for x in re.findall(r'#[0-9a-fA-F]{3,8}\\b',blob))
+          for k,v in cnt.most_common(100): print(v,k)
+          print('=== HUMAN RGB COLORS ===')
+          cnt2=collections.Counter(re.findall(r'rgba?\\([^)]*\\)',blob,re.I))
+          for k,v in cnt2.most_common(70): print(v,k)
+          print('=== FONT FACE BLOCKS ===')
+          for x in re.findall(r'@font-face\\s*\\{[^}]+\\}',blob,re.I)[:80]: print(x[:1200])
+          PY
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
