@@ -1231,3 +1231,13 @@ button,input,select,textarea{font:inherit}
   .footer-bottom{flex-direction:column}
   .decision-dock{margin:6px!important}
 }
+
+/* Public nav buttons + legal acceptance */
+.public-header nav button{
+  border:0;background:transparent;padding:7px 2px;color:#556274;font-size:11px;font-weight:600;cursor:pointer;
+  transition:color .18s ease,transform .18s ease
+}
+.public-header nav button:hover{color:#6d4ee8;transform:translateY(-1px)}
+.contract-consent a{color:#5b42d6;text-decoration:none;font-weight:700}
+.contract-consent a:hover{text-decoration:underline}
+.faq-more{display:flex;justify-content:center;margin-top:16px}
