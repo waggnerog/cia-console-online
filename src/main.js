@@ -989,6 +989,134 @@ function openServiceEditor(){
   const r=modal('<header><div><small>SERVIÇOS</small><h2>Serviços contratados neste Ambiente</h2></div><button data-close>×</button></header><div class="modal-body"><div class="service-builder"><label><input id="svcBko" type="checkbox" '+(state.services.bko_enabled?'checked':'')+'><span><b>BKO</b><small>Análise remota, relatórios e CSV.</small></span></label><label><input id="svcField" type="checkbox" '+(state.services.field_enabled?'checked':'')+'><span><b>CIA Campo</b><small>Execução em campo e envio automático de fotos.</small></span></label></div></div><footer><button data-close>Cancelar</button><button id="saveSvc" class="primary">Salvar serviços</button></footer>');
   r.querySelector('#saveSvc').onclick=async()=>{const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'update_services',workspace_id:state.membership.workspace_id,bko_enabled:r.querySelector('#svcBko').checked,field_enabled:r.querySelector('#svcField').checked}});if(error||data?.error){toast(data?.error||error.message,true);return}r.remove();await loadWorkspaceContext();toast('Serviços atualizados');render()};
 }
+
+function normalizeScheduleDate(raw){
+  const v=String(raw||'').trim();
+  if(!v)return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+  const br=v.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if(br){
+    const d=br[1].padStart(2,'0'),m=br[2].padStart(2,'0'),y=br[3];
+    const iso=y+'-'+m+'-'+d;
+    const dt=new Date(iso+'T12:00:00');
+    if(!Number.isNaN(dt.getTime())&&dt.getFullYear()===Number(y)&&dt.getMonth()+1===Number(m)&&dt.getDate()===Number(d))return iso;
+  }
+  const parsed=Date.parse(v);
+  if(Number.isNaN(parsed))return '';
+  const d=new Date(parsed);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+async function loadFieldAdminData(){
+  const workspaceId=state.membership.workspace_id;
+  const today=fieldDayKey();
+  const [{data:ops,error:opErr},{data:tasks,error:taskErr},{count:visitCount,error:visitErr}]=await Promise.all([
+    supabase.from('operations').select('id,name,client_name,starts_on,ends_on,active,created_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(50),
+    supabase.from('photo_tasks').select('id,operation_id,title,instructions,min_photos,max_photos,required,active').eq('workspace_id',workspaceId).order('created_at'),
+    supabase.from('visits').select('id',{count:'exact',head:true}).eq('workspace_id',workspaceId).gte('scheduled_for',today).in('status',['planned','in_progress'])
+  ]);
+  if(opErr)throw opErr;if(taskErr)throw taskErr;if(visitErr)throw visitErr;
+  const tasksByOp=new Map();
+  for(const t of tasks||[]){if(!tasksByOp.has(t.operation_id))tasksByOp.set(t.operation_id,[]);tasksByOp.get(t.operation_id).push(t)}
+  return {operations:(ops||[]).map(o=>({...o,tasks:tasksByOp.get(o.id)||[]})),upcomingVisits:visitCount||0};
+}
+function downloadFieldScheduleTemplate(){
+  const csv='\ufeffdata,loja_codigo\n2026-10-22,LOJA-001\n23/10/2026,LOJA-002\n';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='CIA_Modelo_Agenda_Campo.csv';a.click();URL.revokeObjectURL(url);
+}
+async function renderFieldAdminSummary(){
+  const el=document.getElementById('fieldOpsSummary');if(!el)return;
+  try{
+    const data=await loadFieldAdminData(),active=data.operations.filter(o=>o.active),tasks=active.reduce((s,o)=>s+o.tasks.filter(t=>t.active).length,0);
+    el.innerHTML='<div><b>'+active.length+'</b><span>Operações ativas</span></div><div><b>'+tasks+'</b><span>Tarefas configuradas</span></div><div><b>'+data.upcomingVisits+'</b><span>Visitas futuras</span></div>';
+  }catch(err){el.innerHTML='<p>Não foi possível carregar a operação de Campo: '+esc(err.message)+'</p>'}
+}
+async function openAddFieldTask(operation){
+  const r=modal('<header><div><small>CIA CAMPO · TAREFA</small><h2>Adicionar tarefa</h2><p class="modal-sub">'+esc(operation.name)+'</p></div><button data-close>×</button></header><div class="modal-body"><div class="contract-fields"><label class="span-2">Nome da tarefa *<input id="fieldTaskTitle" placeholder="Ex.: Exposição principal"></label><label>Fotos mínimas<input id="fieldTaskMin" type="number" min="1" max="20" value="1"></label><label>Obrigatória<select id="fieldTaskRequired"><option value="true">Sim</option><option value="false">Não</option></select></label><label class="span-2">Orientação ao Promotor<input id="fieldTaskInstructions" placeholder="Ex.: fotografar toda a gôndola, de frente"></label></div></div><footer><button data-close>Cancelar</button><button id="saveFieldTask" class="primary">Adicionar tarefa</button></footer>');
+  r.querySelector('#saveFieldTask').onclick=async e=>{
+    const title=r.querySelector('#fieldTaskTitle').value.trim(),min=Math.max(1,Math.min(20,Number(r.querySelector('#fieldTaskMin').value)||1)),required=r.querySelector('#fieldTaskRequired').value==='true',instructions=r.querySelector('#fieldTaskInstructions').value.trim();
+    if(!title){toast('Informe o nome da tarefa.',true);return}
+    e.currentTarget.disabled=true;
+    const {error}=await supabase.from('photo_tasks').insert({workspace_id:state.membership.workspace_id,operation_id:operation.id,title,instructions:instructions||null,min_photos:min,required,active:true,criteria:{}});
+    if(error){toast(error.message,true);e.currentTarget.disabled=false;return}
+    r.remove();toast('Tarefa adicionada');renderFieldAdminSummary();
+  };
+}
+async function openFieldOperationManager(){
+  if(!canMaster()){toast('Somente o Admin pode configurar a operação de Campo.',true);return}
+  let data;
+  try{data=await loadFieldAdminData()}catch(err){toast(err.message,true);return}
+  const r=modal('<header><div><small>CIA CAMPO</small><h2>Operações e tarefas</h2><p class="modal-sub">Crie a operação que aparecerá na agenda do Promotor e defina as fotos necessárias em cada visita.</p></div><button data-close>×</button></header><div id="fieldOperationBody" class="modal-body"></div>');
+  const draw=()=>{
+    const body=r.querySelector('#fieldOperationBody');
+    body.innerHTML='<div class="field-operation-list">'+(data.operations.length?data.operations.map(o=>'<article class="'+(o.active?'active':'inactive')+'"><div><span>'+(o.active?'ATIVA':'INATIVA')+'</span><b>'+esc(o.name)+'</b><small>'+esc(o.client_name||'Sem cliente informado')+(o.starts_on?' · '+date(o.starts_on+'T12:00:00'):'')+(o.ends_on?' → '+date(o.ends_on+'T12:00:00'):'')+'</small></div><div class="field-task-mini">'+(o.tasks.filter(t=>t.active).map(t=>'<span>'+esc(t.title)+' · '+t.min_photos+' foto'+(t.min_photos===1?'':'s')+'</span>').join('')||'<em>Nenhuma tarefa configurada</em>')+'</div><div class="field-operation-actions"><button data-add-field-task="'+o.id+'" '+(!o.active?'disabled':'')+'>+ Tarefa</button><button data-toggle-field-op="'+o.id+'" data-next="'+(!o.active)+'">'+(o.active?'Desativar':'Reativar')+'</button></div></article>').join(''):'<div class="empty">Nenhuma operação criada ainda.</div>')+'</div><div class="field-new-operation"><span>NOVA OPERAÇÃO</span><div class="contract-fields"><label class="span-2">Nome da operação *<input id="newFieldOpName" placeholder="Ex.: Campanha Verão 2027"></label><label class="span-2">Cliente / marca<input id="newFieldOpClient" placeholder="Ex.: Marca X"></label><label>Início<input id="newFieldOpStart" type="date"></label><label>Fim<input id="newFieldOpEnd" type="date"></label></div><div class="field-default-tasks"><b>Tarefas iniciais</b><p>Uma por linha. Você poderá adicionar tarefas extras depois.</p><textarea id="newFieldTasks" rows="5" placeholder="Exposição principal\nPrecificação\nMaterial promocional"></textarea></div><button id="createFieldOperation" class="primary wide">Criar operação</button></div>';
+    body.querySelectorAll('[data-add-field-task]').forEach(b=>b.onclick=()=>{const op=data.operations.find(o=>o.id===b.dataset.addFieldTask);if(op)openAddFieldTask(op)});
+    body.querySelectorAll('[data-toggle-field-op]').forEach(b=>b.onclick=async()=>{b.disabled=true;const active=b.dataset.next==='true';const {error}=await supabase.from('operations').update({active}).eq('id',b.dataset.toggleFieldOp);if(error){toast(error.message,true);b.disabled=false;return}data=await loadFieldAdminData();toast(active?'Operação reativada':'Operação desativada');draw();renderFieldAdminSummary()});
+    body.querySelector('#createFieldOperation').onclick=async e=>{
+      const name=body.querySelector('#newFieldOpName').value.trim(),client=body.querySelector('#newFieldOpClient').value.trim(),starts=body.querySelector('#newFieldOpStart').value||null,ends=body.querySelector('#newFieldOpEnd').value||null;
+      const taskTitles=body.querySelector('#newFieldTasks').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(!name){toast('Informe o nome da operação.',true);return}
+      if(starts&&ends&&ends<starts){toast('A data final não pode ser anterior ao início.',true);return}
+      e.currentTarget.disabled=true;e.currentTarget.textContent='Criando...';
+      const {data:op,error}=await supabase.from('operations').insert({workspace_id:state.membership.workspace_id,name,client_name:client||null,starts_on:starts,ends_on:ends,active:true}).select('id,name').single();
+      if(error){toast(error.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Criar operação';return}
+      if(taskTitles.length){
+        const {error:taskError}=await supabase.from('photo_tasks').insert(taskTitles.map(title=>({workspace_id:state.membership.workspace_id,operation_id:op.id,title,min_photos:1,required:true,active:true,criteria:{}})));
+        if(taskError){await supabase.from('operations').delete().eq('id',op.id);toast(taskError.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Criar operação';return}
+      }
+      data=await loadFieldAdminData();toast('Operação criada');draw();renderFieldAdminSummary();
+    };
+  };
+  draw();
+}
+async function openFieldScheduleImport(){
+  if(!canMaster()){toast('Somente o Admin pode importar a agenda de Campo.',true);return}
+  let adminData;
+  try{adminData=await loadFieldAdminData()}catch(err){toast(err.message,true);return}
+  const operations=adminData.operations.filter(o=>o.active);
+  if(!operations.length){toast('Crie uma operação de Campo antes de importar a agenda.',true);openFieldOperationManager();return}
+  let rows=[],file=null,map={date:'',store:''};
+  const r=modal('<header><div><small>CIA CAMPO · AGENDA</small><h2>Importar agenda por CSV</h2><p class="modal-sub">Informe data e código da loja. O CIA encontra automaticamente o Promotor pelo Cadastro Mestre.</p></div><button data-close>×</button></header><div id="fieldScheduleBody" class="modal-body"></div>');
+  const draw=()=>{
+    const body=r.querySelector('#fieldScheduleBody');
+    if(!file){
+      body.innerHTML='<div class="master-intro"><div><b>Agenda simples e reaproveitável</b><p>O arquivo precisa apenas de <strong>data</strong> e <strong>loja_codigo</strong>. O Promotor vem do vínculo ativo do Cadastro Mestre.</p></div><button id="downloadFieldSchedule" class="btn ghost">Baixar modelo CSV</button></div><label class="field-label">Operação<select id="fieldScheduleOperation">'+operations.map(o=>'<option value="'+o.id+'">'+esc(o.name)+'</option>').join('')+'</select></label><div class="drop"><h3>Selecione a agenda</h3><p>CSV separado por vírgula ou ponto e vírgula.</p><input id="fieldScheduleFile" type="file" accept=".csv,text/csv"><button id="chooseFieldSchedule">Selecionar CSV</button></div>';
+      body.querySelector('#downloadFieldSchedule').onclick=downloadFieldScheduleTemplate;
+      body.querySelector('#chooseFieldSchedule').onclick=()=>body.querySelector('#fieldScheduleFile').click();
+      body.querySelector('#fieldScheduleFile').onchange=async e=>{file=e.target.files?.[0];if(!file)return;rows=parseCSV(await file.text());const headers=rows.length?Object.keys(rows[0]).filter(k=>k!=='__row'):[];map.date=guessHeader(headers,['data','Data visita','Data']);map.store=guessHeader(headers,['loja_codigo','Código loja','Codigo loja','ID PDV']);const op=body.querySelector('#fieldScheduleOperation').value;sessionStorage.setItem('cia-field-schedule-operation',op);draw()};
+      return;
+    }
+    const headers=rows.length?Object.keys(rows[0]).filter(k=>k!=='__row'):[];
+    const opId=sessionStorage.getItem('cia-field-schedule-operation')||operations[0].id;
+    const validated=rows.map(row=>{
+      const d=map.date?normalizeScheduleDate(row[map.date]):'',code=map.store?String(row[map.store]||'').trim():'',assignment=state.assignmentMap.get(code);
+      let error='';
+      if(!d)error='Data inválida';
+      else if(!code)error='Código da loja ausente';
+      else if(!assignment)error='Loja sem vínculo ativo no Cadastro Mestre';
+      else if(!assignment.promoter?.auth_user_id)error='Promotor da loja ainda não possui acesso CIA Campo';
+      return {row,date:d,code,assignment,error};
+    });
+    const valid=validated.filter(x=>!x.error),bad=validated.filter(x=>x.error);
+    body.innerHTML='<div class="stepper"><b>'+esc(file.name)+'</b> · '+rows.length+' linhas</div><div class="mapping-form"><div><label>Data *</label><select id="fieldMapDate">'+headers.map(h=>'<option value="'+esc(h)+'" '+(map.date===h?'selected':'')+'>'+esc(h)+'</option>').join('')+'</select></div><div><label>Código da loja *</label><select id="fieldMapStore">'+headers.map(h=>'<option value="'+esc(h)+'" '+(map.store===h?'selected':'')+'>'+esc(h)+'</option>').join('')+'</select></div></div><div class="validation"><div><b>'+valid.length+'</b><span>Visitas válidas</span></div><div class="'+(bad.length?'bad':'')+'"><b>'+bad.length+'</b><span>Com pendência</span></div></div>'+(bad.length?'<div class="schedule-errors">'+bad.slice(0,8).map(x=>'<span>Linha '+x.row.__row+': '+esc(x.error)+'</span>').join('')+(bad.length>8?'<small>+'+(bad.length-8)+' outras pendências</small>':'')+'</div>':'')+'<div class="contract-actions"><button id="fieldScheduleBack" class="btn ghost">Trocar arquivo</button><button id="fieldScheduleImport" class="primary" '+(!valid.length?'disabled':'')+'>Criar '+valid.length+' visita'+(valid.length===1?'':'s')+'</button></div>';
+    body.querySelector('#fieldMapDate').onchange=e=>{map.date=e.target.value;draw()};
+    body.querySelector('#fieldMapStore').onchange=e=>{map.store=e.target.value;draw()};
+    body.querySelector('#fieldScheduleBack').onclick=()=>{file=null;rows=[];draw()};
+    body.querySelector('#fieldScheduleImport').onclick=async e=>{
+      e.currentTarget.disabled=true;e.currentTarget.textContent='Criando agenda...';
+      const dedup=new Map();
+      for(const x of valid){
+        const a=x.assignment,key=opId+'|'+a.store_id+'|'+a.promoter.auth_user_id+'|'+x.date;
+        dedup.set(key,{workspace_id:state.membership.workspace_id,operation_id:opId,store_id:a.store_id,field_user_id:a.promoter.auth_user_id,scheduled_for:x.date,status:'planned'});
+      }
+      const payload=[...dedup.values()];
+      const {error}=await supabase.from('visits').upsert(payload,{onConflict:'workspace_id,operation_id,store_id,field_user_id,scheduled_for',ignoreDuplicates:true});
+      if(error){toast(error.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Criar agenda';return}
+      sessionStorage.removeItem('cia-field-schedule-operation');r.remove();toast(payload.length+' visita'+(payload.length===1?' criada':'s criadas'));renderFieldAdminSummary();
+    };
+  };
+  draw();
+}
 function settings(){
   const canAdmin=canMaster(),isOwner=canManageEnvironments(),imports=state.imports||[],masters=state.masterImports||[],users=state.users||[],sub=state.subscription;
   const managementUsed=users.filter(u=>['admin','bko','supervisor'].includes(u.role)).length,fieldUsed=users.filter(u=>u.role==='promoter').length;
@@ -1002,6 +1130,7 @@ function settings(){
   (sub?'<article class="settings-card license-card"><header><span>PLANO E USO</span><h2>'+esc(sub.plan?.name||sub.plan_code)+'</h2><p>'+((sub.billing_interval==='annual')?'Contrato anual':'Contrato mensal')+' · '+esc(statusCommercial(sub.status))+'</p></header><div class="license-grid"><div><span>Acessos de gestão</span><b>'+managementUsed+' / '+managementLimit+'</b><i><em style="width:'+Math.min(100,managementLimit?managementUsed/managementLimit*100:0)+'%"></em></i></div><div><span>Acessos de campo</span><b>'+fieldUsed+' / '+fieldLimit+'</b><i><em style="width:'+Math.min(100,fieldLimit?fieldUsed/fieldLimit*100:0)+'%"></em></i></div><div><span>Fotos neste mês</span><b>'+new Intl.NumberFormat('pt-BR').format(photoUsed)+' / '+new Intl.NumberFormat('pt-BR').format(photoLimit)+'</b><i><em style="width:'+Math.min(100,photoLimit?photoUsed/photoLimit*100:0)+'%"></em></i></div></div><small class="license-note">Acessos são pessoais e intransferíveis. Uma conta mantém somente uma sessão ativa por vez.</small></article>':'')+
   
   (canAdmin?'<article class="settings-card master-card"><header><span>CADASTRO MESTRE</span><h2>Lojas, Promotores, Supervisores e contatos</h2><p>Somente o Admin atualiza esta base. O CIA usa esses dados para vínculos, permissões e envio de ajustes pelo WhatsApp.</p></header><div class="master-kpis"><div><b>'+peopleCounts.stores+'</b><span>Lojas vinculadas</span></div><div><b>'+peopleCounts.promoters+'</b><span>Promotores</span></div><div><b>'+peopleCounts.supervisors+'</b><span>Supervisores</span></div></div><div class="master-actions"><button id="downloadMaster" class="btn ghost">Baixar modelo CSV</button><button id="uploadMaster" class="btn primary">Atualizar Cadastro Mestre</button></div><div class="import-history"><h3>Últimas atualizações</h3>'+(masters.length?masters.map(i=>'<div><span><b>'+esc(i.file_name)+'</b><small>'+date(i.created_at)+' · '+esc(i.status)+'</small></span><strong>'+i.stores_count+' lojas</strong></div>').join(''):'<p>O Cadastro Mestre ainda não foi importado.</p>')+'</div></article>':'')+
+  (fieldOn&&canAdmin?'<article class="settings-card field-admin-card"><header><span>OPERAÇÃO DE CAMPO</span><h2>Operações, tarefas e agenda</h2><p>Configure o que o Promotor precisa fotografar e importe a agenda usando data + código da loja. O responsável vem automaticamente do Cadastro Mestre.</p></header><div id="fieldOpsSummary" class="master-kpis"><div><b>—</b><span>Operações ativas</span></div><div><b>—</b><span>Tarefas configuradas</span></div><div><b>—</b><span>Visitas futuras</span></div></div><div class="master-actions"><button id="manageFieldOps" class="btn ghost">Configurar operações</button><button id="importFieldSchedule" class="btn primary">Importar agenda CSV</button></div><small class="license-note">Antes de importar a agenda, o Promotor precisa estar vinculado à loja no Cadastro Mestre e ter um usuário Promotor no CIA.</small></article>':'')+
   (canUseCsv()?'<article class="settings-card"><header><span>ENTRADA POR CSV</span><h2>Importar fotos de execução</h2><p>Use para operações sem CIA Campo ou como canal complementar quando o Ambiente possui os dois serviços.</p></header><div class="import-action"><div><b>CSV de execução</b><small>O Cadastro Mestre completa automaticamente Promotor, Supervisor e contatos pela loja.</small></div><button id="settingsImport" class="btn primary">Importar CSV</button></div><div class="import-history"><h3>Últimas importações</h3>'+(imports.length?imports.map(i=>'<div><span><b>'+esc(i.file_name)+'</b><small>'+date(i.created_at)+' · '+esc(i.status)+'</small></span><strong>'+i.valid_rows+' fotos</strong></div>').join(''):'<p>Nenhuma importação realizada ainda.</p>')+'</div></article>':'')+
   '</div><aside class="settings-stack">'+
   (canManageUsers()?'<article class="settings-card users-card"><header><span>USUÁRIOS</span><h2>Acessos deste Ambiente</h2><p>O Admin controla quem entra e em qual função. O sistema aplica essas permissões também no backend.</p></header><div class="user-list">'+users.map(u=>'<div class="user-row"><span class="user-avatar">'+initials(u.display_name||u.email)+'</span><div><b>'+esc(u.display_name||u.email)+'</b><small>'+esc(u.email||'')+'</small></div><select data-user-role="'+u.user_id+'" '+(u.role==='owner'||(u.role==='admin'&&!isOwner)?'disabled':'')+'><option value="owner" '+(u.role==='owner'?'selected':'')+' disabled>Proprietário CIA</option><option value="admin" '+(u.role==='admin'?'selected':'')+'>Admin</option><option value="bko" '+(u.role==='bko'?'selected':'')+'>BKO</option><option value="supervisor" '+(u.role==='supervisor'?'selected':'')+'>Supervisor</option><option value="promoter" '+(u.role==='promoter'?'selected':'')+'>Promotor</option></select>'+(u.role!=='owner'&&u.user_id!==state.user?.id?'<button data-remove-user="'+u.user_id+'" class="row-remove" title="Remover acesso">×</button>':'')+'</div>').join('')+'</div><button id="inviteUser" class="btn primary full">Convidar usuário</button></article>':'')+
@@ -1014,6 +1143,9 @@ function settings(){
   document.getElementById('downloadMaster')?.addEventListener('click',downloadMasterTemplate);
   document.getElementById('uploadMaster')?.addEventListener('click',openMasterImport);
   document.getElementById('settingsImport')?.addEventListener('click',openImport);
+  document.getElementById('manageFieldOps')?.addEventListener('click',openFieldOperationManager);
+  document.getElementById('importFieldSchedule')?.addEventListener('click',openFieldScheduleImport);
+  if(fieldOn&&canAdmin)renderFieldAdminSummary();
   document.getElementById('inviteUser')?.addEventListener('click',inviteEnvironmentUser);
   document.getElementById('createEnvironment')?.addEventListener('click',openCreateEnvironment);
   document.querySelectorAll('[data-env-open]').forEach(b=>b.onclick=()=>switchEnvironment(b.dataset.envOpen));
