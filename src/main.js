@@ -22,9 +22,9 @@ const seed=[
 ['Vivo Anália Franco','Comunicação de preço','Michel Santos','Vivo','csv_import','rejected',3]
 ];
 const statusLabel={pending:'Pendente',approved:'Aprovada',adjustment_requested:'Ajuste solicitado',resubmitted:'Reenviada',rejected:'Reprovada'};
-const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',whatsapp:'',network:r[3],source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Execução recebida'],_metadata:{}}));
+const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'Execução Echo',store:r[0],code:'12'+(345+i),task:r[1],promoter:r[2],supervisor:i%2?'Maria Santos':'Carlos Rocha',whatsapp:'',network:r[3],region:i===2?'Zona Norte':i===3?'Zona Oeste':i===4?'Zona Leste':'Zona Sul',source:r[4],status:r[5],captured_at:new Date(2026,9,20,10+i,12).toISOString(),image_url:imgs[r[6]],criteria:{product:false,display:false,material:false,price:false,organization:false,quality:false},history:['Execução recebida'],reviews:r[5]==='adjustment_requested'?[{decision:'adjustment_requested',reason:'Produto sem preço'}]:r[5]==='rejected'?[{decision:'rejected',reason:'Imagem ilegível'}]:[],_metadata:{}}));
 const saved=localStorage.getItem('cia-evidencias-demo');
-const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mode:location.hash==='#campo'?'field':'review',mobile:'queue'};
+const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,user:null,workspace:{name:'Principal',settings:{data_source:'csv_import',timezone:'America/Sao_Paulo'}},imports:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]).id;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -42,13 +42,10 @@ function viewer(x){
   return '<div class="viewer-head"><div class="viewer-title"><small>2 · CONFIRA A EXECUÇÃO</small><b>'+esc(x.task)+'</b><span>'+esc(x.network)+' · '+esc(x.store)+'</span></div><div><button data-z="out" aria-label="Reduzir zoom">−</button><span>'+Math.round(state.zoom*100)+'%</span><button data-z="in" aria-label="Aumentar zoom">+</button><button data-z="rotate" aria-label="Girar foto">↻</button><button data-z="fit">Ajustar</button></div></div><div class="photo-stage"><button data-nav="-1" aria-label="Execução anterior">‹</button><img src="'+x.image_url+'" alt="Foto da execução '+esc(x.task)+' em '+esc(x.store)+'" style="transform:scale('+state.zoom+') rotate('+state.rotation+'deg)"><button data-nav="1" aria-label="Próxima execução">›</button></div><div class="decision-dock" aria-label="Decisão da execução"><div class="decision-copy"><small>3 · DECIDA</small><b>Qual é o resultado desta execução?</b></div><button data-action="approve" class="approve"><span class="decision-icon">✓</span><span><b>Aprovar</b><small>Execução correta</small></span><kbd>A</kbd></button><button data-action="adjust" class="adjust"><span class="decision-icon">↗</span><span><b>Solicitar ajuste</b><small>Corrigir via WhatsApp</small></span><kbd>J</kbd></button><button data-action="reject" class="reject"><span class="decision-icon">×</span><span><b>Reprovar</b><small>Execução não aceita</small></span><kbd>R</kbd></button></div>';
 }
 function analysis(x){
-  const cs=[['product','Produto visível'],['display','Exposição completa'],['material','Material correto'],['price','Precificação visível'],['organization','Organização'],['quality','Qualidade da imagem']];
-  const checks=cs.map(v=>'<label><input type="checkbox" data-c="'+v[0]+'" '+(x.criteria[v[0]]?'checked':'')+'><span>✓</span><b>'+v[1]+'</b></label>').join('');
   return '<div class="analysis-scroll"><div class="analysis-title"><div><small>CONTEXTO DA EXECUÇÃO</small><b>Informações para decidir com segurança</b></div><span class="pill '+x.status+'">'+statusLabel[x.status]+'</span></div>'+
-  '<section class="context-identity"><div class="context-eyebrow">LOJA</div><div class="store-identity"><div><b>'+esc(x.store)+'</b><span>'+esc(x.network)+'</span></div><code>'+esc(x.code||'—')+'</code></div></section>'+
+  '<section class="context-identity"><div class="context-eyebrow">LOJA</div><div class="store-identity"><div><b>'+esc(x.store)+'</b><span>'+esc(x.network)+' · '+esc(x.region||'—')+'</span></div><code>'+esc(x.code||'—')+'</code></div></section>'+
   '<section class="context-group"><h3>Execução</h3><div class="context-grid"><div><span>Tarefa</span><b>'+esc(x.task)+'</b></div><div><span>Cliente</span><b>'+esc(x.client)+'</b></div><div><span>Operação</span><b>'+esc(x.operation)+'</b></div><div><span>Capturada em</span><b>'+date(x.captured_at)+' · '+time(x.captured_at)+'</b></div><div><span>Origem</span><b>'+(x.source==='mobile_app'?'CIA Campo':'Importação CSV')+'</b></div></div></section>'+
   '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b>'+(x.whatsapp?'<small>WhatsApp: '+esc(x.whatsapp)+'</small>':'<small>WhatsApp não informado</small>')+'</div></div></div></section>'+
-  '<section class="criteria-section"><div class="section-head-copy"><div><h3>Critérios de conferência</h3><p>Marque o que você consegue confirmar visualmente. Eles apoiam sua decisão; não substituem a análise.</p></div></div><div class="criteria">'+checks+'</div></section>'+
   '<details class="history-card"><summary>Histórico da execução <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
 }
 function loginScreen(){
@@ -58,13 +55,34 @@ function loginScreen(){
   document.getElementById('signupBtn').onclick=async()=>{msg.textContent='Criando conta...';const {data,error}=await supabase.auth.signUp({email:document.getElementById('authEmail').value.trim(),password:document.getElementById('authPass').value});if(error){msg.textContent=error.message;return}if(!data.session){msg.textContent='Acesso criado. Confirme o e-mail que o Supabase enviou e depois entre normalmente.';return}await start()};
 }
 async function ensureWorkspace(){
-  const {data,error}=await supabase.from('memberships').select('workspace_id,role').limit(1);
+  const {data,error}=await supabase.from('memberships').select('workspace_id,role,display_name').limit(1);
   if(error) throw error;
   if(data?.length) return data[0];
   const {data:boot,error:bootErr}=await supabase.functions.invoke('bootstrap-workspace',{body:{org_name:'Minha organização',workspace_name:'Principal'}});
   if(bootErr) throw bootErr;
   if(boot?.error) throw new Error(boot.error);
   return boot;
+}
+async function loadWorkspaceContext(){
+  const workspaceId=state.membership.workspace_id;
+  const [{data:ws,error:wsErr},{data:imports,error:impErr},{data:{user},error:userErr}]=await Promise.all([
+    supabase.from('workspaces').select('id,name,settings').eq('id',workspaceId).single(),
+    supabase.from('imports').select('id,file_name,status,valid_rows,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
+    supabase.auth.getUser()
+  ]);
+  if(wsErr)throw wsErr;if(impErr)throw impErr;if(userErr)throw userErr;
+  state.workspace=ws||state.workspace;state.imports=imports||[];state.user=user;
+}
+async function saveWorkspaceSettings(nextSettings,name){
+  const workspaceId=state.membership.workspace_id;
+  const payload={settings:{...(state.workspace.settings||{}),...nextSettings}};
+  if(name)payload.name=name.trim();
+  const {data,error}=await supabase.from('workspaces').update(payload).eq('id',workspaceId).select('id,name,settings').single();
+  if(error)throw error;state.workspace=data;return data;
+}
+async function saveProfileName(displayName){
+  const {data,error}=await supabase.from('memberships').update({display_name:displayName.trim()}).eq('workspace_id',state.membership.workspace_id).eq('user_id',state.user.id).select('workspace_id,role,display_name').single();
+  if(error)throw error;state.membership={...state.membership,...data};return data;
 }
 async function loadCloudRows(){
   const {data,error}=await supabase
@@ -75,6 +93,11 @@ async function loadCloudRows(){
     .limit(500);
   if(error) throw error;
   if(!data?.length){state.demo=true;return}
+  const ids=data.map(r=>r.id);
+  const {data:reviewRows,error:reviewErr}=await supabase.from('evidence_reviews').select('evidence_id,decision,reason,comment,created_at').in('evidence_id',ids).order('created_at',{ascending:false});
+  if(reviewErr)throw reviewErr;
+  const reviewMap=new Map();
+  for(const review of reviewRows||[]){if(!reviewMap.has(review.evidence_id))reviewMap.set(review.evidence_id,[]);reviewMap.get(review.evidence_id).push(review)}
   const mapped=await Promise.all(data.map(async row=>{
     let image=row.external_url||'';
     if(!image&&row.storage_path){
@@ -85,10 +108,10 @@ async function loadCloudRows(){
       id:row.id,client:row.operation?.client_name||'Cliente',operation:row.operation?.name||'Operação',
       store:row.store?.name||'Loja',code:row.store?.code||'',task:row.task?.title||row.metadata?.task||'Execução',
       promoter:row.metadata?.promoter||'—',supervisor:row.metadata?.supervisor||'—',whatsapp:row.metadata?.whatsapp||row.metadata?.telefone||row.metadata?.phone||'',
-      network:row.store?.network||row.metadata?.network||'—',source:row.source,status:row.status,
+      network:row.store?.network||row.metadata?.network||'—',region:row.store?.region||row.metadata?.region||'—',source:row.source,status:row.status,
       captured_at:row.captured_at||row.uploaded_at,image_url:image||imgs[0],
       criteria:row.metadata?.criteria||{product:false,display:false,material:false,price:false,organization:false,quality:false},
-      history:row.metadata?.history||['Execução recebida'],_metadata:row.metadata||{}
+      history:row.metadata?.history||['Execução recebida'],reviews:reviewMap.get(row.id)||[],_metadata:row.metadata||{}
     }
   }));
   state.rows=mapped;state.demo=false;state.selected=(mapped.find(x=>x.status==='pending')||mapped[0]).id;
@@ -103,7 +126,7 @@ async function start(){
   if(!supabase){render();return}
   const {data:{session}}=await supabase.auth.getSession();
   if(!session){loginScreen();return}
-  try{state.membership=await ensureWorkspace();await loadCloudRows();render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
+  try{state.membership=await ensureWorkspace();await loadWorkspaceContext();await loadCloudRows();render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
 }
 function review(){
   const x=current(),k=metrics(),a=list(),nets=[...new Set(state.rows.map(v=>v.network))];
