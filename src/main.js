@@ -1299,9 +1299,15 @@ async function field(){
   document.querySelectorAll('[data-field-visit]').forEach(b=>b.onclick=()=>openFieldVisit(b.dataset.fieldVisit));
 }
 async function fieldCheckIn(visit){
+  if(visit.status!=='planned'||visit.check_in_at)throw new Error('Esta visita não está disponível para um novo check-in.');
   const pos=await geoPosition(),now=new Date().toISOString();
-  const {error}=await supabase.from('visits').update({status:'in_progress',check_in_at:visit.check_in_at||now,check_in_latitude:pos.latitude,check_in_longitude:pos.longitude}).eq('id',visit.id);
+  const {data,error}=await supabase.from('visits')
+    .update({status:'in_progress',check_in_at:now,check_in_latitude:pos.latitude,check_in_longitude:pos.longitude})
+    .eq('workspace_id',state.membership.workspace_id).eq('field_user_id',state.user.id)
+    .eq('id',visit.id).eq('status','planned').is('check_in_at',null)
+    .select('id').maybeSingle();
   if(error)throw error;
+  if(!data)throw new Error('A visita mudou de situação. Atualize sua agenda antes de tentar novamente.');
 }
 async function optimizeEvidenceImage(file){
   if(!file?.type?.startsWith('image/')||file.size<=2200000)return file;
@@ -1323,7 +1329,11 @@ async function optimizeEvidenceImage(file){
 }
 async function fieldUploadEvidence(visit,task,file){
   const workspaceId=state.membership.workspace_id,userId=state.user.id;
+  if(visit.status!=='in_progress'||!visit.check_in_at||visit.check_out_at)throw new Error('Faça check-in em uma visita em andamento antes de enviar fotos.');
+  if(!task||!visit.tasks.some(t=>t.id===task.id))throw new Error('Tarefa não vinculada a esta visita.');
+  if(!file?.type?.startsWith('image/'))throw new Error('Selecione uma imagem válida.');
   const originalSize=file.size||0,uploadFile=await optimizeEvidenceImage(file);
+  if(uploadFile.size>20*1024*1024)throw new Error('Foto acima do limite de 20 MB. Reduza o tamanho e tente novamente.');
   const ext=(uploadFile.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
   const path=workspaceId+'/'+userId+'/'+visit.id+'/'+task.id+'/'+crypto.randomUUID()+'.'+ext;
   const {error:uploadError}=await supabase.storage.from('cia-evidencias').upload(path,uploadFile,{contentType:uploadFile.type||'image/jpeg',upsert:false});
@@ -1342,11 +1352,11 @@ async function openFieldVisit(visitId){
   const draw=()=>{
     const evidenceByTask=new Map();
     for(const e of visit.evidences||[]){evidenceByTask.set(e.photo_task_id,(evidenceByTask.get(e.photo_task_id)||0)+1)}
-    const complete=visit.tasks.every(t=>!t.required||(evidenceByTask.get(t.id)||0)>=(t.min_photos||1));
-    const r=modal('<header><div><small>'+esc(visit.store?.network||visit.operation?.client_name||'VISITA')+' · '+esc(visit.store?.name||'LOJA')+'</small><h2>'+esc(visit.operation?.name||'Visita em campo')+'</h2><p class="modal-sub">'+fieldStatusLabel(visit.status)+(visit.check_in_at?' · check-in '+time(visit.check_in_at):'')+'</p></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>'+(visit.check_in_at?'Registrado em '+time(visit.check_in_at):'Registre sua chegada antes de fotografar.')+'</span></div><button id="fieldCheckin" class="primary" '+(visit.check_in_at?'disabled':'')+'>'+(visit.check_in_at?'Check-in realizado':'Fazer check-in')+'</button></div><div class="tasks">'+(visit.tasks.length?visit.tasks.map((t,i)=>{const n=evidenceByTask.get(t.id)||0,min=t.min_photos||1;return '<article class="'+(n>=min?'done':'')+'"><strong>'+(i+1)+'</strong><div><b>'+esc(t.title)+'</b><small>'+n+'/'+min+' foto'+(min===1?'':'s')+(t.required?' obrigatória'+(min===1?'':'s'):' opcional')+(t.instructions?' · '+esc(t.instructions):'')+'</small></div><button data-field-photo="'+t.id+'" '+(!visit.check_in_at||visit.status==='completed'?'disabled':'')+'>'+(n>=min?'Adicionar outra':'Fotografar')+'</button></article>'}).join(''):'<div class="field-no-tasks">Esta visita ainda não possui tarefas configuradas.</div>')+'</div><button id="fieldCheckout" class="checkout" '+(!visit.check_in_at||!complete||visit.status==='completed'?'disabled':'')+'>'+(visit.status==='completed'?'Visita finalizada':'Finalizar visita · Check-out')+'</button></div>');
+    const complete=visit.tasks.length>0&&visit.tasks.every(t=>!t.required||(evidenceByTask.get(t.id)||0)>=(t.min_photos||1));
+    const r=modal('<header><div><small>'+esc(visit.store?.network||visit.operation?.client_name||'VISITA')+' · '+esc(visit.store?.name||'LOJA')+'</small><h2>'+esc(visit.operation?.name||'Visita em campo')+'</h2><p class="modal-sub">'+fieldStatusLabel(visit.status)+(visit.check_in_at?' · check-in '+time(visit.check_in_at):'')+'</p></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>'+(visit.check_in_at?'Registrado em '+time(visit.check_in_at):'Registre sua chegada antes de fotografar.')+'</span></div><button id="fieldCheckin" class="primary" '+(visit.check_in_at?'disabled':'')+'>'+(visit.check_in_at?'Check-in realizado':'Fazer check-in')+'</button></div><div class="tasks">'+(visit.tasks.length?visit.tasks.map((t,i)=>{const n=evidenceByTask.get(t.id)||0,min=t.min_photos||1;return '<article class="'+(n>=min?'done':'')+'"><strong>'+(i+1)+'</strong><div><b>'+esc(t.title)+'</b><small>'+n+'/'+min+' foto'+(min===1?'':'s')+(t.required?' obrigatória'+(min===1?'':'s'):' opcional')+(t.instructions?' · '+esc(t.instructions):'')+'</small></div><button data-field-photo="'+t.id+'" '+(visit.status!=='in_progress'||!visit.check_in_at?'disabled':'')+'>'+(n>=min?'Adicionar outra':'Fotografar')+'</button></article>'}).join(''):'<div class="field-no-tasks">Esta visita ainda não possui tarefas configuradas.</div>')+'</div><button id="fieldCheckout" class="checkout" '+(visit.status!=='in_progress'||!visit.check_in_at||!complete?'disabled':'')+'>'+(visit.status==='completed'?'Visita finalizada':'Finalizar visita · Check-out')+'</button></div>');
     r.querySelector('#fieldCheckin').onclick=async e=>{e.currentTarget.disabled=true;e.currentTarget.textContent='Registrando...';try{await fieldCheckIn(visit);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Check-in registrado');openFieldVisit(visitId)}catch(err){toast(err.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Fazer check-in'}};
     r.querySelectorAll('[data-field-photo]').forEach(b=>b.onclick=()=>{const task=visit.tasks.find(t=>t.id===b.dataset.fieldPhoto);const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;b.disabled=true;b.textContent='Enviando...';try{await fieldUploadEvidence(visit,task,file);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Foto enviada para análise');openFieldVisit(visitId)}catch(err){toast(err.message,true);b.disabled=false;b.textContent='Fotografar'}};input.click()});
-    r.querySelector('#fieldCheckout').onclick=async e=>{e.currentTarget.disabled=true;e.currentTarget.textContent='Finalizando...';const pos=await geoPosition();const {error}=await supabase.from('visits').update({status:'completed',check_out_at:new Date().toISOString(),check_out_latitude:pos.latitude,check_out_longitude:pos.longitude}).eq('id',visit.id);if(error){toast(error.message,true);e.currentTarget.disabled=false;return}r.remove();await loadFieldData();toast('Visita finalizada');field()};
+    r.querySelector('#fieldCheckout').onclick=async e=>{if(visit.status!=='in_progress'||!complete){toast('Conclua as fotos obrigatórias antes do check-out.',true);return}e.currentTarget.disabled=true;e.currentTarget.textContent='Finalizando...';try{const pos=await geoPosition();const {data,error}=await supabase.from('visits').update({status:'completed',check_out_at:new Date().toISOString(),check_out_latitude:pos.latitude,check_out_longitude:pos.longitude}).eq('workspace_id',state.membership.workspace_id).eq('field_user_id',state.user.id).eq('id',visit.id).eq('status','in_progress').is('check_out_at',null).select('id').maybeSingle();if(error)throw error;if(!data)throw new Error('Não foi possível confirmar esta visita. Atualize sua agenda.');r.remove();await loadFieldData();toast('Visita finalizada');field()}catch(err){toast(err.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Finalizar visita · Check-out'}};
   };
   draw();
 }
