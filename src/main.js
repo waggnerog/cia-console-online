@@ -51,11 +51,113 @@ function analysis(x){
   '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b><small>'+(contactPhone(x.promoterContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b><small>'+(contactPhone(x.supervisorContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div></div></section>'+
   '<details class="history-card"><summary>Histórico da execução <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
 }
-function loginScreen(){
-  app.innerHTML='<div class="login-shell"><section class="login-card"><div class="login-brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><h1>Acesse o CIA</h1><p>O acesso é liberado pelo administrador do seu Ambiente.</p><form id="authForm"><label>E-mail<input id="authEmail" type="email" autocomplete="email" required></label><label>Senha<input id="authPass" type="password" autocomplete="current-password" minlength="6" required></label><button class="primary" type="submit">Entrar</button><button id="magicBtn" type="button">Receber link de acesso por e-mail</button><small id="authMsg">Primeiro acesso? Use o convite recebido por e-mail.</small></form></section></div>';
+async function loadPublicPlans(){
+  if(state.publicPlans?.length)return state.publicPlans;
+  const {data,error}=await supabase.from('service_plans').select('code,name,short_description,bko_enabled,field_enabled,trial_days,display_order').eq('active',true).eq('self_service',true).order('display_order');
+  if(error){console.warn(error);state.publicPlans=[
+    {code:'bko',name:'CIA BKO',short_description:'Análise remota da execução com entrada por CSV.',bko_enabled:true,field_enabled:false,trial_days:14},
+    {code:'full',name:'CIA BKO + Campo',short_description:'Execução no PDV pelo CIA Campo integrada à análise remota.',bko_enabled:true,field_enabled:true,trial_days:14}
+  ]}else state.publicPlans=data||[];
+  return state.publicPlans;
+}
+function publicRoute(){
+  const route=(location.hash||'#inicio').replace('#','').split('?')[0];
+  return ['inicio','login','contratar'].includes(route)?route:'inicio';
+}
+function publicHeader(active='inicio'){
+  return '<header class="public-header"><button class="public-brand" data-public-route="inicio" aria-label="CIA início"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></button><nav><a href="#produto">Produto</a><a href="#como-funciona">Como funciona</a><a href="#servicos">Serviços</a></nav><div class="public-actions"><button data-public-route="login" class="public-login-btn">Fazer login</button><button data-public-route="contratar" class="public-primary-btn">Contratar</button></div></header>';
+}
+function bindPublicNav(){
+  document.querySelectorAll('[data-public-route]').forEach(b=>b.onclick=()=>{location.hash=b.dataset.publicRoute});
+  document.querySelectorAll('[data-contract-plan]').forEach(b=>b.onclick=()=>{sessionStorage.setItem('cia-contract-plan',b.dataset.contractPlan);location.hash='contratar'});
+}
+function publicLanding(){
+  const bko=state.publicPlans.find(p=>p.code==='bko')||state.publicPlans[0];
+  const full=state.publicPlans.find(p=>p.code==='full')||state.publicPlans[1]||bko;
+  app.innerHTML='<div class="public-site">'+publicHeader('inicio')+
+  '<main><section class="public-hero"><div class="hero-copy"><span class="hero-kicker">GESTÃO DE EXECUÇÃO NO PDV</span><h1>Acompanhe a execução no ponto de venda sem precisar estar lá.</h1><p>O CIA organiza as fotos de campo, dá contexto para quem analisa e transforma problemas de execução em ajustes claros e mensuráveis.</p><div class="hero-actions"><button data-public-route="contratar" class="public-primary-btn large">Contratar CIA</button><button data-public-route="login" class="public-secondary-btn large">Já sou cliente</button></div><div class="hero-proof"><span>✓ Ambiente isolado por cliente</span><span>✓ Permissões por função</span><span>✓ BKO, Campo e CSV no mesmo produto</span></div></div>'+
+  '<div class="hero-product" aria-label="Prévia do CIA"><div class="mock-window"><div class="mock-top"><span class="mock-logo">C</span><i></i><i></i><i></i></div><div class="mock-body"><aside><small>FILA DE ANÁLISE</small><b>12 pendentes</b><div class="mock-row active"><i></i><span><b>Vivo Ibirapuera</b><small>Exposição Echo</small></span></div><div class="mock-row"><i></i><span><b>Fast Shop Morumbi</b><small>Precificação</small></span></div><div class="mock-row"><i></i><span><b>Claro Center Norte</b><small>Material promocional</small></span></div></aside><section><div class="mock-photo"><span>FOTO DA EXECUÇÃO</span></div><div class="mock-decisions"><b>✓ Aprovar</b><b>↗ Ajustar</b><b>× Reprovar</b></div></section><aside class="mock-context"><small>CONTEXTO</small><h3>Vivo Shopping Ibirapuera</h3><p>Rede · Região · Promotor · Supervisor</p><div></div><div></div><div></div></aside></div></div></div></section>'+
+  '<section id="produto" class="public-section"><div class="section-intro"><span>UM FLUXO ÚNICO</span><h2>Da foto no PDV à decisão no BKO.</h2><p>O CIA conecta quem executa, quem acompanha e quem corrige, mantendo cada papel simples.</p></div><div class="product-pillars"><article><span>01</span><h3>Receba a execução</h3><p>Fotos chegam pelo CIA Campo ou por CSV, conforme os serviços contratados pelo Ambiente.</p></article><article><span>02</span><h3>Analise com contexto</h3><p>Loja, rede, região, Promotor, Supervisor e histórico aparecem junto da foto.</p></article><article><span>03</span><h3>Corrija rápido</h3><p>O CIA identifica os responsáveis, prepara a mensagem e abre o WhatsApp sem digitar contatos.</p></article><article><span>04</span><h3>Encontre padrões</h3><p>Relatórios mostram onde os problemas se concentram por região, rede, loja, tarefa e motivo.</p></article></div></section>'+
+  '<section id="como-funciona" class="public-section workflow-section"><div class="section-intro"><span>COMO FUNCIONA</span><h2>Uma operação inteira organizada em quatro passos.</h2></div><div class="public-flow"><div><b>1</b><span><strong>Configure o Ambiente</strong><small>Admin, equipe, lojas e Cadastro Mestre.</small></span></div><i>→</i><div><b>2</b><span><strong>Receba as fotos</strong><small>CIA Campo ou CSV, sem duplicar processos.</small></span></div><i>→</i><div><b>3</b><span><strong>Analise e ajuste</strong><small>BKO decide e aciona o responsável.</small></span></div><i>→</i><div><b>4</b><span><strong>Acompanhe resultados</strong><small>Dashboard mostra onde agir primeiro.</small></span></div></div></section>'+
+  '<section id="servicos" class="public-section services-section"><div class="section-intro"><span>SERVIÇOS</span><h2>Comece pelo modelo que combina com sua operação.</h2><p>A copy comercial e os preços serão refinados depois; a arquitetura de contratação já está pronta.</p></div><div class="public-plans">'+
+  planCard(bko,'BKO remoto','Para operações que já possuem um sistema de campo e querem centralizar análise, ajustes e relatórios.')+
+  planCard(full,'Operação integrada','Para operações que querem executar as fotos no CIA Campo e analisar tudo no BKO.')+
+  '</div></section>'+
+  '<section class="public-cta"><span>CIA · EXECUÇÃO PDV</span><h2>Veja o que está acontecendo no campo. Decida antes que o problema vire resultado.</h2><div><button data-public-route="contratar" class="public-primary-btn large">Contratar CIA</button><button data-public-route="login" class="public-secondary-btn large">Fazer login</button></div></section></main>'+
+  '<footer class="public-footer"><div class="public-brand static"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><span>Produto em evolução · São Paulo, Brasil</span></footer></div>';
+  bindPublicNav();
+}
+function planCard(plan,label,description){
+  if(!plan)return '';
+  const features=plan.field_enabled
+    ? ['Tudo do CIA BKO','CIA Campo para Promotores','Check-in e check-out','Fotos integradas automaticamente','CSV como canal complementar']
+    : ['Análise remota de fotos','Importação CSV','Ajustes via WhatsApp','Relatórios de execução','Cadastro Mestre e usuários'];
+  return '<article class="public-plan '+(plan.field_enabled?'featured':'')+'">'+(plan.field_enabled?'<span class="plan-tag">OPERAÇÃO COMPLETA</span>':'')+'<small>'+esc(label)+'</small><h3>'+esc(plan.name)+'</h3><p>'+esc(description||plan.short_description||'')+'</p><ul>'+features.map(x=>'<li>✓ '+esc(x)+'</li>').join('')+'</ul><button class="'+(plan.field_enabled?'public-primary-btn':'public-secondary-btn')+'" data-contract-plan="'+esc(plan.code)+'">Contratar</button></article>';
+}
+function publicLogin(){
+  app.innerHTML='<div class="public-site public-auth-page">'+publicHeader('login')+'<main class="auth-main"><section class="auth-side"><span>ACESSO AO CIA</span><h1>Entre no seu Ambiente.</h1><p>Use a conta criada pelo Admin da sua empresa ou o convite recebido por e-mail.</p><button data-public-route="inicio" class="text-back">← Voltar para o site</button></section><section class="auth-card"><div class="login-brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><h2>Fazer login</h2><form id="authForm"><label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="nome@empresa.com"></label><label>Senha<input id="authPass" type="password" autocomplete="current-password" minlength="6" required placeholder="Sua senha"></label><button class="public-primary-btn full" type="submit">Entrar</button><button id="magicBtn" class="public-secondary-btn full" type="button">Receber link de acesso</button><small id="authMsg">Primeiro acesso? Abra o convite enviado ao seu e-mail.</small></form><div class="auth-divider"><span>AINDA NÃO É CLIENTE?</span></div><button data-public-route="contratar" class="text-contract">Conhecer contratação →</button></section></main></div>';
+  bindPublicNav();
   const form=document.getElementById('authForm'),msg=document.getElementById('authMsg'),email=()=>document.getElementById('authEmail').value.trim();
-  form.onsubmit=async e=>{e.preventDefault();msg.textContent='Entrando...';const {error}=await supabase.auth.signInWithPassword({email:email(),password:document.getElementById('authPass').value});if(error){msg.textContent='Não foi possível entrar. Confira a senha ou use o link de acesso.';return}await start()};
-  document.getElementById('magicBtn').onclick=async()=>{if(!email()){msg.textContent='Informe seu e-mail primeiro.';return}msg.textContent='Enviando link...';const {error}=await supabase.auth.signInWithOtp({email:email(),options:{shouldCreateUser:false,emailRedirectTo:'https://app.usecia.com'}});msg.textContent=error?error.message:'Link enviado. Verifique seu e-mail.'};
+  form.onsubmit=async e=>{e.preventDefault();msg.textContent='Entrando...';const {error}=await supabase.auth.signInWithPassword({email:email(),password:document.getElementById('authPass').value});if(error){msg.textContent='Não foi possível entrar. Confira os dados ou use o link de acesso.';return}history.replaceState({},'',location.pathname);await start()};
+  document.getElementById('magicBtn').onclick=async()=>{if(!email()){msg.textContent='Informe seu e-mail primeiro.';return}msg.textContent='Enviando link...';const {error}=await supabase.auth.signInWithOtp({email:email(),options:{shouldCreateUser:false,emailRedirectTo:'https://app.usecia.com/?welcome=1'}});msg.textContent=error?error.message:'Link enviado. Verifique seu e-mail.'};
+}
+function contractPage(preselected=''){
+  const plans=state.publicPlans||[];
+  let step=1;
+  const draft={plan_code:preselected||plans[0]?.code||'bko',company_name:'',trade_name:'',document:'',company_size:'',admin_name:'',admin_email:'',admin_phone:'',commercial_consent:false};
+  app.innerHTML='<div class="public-site public-contract-page">'+publicHeader('contratar')+'<main class="contract-main"><aside class="contract-aside"><span>CONTRATAÇÃO</span><h1>Crie seu Ambiente CIA.</h1><p>Você escolhe os serviços, informa a empresa e define o primeiro Admin. O restante é provisionado automaticamente.</p><ol><li class="active"><b>1</b><span>Serviços</span></li><li><b>2</b><span>Empresa</span></li><li><b>3</b><span>Administrador</span></li><li><b>4</b><span>Revisão</span></li></ol><small>A cobrança automática ainda não está conectada. O Ambiente é criado em avaliação e a ativação comercial definitiva é controlada pelo CIA.</small></aside><section id="contractCard" class="contract-card"></section></main></div>';
+  bindPublicNav();
+  const sideSteps=[...document.querySelectorAll('.contract-aside li')];
+  function mark(){sideSteps.forEach((x,i)=>x.classList.toggle('active',i===step-1));}
+  function selectedPlan(){return plans.find(p=>p.code===draft.plan_code)||plans[0]}
+  function draw(){
+    mark();
+    const card=document.getElementById('contractCard'),plan=selectedPlan();
+    if(step===1)card.innerHTML='<div class="contract-head"><span>PASSO 1 DE 4</span><h2>Quais serviços sua operação precisa?</h2><p>Você não precisa escolher entre Campo e CSV. Os canais disponíveis são definidos pelo pacote contratado.</p></div><div class="contract-plan-list">'+plans.map(p=>'<label class="'+(draft.plan_code===p.code?'selected':'')+'"><input type="radio" name="contractPlan" value="'+esc(p.code)+'" '+(draft.plan_code===p.code?'checked':'')+'><span class="contract-plan-icon">'+(p.field_enabled?'FULL':'BKO')+'</span><div><b>'+esc(p.name)+'</b><small>'+esc(p.short_description||'')+'</small><em>'+ (p.field_enabled?'CIA Campo + BKO + CSV complementar':'BKO + CSV') +'</em></div></label>').join('')+'</div><div class="contract-actions"><button data-public-route="inicio" class="public-secondary-btn">Cancelar</button><button id="contractNext" class="public-primary-btn">Continuar</button></div>';
+    if(step===2)card.innerHTML='<div class="contract-head"><span>PASSO 2 DE 4</span><h2>Conte sobre a empresa.</h2><p>Esses dados identificam o Ambiente e podem ser refinados depois pelo Admin.</p></div><div class="contract-fields"><label class="span-2">Razão social / empresa *<input id="companyName" value="'+esc(draft.company_name)+'" autocomplete="organization"></label><label class="span-2">Nome que aparecerá no CIA<input id="tradeName" value="'+esc(draft.trade_name)+'" placeholder="Ex.: Amazon Brasil"></label><label>CNPJ / documento<input id="document" value="'+esc(draft.document)+'" inputmode="numeric"></label><label>Porte<select id="companySize"><option value="">Não informar</option><option value="small" '+(draft.company_size==='small'?'selected':'')+'>Pequena</option><option value="medium" '+(draft.company_size==='medium'?'selected':'')+'>Média</option><option value="large" '+(draft.company_size==='large'?'selected':'')+'>Grande</option><option value="enterprise" '+(draft.company_size==='enterprise'?'selected':'')+'>Enterprise</option></select></label></div><div class="contract-actions"><button id="contractBack" class="public-secondary-btn">Voltar</button><button id="contractNext" class="public-primary-btn">Continuar</button></div>';
+    if(step===3)card.innerHTML='<div class="contract-head"><span>PASSO 3 DE 4</span><h2>Quem será o Admin do Ambiente?</h2><p>Este usuário poderá carregar o Cadastro Mestre, convidar pessoas e administrar a operação.</p></div><div class="contract-fields"><label class="span-2">Nome completo *<input id="adminName" value="'+esc(draft.admin_name)+'" autocomplete="name"></label><label>E-mail corporativo *<input id="adminEmail" type="email" value="'+esc(draft.admin_email)+'" autocomplete="email"></label><label>WhatsApp / telefone<input id="adminPhone" value="'+esc(draft.admin_phone)+'" inputmode="tel" autocomplete="tel"></label></div><div class="contract-note"><b>Como funciona o acesso</b><span>Se este e-mail ainda não tiver conta, o CIA enviará um convite. Se já tiver, o novo Ambiente aparecerá na conta existente.</span></div><div class="contract-actions"><button id="contractBack" class="public-secondary-btn">Voltar</button><button id="contractNext" class="public-primary-btn">Continuar</button></div>';
+    if(step===4)card.innerHTML='<div class="contract-head"><span>PASSO 4 DE 4</span><h2>Revise antes de criar o Ambiente.</h2><p>O provisionamento leva os serviços escolhidos, cria o Ambiente e vincula o Admin automaticamente.</p></div><div class="contract-review"><div><span>EMPRESA</span><b>'+esc(draft.trade_name||draft.company_name)+'</b><small>'+esc(draft.company_name)+'</small></div><div><span>SERVIÇOS</span><b>'+esc(plan?.name||draft.plan_code)+'</b><small>'+(plan?.field_enabled?'BKO + CIA Campo':'BKO + CSV')+'</small></div><div><span>ADMIN</span><b>'+esc(draft.admin_name)+'</b><small>'+esc(draft.admin_email)+'</small></div><div><span>STATUS INICIAL</span><b>Ambiente de avaliação</b><small>Sem cobrança online nesta etapa</small></div></div><label class="contract-consent"><input id="commercialConsent" type="checkbox" '+(draft.commercial_consent?'checked':'')+'><span>Confirmo que os dados estão corretos e autorizo a criação deste Ambiente para avaliação comercial do CIA.</span></label><div id="contractError" class="contract-error"></div><div class="contract-actions"><button id="contractBack" class="public-secondary-btn">Voltar</button><button id="contractSubmit" class="public-primary-btn">Criar Ambiente</button></div>';
+    bindPublicNav();
+    document.querySelectorAll('input[name=contractPlan]').forEach(i=>i.onchange=e=>{draft.plan_code=e.target.value;draw()});
+    document.getElementById('contractBack')?.addEventListener('click',()=>{saveStep();step--;draw()});
+    document.getElementById('contractNext')?.addEventListener('click',()=>{if(!saveStep(true))return;step++;draw()});
+    document.getElementById('contractSubmit')?.addEventListener('click',submit);
+  }
+  function saveStep(validate=false){
+    if(step===2){
+      draft.company_name=document.getElementById('companyName').value.trim();
+      draft.trade_name=document.getElementById('tradeName').value.trim();
+      draft.document=document.getElementById('document').value.trim();
+      draft.company_size=document.getElementById('companySize').value;
+      if(validate&&draft.company_name.length<2){toast('Informe o nome da empresa.',true);return false}
+    }
+    if(step===3){
+      draft.admin_name=document.getElementById('adminName').value.trim();
+      draft.admin_email=document.getElementById('adminEmail').value.trim();
+      draft.admin_phone=document.getElementById('adminPhone').value.trim();
+      if(validate&&draft.admin_name.length<2){toast('Informe o nome do Admin.',true);return false}
+      if(validate&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.admin_email)){toast('Informe um e-mail válido.',true);return false}
+    }
+    return true;
+  }
+  async function submit(){
+    draft.commercial_consent=document.getElementById('commercialConsent').checked;
+    const errorEl=document.getElementById('contractError');
+    if(!draft.commercial_consent){errorEl.textContent='Confirme os dados para continuar.';return}
+    const btn=document.getElementById('contractSubmit');btn.disabled=true;btn.textContent='Criando Ambiente...';errorEl.textContent='';
+    const {data,error}=await supabase.functions.invoke('public-contract',{body:draft});
+    if(error||data?.error){btn.disabled=false;btn.textContent='Criar Ambiente';errorEl.textContent=data?.error||error.message||'Não foi possível concluir.';return}
+    const card=document.getElementById('contractCard');
+    card.innerHTML='<div class="contract-success"><span>✓</span><h2>Ambiente criado.</h2><p>'+esc(data.message||'Seu Ambiente CIA está pronto para o próximo passo.')+'</p><div class="success-summary"><div><small>EMPRESA</small><b>'+esc(draft.trade_name||draft.company_name)+'</b></div><div><small>SERVIÇO</small><b>'+esc(data.plan?.name||selectedPlan()?.name||'CIA')+'</b></div></div>'+(data.invited?'<div class="success-next"><b>Agora abra o convite enviado para '+esc(draft.admin_email)+'.</b><span>O link confirma o acesso e leva o Admin ao onboarding inicial.</span></div>':'<div class="success-next"><b>Esta conta já existe.</b><span>Faça login e o novo Ambiente estará disponível.</span></div>')+'<button data-public-route="login" class="public-primary-btn full">Fazer login</button><button data-public-route="inicio" class="public-secondary-btn full">Voltar ao site</button></div>';
+    bindPublicNav();
+  }
+  draw();
+}
+function renderPublic(){
+  const route=publicRoute();
+  if(route==='login'){publicLogin();return}
+  if(route==='contratar'){const preset=sessionStorage.getItem('cia-contract-plan')||'';sessionStorage.removeItem('cia-contract-plan');contractPage(preset);return}
+  publicLanding();
 }
 async function ensureWorkspace(){
   const {data,error}=await supabase.from('memberships').select('workspace_id,role,display_name,created_at,workspace:workspaces(id,name,settings)').order('created_at');
