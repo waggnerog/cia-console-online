@@ -27,7 +27,7 @@ const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'E
 const saved=localStorage.getItem('cia-evidencias-demo');
 const DEV_DEMO=import.meta.env.DEV&&new URLSearchParams(location.search).get('demo')==='1';
 const initialRows=DEV_DEMO?(saved?JSON.parse(saved):makeRows()):[];
-const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
+const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:false,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]||{}).id||null;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 let sessionGuardTimer=null;
@@ -346,7 +346,7 @@ async function switchEnvironment(workspaceId){
   const next=state.environments.find(x=>x.workspace_id===workspaceId);
   if(!next)return;
   state.membership=next;localStorage.setItem('cia-active-environment',workspaceId);
-  state.rows=makeRows();state.selected=state.rows[0]?.id||null;
+  state.rows=[];state.selected=null;state.fieldVisits=[];state.fieldTasks=new Map();state.fieldEvidences=[];
   await loadWorkspaceContext();await loadCloudRows();render();
 }
 async function loadWorkspaceContext(){
@@ -365,7 +365,7 @@ async function loadWorkspaceContext(){
     supabase.auth.getUser()
   ]);
   if(wsErr)throw wsErr;if(impErr)throw impErr;if(svcErr)throw svcErr;if(subErr)throw subErr;if(usageErr)throw usageErr;if(miErr)throw miErr;if(pErr)throw pErr;if(aErr)throw aErr;if(userErr)throw userErr;
-  state.workspace=ws||state.workspace;state.imports=imports||[];state.services=services||{bko_enabled:true,field_enabled:false};state.subscription=subscription||null;state.usage=usage||{photos_count:0,period:periodKey};state.masterImports=masterImports||[];state.people=people||[];state.assignments=assignments||[];state.user=user;
+  state.workspace=ws||state.workspace;state.imports=imports||[];state.services=services||{bko_enabled:false,field_enabled:false};state.subscription=subscription||null;state.usage=usage||{photos_count:0,period:periodKey};state.masterImports=masterImports||[];state.people=people||[];state.assignments=assignments||[];state.user=user;
   state.assignmentMap=new Map();
   for(const a of state.assignments){if(a.store?.code)state.assignmentMap.set(String(a.store.code),a);if(a.store_id)state.assignmentMap.set(String(a.store_id),a)}
   state.users=[];
