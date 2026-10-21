@@ -472,6 +472,96 @@ function reports(){
   '<section class="dashboard-grid bottom"><article class="dash-card wide"><header><div><span>LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3></div></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article><article class="dash-card"><header><div><span>POR TAREFA</span><h3>Tipos de execução com mais falhas</h3></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article></section></main></div>';
   bindGlobalNav();
 }
+function safeFileName(name){return String(name||'arquivo.csv').replace(/[^a-zA-Z0-9._-]+/g,'-')}
+function downloadMasterTemplate(){
+  const header=['loja_codigo','loja_nome','rede','regiao','endereco','promotor_codigo','promotor_nome','promotor_whatsapp','promotor_email','supervisor_codigo','supervisor_nome','supervisor_whatsapp','supervisor_email'];
+  const sample=['001','Vivo Shopping Ibirapuera','Vivo','Zona Sul','Av. Ibirapuera, 3103','P001','João Silva','11999999999','joao@empresa.com','S001','Maria Santos','11988888888','maria@empresa.com'];
+  const blob=new Blob([header.join(',')+'\n'+sample.join(',')+'\n'],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modelo-cadastro-mestre-cia.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function importMasterData(rows,map,file){
+  if(!canMaster())throw new Error('Somente o Admin pode atualizar o Cadastro Mestre.');
+  const workspaceId=state.membership.workspace_id;
+  const valid=rows.filter(r=>r[map.store_code]&&r[map.store_name]&&r[map.promoter_name]&&r[map.supervisor_name]);
+  if(!valid.length)throw new Error('Nenhuma linha válida encontrada no arquivo.');
+  const storagePath=workspaceId+'/cadastro-mestre/'+Date.now()+'-'+safeFileName(file.name);
+  const {error:uploadErr}=await supabase.storage.from('cia-cadastros').upload(storagePath,file,{contentType:'text/csv',upsert:false});
+  if(uploadErr)throw uploadErr;
+  const {data:imp,error:impErr}=await supabase.from('master_imports').insert({workspace_id:workspaceId,uploaded_by:state.user.id,file_name:file.name,storage_path:storagePath,mapping:map,status:'processing'}).select('id').single();
+  if(impErr)throw impErr;
+
+  const storesMap=new Map(),peopleMap=new Map();
+  for(const r of valid){
+    const storeCode=String(r[map.store_code]).trim();
+    if(!storesMap.has(storeCode))storesMap.set(storeCode,{workspace_id:workspaceId,code:storeCode,name:String(r[map.store_name]).trim(),network:map.network?r[map.network]||null:null,region:map.region?r[map.region]||null:null,address:map.address?r[map.address]||null:null});
+    const pc=(map.promoter_code&&r[map.promoter_code]?String(r[map.promoter_code]):'PROM-'+norm(r[map.promoter_name])).trim();
+    const sc=(map.supervisor_code&&r[map.supervisor_code]?String(r[map.supervisor_code]):'SUP-'+norm(r[map.supervisor_name])).trim();
+    peopleMap.set('promoter|'+pc,{workspace_id:workspaceId,external_code:pc,full_name:String(r[map.promoter_name]).trim(),person_role:'promoter',whatsapp:map.promoter_whatsapp?r[map.promoter_whatsapp]||null:null,email:map.promoter_email?r[map.promoter_email]||null:null});
+    peopleMap.set('supervisor|'+sc,{workspace_id:workspaceId,external_code:sc,full_name:String(r[map.supervisor_name]).trim(),person_role:'supervisor',whatsapp:map.supervisor_whatsapp?r[map.supervisor_whatsapp]||null:null,email:map.supervisor_email?r[map.supervisor_email]||null:null});
+  }
+  const {data:storeRows,error:storeErr}=await supabase.from('stores').upsert([...storesMap.values()],{onConflict:'workspace_id,code'}).select('id,code');
+  if(storeErr)throw storeErr;
+  const {data:personRows,error:personErr}=await supabase.from('people').upsert([...peopleMap.values()],{onConflict:'workspace_id,external_code,person_role'}).select('id,external_code,person_role,email');
+  if(personErr)throw personErr;
+
+  const storeIds=new Map((storeRows||[]).map(s=>[String(s.code),s.id]));
+  const personIds=new Map((personRows||[]).map(p=>[p.person_role+'|'+p.external_code,p.id]));
+  const assignments=[];
+  for(const r of valid){
+    const storeCode=String(r[map.store_code]).trim();
+    const pc=(map.promoter_code&&r[map.promoter_code]?String(r[map.promoter_code]):'PROM-'+norm(r[map.promoter_name])).trim();
+    const sc=(map.supervisor_code&&r[map.supervisor_code]?String(r[map.supervisor_code]):'SUP-'+norm(r[map.supervisor_name])).trim();
+    assignments.push({workspace_id:workspaceId,store_id:storeIds.get(storeCode),promoter_id:personIds.get('promoter|'+pc)||null,supervisor_id:personIds.get('supervisor|'+sc)||null,active:true});
+  }
+  const storeIdList=[...new Set(assignments.map(a=>a.store_id).filter(Boolean))];
+  if(storeIdList.length){const {error:delErr}=await supabase.from('store_assignments').delete().eq('workspace_id',workspaceId).eq('active',true).in('store_id',storeIdList);if(delErr)throw delErr}
+  if(assignments.length){const {error:aErr}=await supabase.from('store_assignments').insert(assignments);if(aErr)throw aErr}
+
+  for(const u of state.users||[]){
+    if(!['promoter','supervisor'].includes(u.role)||!u.email)continue;
+    await supabase.from('people').update({auth_user_id:u.user_id}).eq('workspace_id',workspaceId).eq('person_role',u.role).ilike('email',u.email);
+  }
+
+  await supabase.from('master_imports').update({status:'completed',stores_count:storesMap.size,promoters_count:[...peopleMap.keys()].filter(k=>k.startsWith('promoter|')).length,supervisors_count:[...peopleMap.keys()].filter(k=>k.startsWith('supervisor|')).length,error_rows:rows.length-valid.length,completed_at:new Date().toISOString()}).eq('id',imp.id);
+  await loadWorkspaceContext();await loadCloudRows();
+  return {stores:storesMap.size,people:peopleMap.size,errors:rows.length-valid.length};
+}
+function openMasterImport(){
+  if(!canMaster()){toast('Somente o Admin pode atualizar o Cadastro Mestre.',true);return}
+  let rows=[],headers=[],map={},file=null;
+  const aliases={
+    store_code:['loja_codigo','Código loja','Codigo loja','ID PDV'],store_name:['loja_nome','Loja','Nome PDV'],network:['rede','Rede'],region:['regiao','Região','Regional'],address:['endereco','Endereço'],
+    promoter_code:['promotor_codigo','Código promotor','Matricula promotor'],promoter_name:['promotor_nome','Promotor','Consultor'],promoter_whatsapp:['promotor_whatsapp','WhatsApp promotor','Telefone promotor'],promoter_email:['promotor_email','Email promotor'],
+    supervisor_code:['supervisor_codigo','Código supervisor'],supervisor_name:['supervisor_nome','Supervisor','Coordenador'],supervisor_whatsapp:['supervisor_whatsapp','WhatsApp supervisor','Telefone supervisor'],supervisor_email:['supervisor_email','Email supervisor']
+  };
+  const r=modal('<header><div><small>CADASTRO MESTRE</small><h2>Atualizar lojas e equipe por arquivo</h2><p class="modal-sub">Este arquivo alimenta automaticamente contatos, vínculos e destinatários do WhatsApp.</p></div><button data-close>×</button></header><div id="masterBody" class="modal-body"></div>');
+  function auto(){for(const [k,a] of Object.entries(aliases))map[k]=guessHeader(headers,a)}
+  function sel(k,label,required=false){return '<div><label>'+label+(required?' *':'')+'</label><select data-master-map="'+k+'"><option value="">— Não mapear —</option>'+headers.map(h=>'<option value="'+esc(h)+'" '+(map[k]===h?'selected':'')+'>'+esc(h)+'</option>').join('')+'</select></div>'}
+  function draw(){
+    const b=r.querySelector('#masterBody');
+    if(!file)b.innerHTML='<div class="master-intro"><div><b>Um arquivo, uma base operacional</b><p>Cada linha representa uma loja e seus responsáveis atuais. O CIA usa esse cadastro para relacionar execução, Promotor, Supervisor e WhatsApp.</p></div><button id="downloadMasterModel" class="btn ghost">Baixar modelo CSV</button></div><div class="drop"><h3>Selecione o arquivo de cadastro</h3><p>CSV com lojas, promotores, supervisores e contatos.</p><input id="masterFile" type="file" accept=".csv,text/csv"><button id="chooseMaster">Selecionar arquivo</button></div>';
+    else b.innerHTML='<div class="stepper"><b>'+esc(file.name)+'</b> · '+rows.length+' linhas</div><div class="mapping-form">'+sel('store_code','Código da loja',true)+sel('store_name','Nome da loja',true)+sel('network','Rede')+sel('region','Região')+sel('address','Endereço')+sel('promoter_code','Código do promotor')+sel('promoter_name','Promotor',true)+sel('promoter_whatsapp','WhatsApp do promotor')+sel('promoter_email','E-mail do promotor')+sel('supervisor_code','Código do supervisor')+sel('supervisor_name','Supervisor',true)+sel('supervisor_whatsapp','WhatsApp do supervisor')+sel('supervisor_email','E-mail do supervisor')+'</div><div class="master-summary"><b>O CIA vai atualizar o Cadastro Mestre deste Ambiente.</b><span>Cadastros anteriores da mesma loja/pessoa serão atualizados; os vínculos ativos da loja serão substituídos pelos deste arquivo.</span></div><button id="processMaster" class="primary wide">Validar e atualizar cadastro</button>';
+    b.querySelector('#downloadMasterModel')?.addEventListener('click',downloadMasterTemplate);
+    b.querySelector('#chooseMaster')?.addEventListener('click',()=>b.querySelector('#masterFile').click());
+    b.querySelector('#masterFile')?.addEventListener('change',async e=>{file=e.target.files[0];if(!file)return;rows=parseCSV(await file.text());headers=rows.length?Object.keys(rows[0]).filter(k=>k!=='__row'):[];auto();draw()});
+    b.querySelectorAll('[data-master-map]').forEach(s=>s.onchange=e=>{map[e.target.dataset.masterMap]=e.target.value});
+    b.querySelector('#processMaster')?.addEventListener('click',async e=>{if(!map.store_code||!map.store_name||!map.promoter_name||!map.supervisor_name){toast('Mapeie os campos obrigatórios.',true);return}e.currentTarget.disabled=true;e.currentTarget.textContent='Atualizando cadastro...';try{const result=await importMasterData(rows,map,file);r.remove();toast('Cadastro Mestre atualizado: '+result.stores+' lojas');render()}catch(err){e.currentTarget.disabled=false;e.currentTarget.textContent='Validar e atualizar cadastro';toast(err.message,true)}});
+  }draw();
+}
+async function inviteEnvironmentUser(){
+  const r=modal('<header><div><small>USUÁRIOS</small><h2>Convidar usuário</h2></div><button data-close>×</button></header><div class="modal-body"><div class="mapping-form"><div><label>Nome</label><input id="inviteName" placeholder="Nome completo"></div><div><label>E-mail</label><input id="inviteEmail" type="email" placeholder="nome@empresa.com"></div><div><label>Função</label><select id="inviteRole">'+(hasRole('owner')?'<option value="admin">Admin</option>':'')+'<option value="bko">BKO</option><option value="supervisor">Supervisor</option><option value="promoter">Promotor</option></select></div></div><div class="role-hint">Promotor recebe acesso ao CIA Campo somente quando o serviço Campo estiver ativo no Ambiente.</div></div><footer><button data-close>Cancelar</button><button id="sendInvite" class="primary">Enviar convite</button></footer>');
+  r.querySelector('#sendInvite').onclick=async()=>{const name=r.querySelector('#inviteName').value.trim(),email=r.querySelector('#inviteEmail').value.trim(),role=r.querySelector('#inviteRole').value;if(!email){toast('Informe o e-mail.',true);return}const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'invite_user',workspace_id:state.membership.workspace_id,email,display_name:name,role}});if(error||data?.error){toast(data?.error||error.message,true);return}r.remove();await loadWorkspaceContext();toast('Convite enviado');render()};
+}
+function openCreateEnvironment(){
+  if(!canManageEnvironments())return;
+  const r=modal('<header><div><small>AMBIENTES</small><h2>Cadastrar empresa cliente</h2><p class="modal-sub">Cada Ambiente isola dados, usuários, serviços e cadastros do cliente.</p></div><button data-close>×</button></header><div class="modal-body"><div class="mapping-form"><div><label>Nome do Ambiente</label><input id="envName" placeholder="Ex.: Amazon Brasil"></div><div><label>Nome do Admin cliente</label><input id="envAdminName" placeholder="Nome completo"></div><div><label>E-mail do Admin cliente</label><input id="envAdminEmail" type="email" placeholder="admin@cliente.com"></div></div><div class="service-builder"><label><input id="envBko" type="checkbox" checked><span><b>BKO</b><small>Análise, relatórios e CSV</small></span></label><label><input id="envField" type="checkbox"><span><b>CIA Campo</b><small>Check-in, tarefas e fotos no PDV</small></span></label></div></div><footer><button data-close>Cancelar</button><button id="createEnv" class="primary">Criar Ambiente</button></footer>');
+  r.querySelector('#createEnv').onclick=async()=>{const body={action:'create_environment',workspace_id:state.membership.workspace_id,name:r.querySelector('#envName').value.trim(),admin_name:r.querySelector('#envAdminName').value.trim(),admin_email:r.querySelector('#envAdminEmail').value.trim(),bko_enabled:r.querySelector('#envBko').checked,field_enabled:r.querySelector('#envField').checked};const {data,error}=await supabase.functions.invoke('environment-admin',{body});if(error||data?.error){toast(data?.error||error.message,true);return}localStorage.setItem('cia-active-environment',data.workspace.id);r.remove();state.membership=await ensureWorkspace();await loadWorkspaceContext();await loadCloudRows();toast('Ambiente criado');render()};
+}
+function openServiceEditor(){
+  if(!canManageEnvironments())return;
+  const r=modal('<header><div><small>SERVIÇOS</small><h2>Serviços contratados neste Ambiente</h2></div><button data-close>×</button></header><div class="modal-body"><div class="service-builder"><label><input id="svcBko" type="checkbox" '+(state.services.bko_enabled?'checked':'')+'><span><b>BKO</b><small>Análise remota, relatórios e CSV.</small></span></label><label><input id="svcField" type="checkbox" '+(state.services.field_enabled?'checked':'')+'><span><b>CIA Campo</b><small>Execução em campo e envio automático de fotos.</small></span></label></div></div><footer><button data-close>Cancelar</button><button id="saveSvc" class="primary">Salvar serviços</button></footer>');
+  r.querySelector('#saveSvc').onclick=async()=>{const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'update_services',workspace_id:state.membership.workspace_id,bko_enabled:r.querySelector('#svcBko').checked,field_enabled:r.querySelector('#svcField').checked}});if(error||data?.error){toast(data?.error||error.message,true);return}r.remove();await loadWorkspaceContext();toast('Serviços atualizados');render()};
+}
 function settings(){
   const settings=state.workspace?.settings||{},source=settings.data_source||'csv_import',canManage=['owner','admin'].includes(state.membership?.role);
   const imports=state.imports||[];
