@@ -3712,3 +3712,27 @@ body:not(.public-mode) .execution-empty .empty-actions{
     min-height:0!important;
   }
 }
+
+
+/* QA correction: CSS grid item with absolutely positioned photo has no intrinsic width.
+   Explicit width prevents auditoria image from collapsing to 2px at laptop sizes. */
+@media(min-width:701px) and (max-width:1100px){
+  .human-cia .usecase-editorial article:nth-child(4){
+    display:grid!important;
+    grid-template-columns:minmax(0,.78fr) minmax(280px,1fr)!important;
+    gap:18px!important;
+    align-items:center!important;
+  }
+  .human-cia .usecase-editorial article:nth-child(4) .cia-media-slot.square{
+    display:block!important;
+    position:relative!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:420px!important;
+    height:auto!important;
+    min-height:0!important;
+    aspect-ratio:1/1!important;
+    grid-column:2!important;
+    justify-self:stretch!important;
+  }
+}
