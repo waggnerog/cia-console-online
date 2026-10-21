@@ -3414,3 +3414,13 @@ body:not(.public-mode) .execution-empty .empty-actions{
   .support-ticket-main aside{padding:10px 0 0;border-left:0;border-top:1px solid var(--cia-hairline)}
   .field-operation-list article{grid-template-columns:1fr}
 }
+
+/* Commercial expired trial state */
+.commercial-page .commercial-summary{grid-template-columns:repeat(5,1fr)!important}
+.status-chip.expired{background:#f5f1f8!important;color:#77658f!important}
+@media(max-width:1000px){
+  .commercial-page .commercial-summary{grid-template-columns:repeat(3,1fr)!important}
+}
+@media(max-width:700px){
+  .commercial-page .commercial-summary{grid-template-columns:1fr 1fr!important}
+}
