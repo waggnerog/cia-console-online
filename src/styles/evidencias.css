@@ -616,3 +616,13 @@
 .license-grid i>em{display:block;height:100%;border-radius:99px;background:var(--green)}
 .license-note{display:block;margin-top:10px;font-size:8px;line-height:1.45;color:#738078}
 @media(max-width:700px){.license-grid{grid-template-columns:1fr}}
+
+/* Commercial license add-ons */
+.addon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.addon-grid label{display:flex;flex-direction:column;gap:5px;border:1px solid #e0e5e8;border-radius:9px;padding:10px;font-size:9px;font-weight:700;color:#55616c}
+.addon-grid input{height:38px;border:1px solid #d9e0e4;border-radius:7px;padding:0 8px;font-family:'IBM Plex Mono'}
+.addon-grid small{font-size:8px;color:#7c8791;font-weight:400}
+.addon-total{margin-top:10px;padding:10px 12px;border-radius:9px;background:#f4faf6;border:1px solid #d8e8dd;display:flex;align-items:center;justify-content:space-between}
+.addon-total span{font-size:9px;color:#68756d}.addon-total b{font-family:'IBM Plex Mono';font-size:14px;color:var(--green)}
+.money-kpi{font-size:15px!important}
+@media(max-width:700px){.addon-grid{grid-template-columns:1fr}}
