@@ -1307,3 +1307,493 @@ body:not(.public-mode) .profile-avatar{
   body:not(.public-mode) .metrics{grid-template-columns:repeat(2,1fr)!important}
   body:not(.public-mode) .metrics>div{border-bottom:1px solid var(--cia-hairline)!important}
 }
+
+
+/* Contract / onboarding */
+.public-contract-page{
+  background:var(--cia-canvas)!important;
+}
+.public-contract-page .contract-main{
+  max-width:1220px!important;
+  min-height:calc(100vh - 76px)!important;
+  grid-template-columns:360px minmax(0,1fr)!important;
+  gap:0!important;
+  padding:38px 22px 70px!important;
+}
+.public-contract-page .contract-aside{
+  padding:34px 34px 34px 8px!important;
+  border-right:1px solid var(--cia-hairline);
+}
+.public-contract-page .contract-aside>span{
+  color:#7655e4!important;
+  font-size:8px!important;
+  letter-spacing:.16em!important;
+}
+.public-contract-page .contract-aside h1{
+  margin:10px 0 14px!important;
+  max-width:280px;
+  font-size:44px!important;
+  line-height:.95!important;
+  letter-spacing:-.06em!important;
+}
+.public-contract-page .contract-aside>p{
+  max-width:290px;
+  font-size:10px!important;
+  line-height:1.6!important;
+}
+.public-contract-page .contract-aside ol{
+  margin:38px 0 28px!important;
+  gap:0!important;
+}
+.public-contract-page .contract-aside li{
+  min-height:56px;
+  flex-direction:row!important;
+  align-items:center!important;
+  gap:12px!important;
+  border-top:1px solid var(--cia-hairline);
+}
+.public-contract-page .contract-aside li>b{
+  width:28px!important;
+  height:28px!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  border:1px solid var(--cia-hairline-strong);
+}
+.public-contract-page .contract-aside li.active>b{
+  background:var(--cia-ink)!important;
+  border-color:var(--cia-ink)!important;
+  color:#fff!important;
+}
+.public-contract-page .contract-aside li.active span{color:#111827}
+.public-contract-page .contract-card{
+  min-height:610px!important;
+  align-self:start!important;
+  margin-left:34px;
+  padding:34px!important;
+  background:#fff!important;
+  border:1px solid var(--cia-hairline)!important;
+  border-radius:24px!important;
+  box-shadow:var(--cia-shadow-1)!important;
+  backdrop-filter:none!important;
+}
+.public-contract-page .contract-head>span{
+  color:#7655e4!important;
+  font-size:8px!important;
+}
+.public-contract-page .contract-head h2{
+  margin:8px 0!important;
+  font-size:30px!important;
+  letter-spacing:-.045em!important;
+}
+.public-contract-page .contract-head p{
+  max-width:620px;
+  font-size:10px!important;
+}
+.public-contract-page .billing-toggle{
+  border-radius:999px!important;
+  padding:3px!important;
+  background:#f1f3f6!important;
+}
+.public-contract-page .billing-toggle button{
+  border-radius:999px!important;
+}
+.public-contract-page .contract-plan-list{
+  margin-top:4px;
+}
+.public-contract-page .contract-plan-list label{
+  min-height:104px;
+  grid-template-columns:60px 1fr!important;
+  border:1px solid var(--cia-hairline)!important;
+  background:#fff!important;
+  border-radius:16px!important;
+  padding:14px!important;
+  box-shadow:none!important;
+}
+.public-contract-page .contract-plan-list label.selected{
+  background:var(--cia-spectrum-soft)!important;
+  border-color:rgba(117,71,235,.18)!important;
+}
+.public-contract-page .contract-plan-icon{
+  width:52px!important;
+  height:52px!important;
+  border-radius:50%!important;
+  background:#fff!important;
+  border:1px solid rgba(117,71,235,.14);
+}
+.public-contract-page .contract-fields{
+  gap:18px 14px!important;
+}
+.public-contract-page .contract-fields label{
+  font-size:8px!important;
+  letter-spacing:.04em;
+}
+.public-contract-page .contract-fields input,
+.public-contract-page .contract-fields select{
+  height:44px!important;
+  border-radius:0!important;
+  border:0!important;
+  border-bottom:1px solid var(--cia-hairline-strong)!important;
+  padding:0!important;
+  background:transparent!important;
+}
+.public-contract-page .contract-fields input:focus,
+.public-contract-page .contract-fields select:focus{
+  box-shadow:none!important;
+  border-bottom-color:#7655e4!important;
+}
+.public-contract-page .contract-review{
+  gap:0!important;
+  border-top:1px solid var(--cia-hairline);
+}
+.public-contract-page .contract-review>div{
+  border:0!important;
+  border-bottom:1px solid var(--cia-hairline)!important;
+  border-radius:0!important;
+  padding:14px 0!important;
+  background:transparent!important;
+}
+.public-contract-page .contract-actions{
+  padding-top:12px;
+}
+.public-contract-page .contract-consent{
+  margin-top:20px!important;
+  padding:14px;
+  border:1px solid var(--cia-hairline);
+  border-radius:14px;
+  background:#fafbfc;
+}
+
+/* Institutional: editorial, less glass */
+.institutional-site{
+  background:var(--cia-canvas)!important;
+}
+.institutional-site .institutional-main{
+  max-width:1220px!important;
+  padding-top:90px!important;
+}
+.institutional-site .institutional-hero{
+  max-width:860px!important;
+  margin-bottom:60px!important;
+}
+.institutional-site .institutional-hero h1{
+  font-size:clamp(48px,6vw,82px)!important;
+  line-height:.92!important;
+  letter-spacing:-.07em!important;
+}
+.institutional-site .institutional-hero p{
+  max-width:690px!important;
+  margin-top:18px!important;
+  font-size:12px!important;
+}
+.institutional-site .glass-panel{
+  background:#fff!important;
+  border:1px solid var(--cia-hairline)!important;
+  box-shadow:var(--cia-shadow-1)!important;
+  backdrop-filter:none!important;
+}
+.institutional-site .faq-full{
+  gap:30px!important;
+}
+.institutional-site .faq-group{
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+.institutional-site .faq-group h2{
+  margin-bottom:16px!important;
+  font-size:23px!important;
+  letter-spacing:-.035em!important;
+}
+.institutional-site .faq-group summary{
+  padding:16px 0!important;
+  font-size:11px!important;
+}
+.institutional-site .institutional-cta{
+  margin-top:60px!important;
+  padding:34px!important;
+  border-radius:24px!important;
+  background:var(--cia-ink)!important;
+  color:#fff;
+  border:0!important;
+  box-shadow:none!important;
+}
+.institutional-site .institutional-cta span{color:#b9b3ff!important}
+.institutional-site .institutional-cta h2{font-size:30px!important}
+.institutional-site .story-grid{
+  gap:14px!important;
+}
+.institutional-site .story-main{
+  min-height:420px;
+  display:flex;
+  flex-direction:column;
+}
+.institutional-site .story-main h2{
+  margin-top:auto!important;
+  font-size:38px!important;
+  line-height:1.02!important;
+  letter-spacing:-.05em;
+}
+.institutional-site .story-values article{
+  min-height:132px;
+}
+.institutional-site .company-focus{
+  margin-top:38px!important;
+  padding:50px 0!important;
+  border:0!important;
+  border-top:1px solid var(--cia-hairline)!important;
+  border-bottom:1px solid var(--cia-hairline)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.institutional-site .company-focus h2{
+  max-width:850px!important;
+  font-size:40px!important;
+  line-height:1!important;
+  letter-spacing:-.05em;
+}
+.institutional-site .trust-grid{
+  gap:12px!important;
+}
+.institutional-site .trust-card{
+  min-height:250px;
+  border-radius:20px!important;
+  background:#fff!important;
+  border:1px solid var(--cia-hairline)!important;
+  box-shadow:var(--cia-shadow-1)!important;
+}
+.institutional-site .trust-card h2{
+  margin-top:auto!important;
+  font-size:18px!important;
+}
+.institutional-site .security-note-page{
+  margin-top:40px!important;
+  padding:38px!important;
+  border-radius:24px!important;
+  background:var(--cia-ink)!important;
+  color:#fff;
+}
+.institutional-site .security-note-page p{color:#bbc3d0!important}
+.institutional-site .support-layout{
+  gap:24px!important;
+}
+.institutional-site .support-info{
+  gap:0!important;
+}
+.institutional-site .support-info article{
+  min-height:160px;
+  border-radius:0!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-top:1px solid var(--cia-hairline)!important;
+  box-shadow:none!important;
+  background:transparent!important;
+}
+.institutional-site .support-form{
+  padding:30px!important;
+  border-radius:22px!important;
+}
+.institutional-site .support-form-head h2{
+  font-size:30px!important;
+  letter-spacing:-.045em;
+}
+.institutional-site .support-fields input,
+.institutional-site .support-fields select,
+.institutional-site .support-fields textarea{
+  border-radius:0!important;
+  border:0!important;
+  border-bottom:1px solid var(--cia-hairline-strong)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.institutional-site .legal-layout{
+  grid-template-columns:minmax(0,1fr) 300px!important;
+  gap:34px!important;
+}
+.institutional-site .legal-article{
+  padding:38px!important;
+  border-radius:24px!important;
+}
+.institutional-site .legal-article h2{
+  font-size:17px!important;
+  letter-spacing:-.025em;
+}
+.institutional-site .legal-article p{
+  max-width:780px;
+  font-size:11px!important;
+  line-height:1.75!important;
+}
+.institutional-site .legal-side .glass-panel{
+  padding:20px!important;
+}
+
+/* Onboarding */
+.onboarding-main{
+  max-width:1040px!important;
+  padding-top:70px!important;
+}
+.onboarding-hero{
+  max-width:760px!important;
+  margin-bottom:50px!important;
+}
+.onboarding-hero h1{
+  font-size:clamp(42px,5vw,70px)!important;
+  line-height:.94!important;
+  letter-spacing:-.065em!important;
+  background:none!important;
+  color:#111827!important;
+}
+.onboarding-hero p{
+  max-width:600px;
+  margin:16px auto 0;
+  font-size:11px!important;
+  line-height:1.6;
+}
+.onboarding-steps{
+  gap:0!important;
+  border-top:1px solid var(--cia-hairline);
+}
+.onboarding-steps article{
+  min-height:92px;
+  border:0!important;
+  border-bottom:1px solid var(--cia-hairline)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:18px 0!important;
+}
+.onboarding-steps article>b{
+  border-radius:50%!important;
+  background:#fff!important;
+  border:1px solid var(--cia-hairline)!important;
+}
+
+/* Profile */
+.profile-page .profile-grid{
+  gap:12px!important;
+}
+.profile-page .identity-card{
+  position:relative;
+  overflow:hidden;
+  min-height:330px;
+  align-items:flex-start!important;
+  text-align:left!important;
+  justify-content:flex-end;
+  background:
+    radial-gradient(circle at 85% 10%,rgba(117,71,235,.10),transparent 34%),
+    #fff!important;
+}
+.profile-page .profile-avatar{
+  width:62px!important;
+  height:62px!important;
+  border-radius:50%!important;
+}
+.profile-page .identity-card h2{
+  margin-top:auto!important;
+  font-size:25px!important;
+  letter-spacing:-.04em;
+}
+.profile-page .profile-card{
+  padding:22px!important;
+}
+.profile-page .profile-card h2{
+  font-size:15px!important;
+  letter-spacing:-.02em;
+}
+
+/* Commercial environments */
+.commercial-page .commercial-summary{
+  grid-template-columns:repeat(4,1fr)!important;
+  gap:0!important;
+  border-top:1px solid var(--cia-hairline);
+  border-bottom:1px solid var(--cia-hairline);
+}
+.commercial-page .commercial-summary article{
+  border:0!important;
+  border-right:1px solid var(--cia-hairline)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  padding:20px!important;
+}
+.commercial-page .commercial-summary article:last-child{border-right:0!important}
+.commercial-page .commercial-list{
+  margin-top:24px!important;
+  gap:0!important;
+}
+.commercial-page .commercial-row{
+  border:0!important;
+  border-top:1px solid var(--cia-hairline)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  padding:18px 0!important;
+}
+
+/* Modal */
+.modal-root .backdrop{
+  backdrop-filter:blur(5px);
+  background:rgba(15,23,42,.25)!important;
+}
+.modal-root .modal{
+  border-radius:24px!important;
+  border:1px solid rgba(255,255,255,.7)!important;
+  box-shadow:0 32px 100px rgba(15,23,42,.20)!important;
+}
+.modal-root .modal>header{
+  padding:20px 22px!important;
+}
+.modal-root .modal>header small{
+  color:#7655e4!important;
+  letter-spacing:.12em;
+}
+.modal-root .modal>header h2{
+  font-size:22px!important;
+  letter-spacing:-.035em;
+}
+
+/* Cookie */
+.cookie-banner{
+  border-radius:18px!important;
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid var(--cia-hairline)!important;
+  box-shadow:0 24px 70px rgba(15,23,42,.14)!important;
+  backdrop-filter:blur(18px)!important;
+}
+
+/* subtle transitions */
+.human-cia button,
+.human-auth button,
+body:not(.public-mode) button{
+  transition:transform .18s var(--cia-ease),background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease;
+}
+.human-cia button:hover,
+.human-auth button:hover{
+  transform:translateY(-1px);
+}
+
+/* accessibility / motion */
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
+/* Responsive for supporting surfaces */
+@media(max-width:900px){
+  .public-contract-page .contract-main{grid-template-columns:1fr!important}
+  .public-contract-page .contract-aside{
+    border-right:0!important;
+    border-bottom:1px solid var(--cia-hairline);
+    padding:20px 0 24px!important;
+  }
+  .public-contract-page .contract-aside h1{max-width:none}
+  .public-contract-page .contract-card{margin:20px 0 0!important}
+  .institutional-site .legal-layout{grid-template-columns:1fr!important}
+}
+@media(max-width:700px){
+  .commercial-page .commercial-summary{grid-template-columns:1fr 1fr!important}
+  .commercial-page .commercial-summary article:nth-child(2){border-right:0!important}
+  .commercial-page .commercial-summary article:nth-child(-n+2){border-bottom:1px solid var(--cia-hairline)!important}
+  .public-contract-page .contract-card{padding:22px!important}
+}
