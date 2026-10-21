@@ -48,7 +48,7 @@ function analysis(x){
   return '<div class="analysis-scroll"><div class="analysis-title"><div><small>CONTEXTO DA EXECUÇÃO</small><b>Informações para decidir com segurança</b></div><span class="pill '+x.status+'">'+statusLabel[x.status]+'</span></div>'+
   '<section class="context-identity"><div class="context-eyebrow">LOJA</div><div class="store-identity"><div><b>'+esc(x.store)+'</b><span>'+esc(x.network)+' · '+esc(x.region||'—')+'</span></div><code>'+esc(x.code||'—')+'</code></div></section>'+
   '<section class="context-group"><h3>Execução</h3><div class="context-grid"><div><span>Tarefa</span><b>'+esc(x.task)+'</b></div><div><span>Cliente</span><b>'+esc(x.client)+'</b></div><div><span>Operação</span><b>'+esc(x.operation)+'</b></div><div><span>Capturada em</span><b>'+date(x.captured_at)+' · '+time(x.captured_at)+'</b></div><div><span>Origem</span><b>'+(x.source==='mobile_app'?'CIA Campo':'Importação CSV')+'</b></div></div></section>'+
-  '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b>'+(x.whatsapp?'<small>WhatsApp: '+esc(x.whatsapp)+'</small>':'<small>WhatsApp não informado</small>')+'</div></div></div></section>'+
+  '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b><small>'+(contactPhone(x.promoterContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b><small>'+(contactPhone(x.supervisorContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div></div></section>'+
   '<details class="history-card"><summary>Histórico da execução <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
 }
 function loginScreen(){
@@ -620,6 +620,12 @@ function render(){
 window.addEventListener('hashchange',render);
 window.addEventListener('keydown',e=>{
   if(routeName()!=='execucao'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.querySelector('.modal-root'))return;
-  const k=e.key.toLowerCase();if(k==='a')decision('approve');if(k==='j')decision('adjust');if(k==='r')decision('reject');if(e.key==='ArrowRight')navigate(1);if(e.key==='ArrowLeft')navigate(-1)
+  if(e.key==='ArrowRight'){navigate(1);return}
+  if(e.key==='ArrowLeft'){navigate(-1);return}
+  if(!canAnalyze())return;
+  const k=e.key.toLowerCase();
+  if(k==='a')decision('approve');
+  if(k==='j')decision('adjust');
+  if(k==='r')decision('reject');
 });
 start();
