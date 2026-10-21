@@ -24,11 +24,11 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Browser journey and screenshots
         run: |
-          mkdir -p qa-snapshots/2026-10-21-final
+          mkdir -p qa-snapshots/2026-10-21-refined
           node --input-type=module <<'NODE'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
-          const OUT='qa-snapshots/2026-10-21-final';
+          const OUT='qa-snapshots/2026-10-21-refined';
           const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
           const cases=[{name:'desktop',width:1440,height:900},{name:'laptop',width:1024,height:768},{name:'mobile',width:390,height:844}];
           const result={testedAt:new Date().toISOString(),url:'https://app.usecia.com/',cases:[]};
@@ -42,6 +42,8 @@ jobs:
             try {
               await page.goto(result.url,{waitUntil:'domcontentloaded',timeout:55000});
               await page.waitForTimeout(2200);
+              const dismiss=page.getByText('Somente necessários',{exact:true}).first();
+              if(await dismiss.count()) await dismiss.click({timeout:3000}).catch(()=>{});
               // Scroll all content into view to exercise lazy loading before screenshots.
               const height=await page.evaluate(()=>document.documentElement.scrollHeight);
               for(let y=0;y<height;y+=650){await page.evaluate(v=>window.scrollTo(0,v),y);await page.waitForTimeout(110);}
@@ -70,7 +72,8 @@ jobs:
               const nav=[];
               for(const label of ['produto','para-quem','planos','faq']){
                 try{
-                  const loc=page.locator('[data-scroll="'+label+'"]').first();
+                  const id=label==='planos'?'servicos':label==='faq'?'faq-resumo':label;
+                  const loc=page.locator('[data-home-section="'+id+'"]').first();
                   if(await loc.count()){
                     await loc.click({timeout:4500});
                     await page.waitForTimeout(450);
