@@ -10,35 +10,14 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch reference and inspect design tokens
+      - name: Fetch exact Human visual tokens
         shell: bash
         run: |
           set -euo pipefail
           URL="https://black.humanacademy.ai/black-2026"
           mkdir -p /tmp/human-ref
           curl -L --compressed -A "Mozilla/5.0" "$URL" -o /tmp/human-ref/page.html
-          echo "=== HTML HEAD / STYLES ==="
-          python - <<'PY'
-          from pathlib import Path
-          import re, html
-          s=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
-          print(s[:12000])
-          css=re.findall(r'<link[^>]+href=["\']([^"\']+\.css[^"\']*)["\']', s, re.I)
-          print("\nCSS_LINKS")
-          for x in css: print(x)
-          fonts=re.findall(r'(?:font-family|--[^:]*font[^:]*):\s*([^;}]+)', s, re.I)
-          print("\nINLINE_FONT_HINTS")
-          for x in sorted(set(fonts)): print(x[:200])
-          PY
-          python - <<'PY'
-          from pathlib import Path
-          import re, urllib.parse
-          s=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
-          css=re.findall(r'<link[^>]+href=["\']([^"\']+\.css[^"\']*)["\']', s, re.I)
-          for i,u in enumerate(css):
-              print(f"CSS_URL_{i}={urllib.parse.urljoin('https://black.humanacademy.ai/black-2026',u)}")
-          PY
-          python - <<'PY' > /tmp/human-ref/css_urls.txt
+          python - <<'PY' > /tmp/human-ref/urls.txt
           from pathlib import Path
           import re, urllib.parse
           s=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
@@ -47,26 +26,50 @@ jobs:
           PY
           n=0
           while IFS= read -r css; do
-            [ -z "$css" ] && continue
-            echo "Fetching $css"
             curl -L --compressed -A "Mozilla/5.0" "$css" -o "/tmp/human-ref/style-$n.css"
             n=$((n+1))
-          done < /tmp/human-ref/css_urls.txt
-          cat /tmp/human-ref/style-*.css > /tmp/human-ref/all.css 2>/dev/null || true
-          echo "=== FONT FACE ==="
-          grep -Eo '@font-face\{[^}]+\}' /tmp/human-ref/all.css | head -80 || true
-          echo "=== FONT FAMILY TOKENS ==="
-          grep -Eo 'font-family:[^;}]+' /tmp/human-ref/all.css | sort -u | head -120 || true
-          echo "=== CSS CUSTOM PROPERTIES ==="
-          grep -Eo -- '--[A-Za-z0-9_-]+:[^;}]+' /tmp/human-ref/all.css | grep -Ei 'color|bg|background|font|text|accent|black|white|purple|green|yellow|orange|blue|cream' | sort -u | head -200 || true
-          echo "=== HEX COLORS BY FREQUENCY ==="
+          done < /tmp/human-ref/urls.txt
+          cat /tmp/human-ref/style-*.css > /tmp/human-ref/all.css
           python - <<'PY'
           from pathlib import Path
           import re, collections
-          s=Path('/tmp/human-ref/all.css').read_text(errors='ignore')
-          c=collections.Counter(x.lower() for x in re.findall(r'#[0-9a-fA-F]{3,8}\b',s))
-          for k,v in c.most_common(80): print(v,k)
-          print("\nFONT NAMES FROM @font-face")
-          for fam in sorted(set(re.findall(r'font-family:\s*["\']?([^;"\'}]+)',s,re.I))):
-              print(fam.strip()[:160])
+          css=Path('/tmp/human-ref/all.css').read_text(errors='ignore')
+          html=Path('/tmp/human-ref/page.html').read_text(errors='ignore')
+          blob=css+'\n'+html
+
+          print("=== EXACT FONT FACES ===")
+          for b in re.findall(r'@font-face\s*\{[^}]+\}',css,re.I):
+              if re.search(r'(Google Sans|Boldonse)',b,re.I):
+                  print(b)
+
+          print("\n=== FONT VARIABLES ===")
+          for name,val in re.findall(r'(--[\w-]*font[\w-]*)\s*:\s*([^;}]+)',blob,re.I):
+              if len(val)<300:
+                  print(name,":",val.strip())
+
+          print("\n=== CORE HUMAN BLACK TOKENS ===")
+          props={}
+          for name,val in re.findall(r'(--black-[\w-]+)\s*:\s*([^;}]+)',blob,re.I):
+              props.setdefault(name,[]).append(val.strip())
+          key_words=('fundo','background','surface','glass','tinta','text','ink','paper','cream','ice','silver','accent','navy','blue','lilac','periwinkle','line','borda','white','black')
+          for name in sorted(props):
+              if any(k in name.lower() for k in key_words):
+                  vals=[]
+                  for v in props[name]:
+                      if v not in vals: vals.append(v)
+                  if len(vals)<=5:
+                      print(name,":"," | ".join(vals))
+
+          print("\n=== CAMPAIGN ROOT BLOCKS ===")
+          blocks=re.findall(r'([^{}]*campanha-black-2026[^{}]*)\{([^{}]{0,12000})\}',css,re.I)
+          for sel,body in blocks[:40]:
+              if '--black-' in body or '--font-' in body:
+                  print("SELECTOR",sel.strip()[:500])
+                  for decl in body.split(';'):
+                      if '--black-' in decl or '--font-' in decl:
+                          print(decl.strip()[:1000])
+
+          print("\n=== COLOR FREQUENCY ===")
+          cnt=collections.Counter(x.lower() for x in re.findall(r'#[0-9a-fA-F]{3,8}\b',blob))
+          for k,v in cnt.most_common(60): print(v,k)
           PY
