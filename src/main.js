@@ -361,7 +361,7 @@ async function loadWorkspaceContext(){
     supabase.from('environment_usage_monthly').select('photos_count,period').eq('workspace_id',workspaceId).eq('period',periodKey).maybeSingle(),
     supabase.from('master_imports').select('id,file_name,status,stores_count,promoters_count,supervisors_count,error_rows,created_at,completed_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(5),
     supabase.from('people').select('id,external_code,full_name,person_role,phone,whatsapp,email,auth_user_id,active').eq('workspace_id',workspaceId).eq('active',true),
-    supabase.from('store_assignments').select('id,store_id,promoter_id,supervisor_id,active,store:stores(id,code,name),promoter:people!store_assignments_promoter_id_fkey(id,full_name,whatsapp,phone,email),supervisor:people!store_assignments_supervisor_id_fkey(id,full_name,whatsapp,phone,email)').eq('workspace_id',workspaceId).eq('active',true),
+    supabase.from('store_assignments').select('id,store_id,promoter_id,supervisor_id,active,store:stores(id,code,name),promoter:people!store_assignments_promoter_id_fkey(id,full_name,whatsapp,phone,email,auth_user_id),supervisor:people!store_assignments_supervisor_id_fkey(id,full_name,whatsapp,phone,email,auth_user_id)').eq('workspace_id',workspaceId).eq('active',true),
     supabase.auth.getUser()
   ]);
   if(wsErr)throw wsErr;if(impErr)throw impErr;if(svcErr)throw svcErr;if(subErr)throw subErr;if(usageErr)throw usageErr;if(miErr)throw miErr;if(pErr)throw pErr;if(aErr)throw aErr;if(userErr)throw userErr;
@@ -659,12 +659,14 @@ function openDecision(){
   r.querySelector('#confirm').onclick=async()=>{const x=current(),reason=r.querySelector('input:checked').value,comment=r.querySelector('#comment').value.trim();try{await saveCloudDecision(x,'rejected',reason,comment);x.status='rejected';x.history.push('Execução reprovada: '+reason+(comment?' — '+comment:''));persist();r.remove();nextOpen();toast('Execução reprovada',true);render()}catch(err){toast(err.message,true)}};
 }
 function parseCSV(text){
+  const firstLine=(String(text||'').split(/\r?\n/,1)[0]||'');
+  const delimiter=((firstLine.match(/;/g)||[]).length>(firstLine.match(/,/g)||[]).length)?';':',';
   const rows=[];let row=[],cell='',quoted=false;
   for(let i=0;i<text.length;i++){
     const ch=text[i],next=text[i+1];
     if(ch==='"'&&quoted&&next==='"'){cell+='"';i++;continue}
     if(ch==='"'){quoted=!quoted;continue}
-    if(ch===','&&!quoted){row.push(cell.trim());cell='';continue}
+    if(ch===delimiter&&!quoted){row.push(cell.trim());cell='';continue}
     if((ch==='\n'||ch==='\r')&&!quoted){
       if(ch==='\r'&&next==='\n')i++;
       row.push(cell.trim());cell='';
