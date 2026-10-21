@@ -289,23 +289,30 @@ async function saveEvidenceContact(e,phone){
   if(state.demo||String(e.id).startsWith('ev-'))return;
   const {error}=await supabase.from('evidences').update({metadata:e._metadata}).eq('id',e.id);if(error)throw error;
 }
+function contactPhone(person){return normalizeWhats(person?.whatsapp||person?.phone||'')}
 function openAdjustment(){
   const x=current();
   const types=Object.keys(adjustmentCopy);
-  const r=modal('<header><div><small>SOLICITAR AJUSTE</small><h2>Prepare a mensagem para o WhatsApp</h2><p class="modal-sub">Escolha o ajuste. O CIA monta a mensagem pronta e registra a solicitação.</p></div><button data-close>×</button></header><div class="modal-body adjustment-flow"><label class="field-label">Tipo de ajuste<select id="adjustType">'+types.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+'</select></label><label class="field-label">WhatsApp do supervisor<input id="adjustPhone" inputmode="tel" placeholder="Ex.: 11 99999-9999" value="'+esc(x.whatsapp||'')+'"><small>O CIA original também direcionava o ajuste pelo contato do supervisor. Se o número vier no CSV, ele será preenchido automaticamente.</small></label><label class="field-label">Observação adicional <textarea id="adjustNote" rows="2" placeholder="Opcional — acrescente apenas se precisar contextualizar algo específico."></textarea></label><div class="message-preview"><div><span>Mensagem pronta</span><button id="copyAdjust" type="button">Copiar</button></div><textarea id="adjustMessage" rows="9" readonly></textarea></div></div><footer><button data-close>Cancelar</button><button id="sendAdjust" class="whatsapp-primary">Salvar ajuste e abrir WhatsApp ↗</button></footer>');
-  const type=r.querySelector('#adjustType'),phone=r.querySelector('#adjustPhone'),note=r.querySelector('#adjustNote'),preview=r.querySelector('#adjustMessage');
-  const sync=()=>{preview.value=buildAdjustmentMessage(x,type.value,note.value.trim())};sync();type.onchange=sync;note.oninput=sync;
+  const contacts=[
+    {key:'promoter',label:'Promotor',name:x.promoter,person:x.promoterContact},
+    {key:'supervisor',label:'Supervisor',name:x.supervisor,person:x.supervisorContact}
+  ].map(v=>({...v,phone:contactPhone(v.person)}));
+  const available=contacts.filter(v=>v.phone);
+  const r=modal('<header><div><small>SOLICITAR AJUSTE</small><h2>Quem deve receber o ajuste?</h2><p class="modal-sub">Os contatos vêm do Cadastro Mestre do Ambiente. Nenhum número precisa ser digitado.</p></div><button data-close>×</button></header><div class="modal-body adjustment-flow"><div class="recipient-options">'+contacts.map((ct,i)=>'<label class="'+(ct.phone?'':'disabled')+'"><input type="radio" name="recipient" value="'+ct.key+'" '+(ct.phone&&i===contacts.findIndex(x=>x.phone)?'checked':'')+' '+(!ct.phone?'disabled':'')+'><span class="recipient-avatar">'+ct.label[0]+'</span><div><b>'+ct.label+' · '+esc(ct.name||'Não identificado')+'</b><small>'+(ct.phone?'WhatsApp cadastrado':'Sem contato no Cadastro Mestre')+'</small></div></label>').join('')+'</div>'+(!available.length?'<div class="contact-warning"><b>Contato não disponível</b><span>Peça ao Admin para atualizar o Cadastro Mestre deste Ambiente.</span></div>':'')+'<label class="field-label">Tipo de ajuste<select id="adjustType">'+types.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('')+'</select></label><label class="field-label">Observação adicional <textarea id="adjustNote" rows="2" placeholder="Opcional — acrescente apenas se precisar contextualizar algo específico."></textarea></label><div class="message-preview"><div><span>Mensagem pronta</span><button id="copyAdjust" type="button">Copiar</button></div><textarea id="adjustMessage" rows="9" readonly></textarea></div></div><footer><button data-close>Cancelar</button><button id="sendAdjust" class="whatsapp-primary" '+(!available.length?'disabled':'')+'>Salvar ajuste e abrir WhatsApp ↗</button></footer>');
+  const type=r.querySelector('#adjustType'),note=r.querySelector('#adjustNote'),preview=r.querySelector('#adjustMessage');
+  const chosen=()=>{const key=r.querySelector('input[name=recipient]:checked')?.value;return contacts.find(x=>x.key===key)||available[0]};
+  const sync=()=>{const ct=chosen();preview.value=buildAdjustmentMessage(x,type.value,note.value.trim())+(ct?'\n\nDestinatário: '+ct.label+' · '+ct.name:'')};sync();
+  type.onchange=sync;note.oninput=sync;r.querySelectorAll('input[name=recipient]').forEach(i=>i.onchange=sync);
   r.querySelector('#copyAdjust').onclick=async()=>{try{await navigator.clipboard.writeText(preview.value);toast('Mensagem copiada')}catch{toast('Não foi possível copiar',true)}};
   r.querySelector('#sendAdjust').onclick=async()=>{
-    const wa=normalizeWhats(phone.value);
-    if(!wa){phone.focus();phone.classList.add('field-error');toast('Informe um WhatsApp válido com DDD.',true);return}
+    const ct=chosen();
+    if(!ct?.phone){toast('Não há contato válido no Cadastro Mestre.',true);return}
     const msg=buildAdjustmentMessage(x,type.value,note.value.trim());
-    const url='https://wa.me/'+wa+'?text='+encodeURIComponent(msg);
+    const url='https://wa.me/'+ct.phone+'?text='+encodeURIComponent(msg);
     const win=window.open('about:blank','_blank');
     try{
-      await saveEvidenceContact(x,wa);
-      await saveCloudDecision(x,'adjustment_requested',type.value,msg);
-      x.status='adjustment_requested';x.history.push('Ajuste solicitado via WhatsApp: '+type.value);persist();
+      await saveCloudDecision(x,'adjustment_requested',type.value,'Destinatário: '+ct.label+' · '+ct.name+(note.value.trim()?' — '+note.value.trim():''));
+      x.status='adjustment_requested';x.history.push('Ajuste enviado ao '+ct.label+' via WhatsApp: '+type.value);persist();
       if(win)win.location.href=url;else window.location.href=url;
       r.remove();nextOpen();toast('Ajuste registrado e WhatsApp aberto');render();
     }catch(err){if(win)win.close();toast(err.message,true)}
