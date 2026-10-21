@@ -256,10 +256,18 @@ async function saveCloudDecision(e,decision,reason='',comment=''){
   const {error:uErr}=await supabase.from('evidences').update({status:decision}).eq('id',e.id); if(uErr) throw uErr;
 }
 async function start(){
-  if(!supabase){render();return}
+  if(!supabase){renderPublic();return}
   const {data:{session}}=await supabase.auth.getSession();
-  if(!session){loginScreen();return}
-  try{state.membership=await ensureWorkspace();await loadWorkspaceContext();await loadCloudRows();if(canUseField()&&!canViewExecution())location.hash='campo';render()}catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
+  if(!session){await loadPublicPlans();renderPublic();return}
+  try{
+    state.membership=await ensureWorkspace();
+    await loadWorkspaceContext();
+    await loadCloudRows();
+    const welcome=new URLSearchParams(location.search).get('welcome')==='1';
+    if(welcome&&hasRole('admin')){welcomeOnboarding();return}
+    if(canUseField()&&!canViewExecution())location.hash='campo';
+    render();
+  }catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
 }
 const roleLabel={owner:'Proprietário CIA',admin:'Admin',bko:'BKO',supervisor:'Supervisor',promoter:'Promotor',analyst:'BKO',field:'Promotor',viewer:'Supervisor'};
 function hasRole(...roles){return roles.includes(state.membership?.role)}
@@ -274,7 +282,7 @@ function canUseCsv(){return state.services?.bko_enabled&&hasRole('owner','admin'
 function canUseField(){return state.services?.field_enabled&&hasRole('promoter','field')}
 function routeName(){
   const route=(location.hash||'#execucao').replace('#','');
-  return ['execucao','relatorios','configuracoes','perfil','campo'].includes(route)?route:'execucao';
+  return ['execucao','relatorios','configuracoes','perfil','campo','ambientes'].includes(route)?route:'execucao';
 }
 function initials(name){
   return String(name||'U').trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'U';
@@ -282,7 +290,7 @@ function initials(name){
 function appHeader(active){
   const display=state.membership?.display_name||state.user?.email?.split('@')[0]||'Usuário';
   const envOptions=state.environments.map(e=>'<option value="'+e.workspace_id+'" '+(e.workspace_id===state.membership?.workspace_id?'selected':'')+'>'+esc(e.workspace_name)+'</option>').join('');
-  const nav=(canViewExecution()?'<button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button>':'')+(canReport()?'<button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button>':'')+(canSettings()?'<button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button>':'');
+  const nav=(canViewExecution()?'<button data-route="execucao" class="'+(active==='execucao'?'active':'')+'">Execução</button>':'')+(canReport()?'<button data-route="relatorios" class="'+(active==='relatorios'?'active':'')+'">Relatórios</button>':'')+(canSettings()?'<button data-route="configuracoes" class="'+(active==='configuracoes'?'active':'')+'">Configurações</button>':'')+(canManageEnvironments()?'<button data-route="ambientes" class="'+(active==='ambientes'?'active':'')+'">Ambientes</button>':'');
   return '<header class="topbar app-header"><div class="brand"><span>C</span><div><b>CIA</b><small>Execução PDV</small></div></div><div class="environment-switch"><small>AMBIENTE</small><select id="environmentSwitch" '+(state.environments.length<2?'disabled':'')+'>'+envOptions+'</select></div><nav class="main-nav">'+nav+'</nav><div class="top-actions"><button id="helpBtn" class="help-icon" title="Como funciona" aria-label="Como funciona">?</button><button data-route="perfil" class="avatar avatar-btn" title="Perfil">'+initials(display)+'</button></div></header>';
 }
 function bindGlobalNav(){
@@ -567,6 +575,32 @@ function openImport(){
     b.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>{r.remove();render()})
   }draw()
 }
+
+function welcomeOnboarding(){
+  const hasMaster=(state.masterImports||[]).some(x=>x.status==='completed');
+  const hasUsers=(state.users||[]).filter(x=>x.role!=='owner'&&x.role!=='admin').length>0;
+  app.innerHTML='<div class="page-shell">'+appHeader('')+'<main class="onboarding-main"><div class="onboarding-hero"><span>PRIMEIRO ACESSO</span><h1>Seu Ambiente CIA está pronto.</h1><p>Complete estes passos para começar a receber e analisar execução real.</p></div><div class="onboarding-steps"><article class="'+(hasMaster?'done':'')+'"><b>'+(hasMaster?'✓':'1')+'</b><div><h2>Cadastro Mestre</h2><p>Carregue lojas, Promotores, Supervisores e contatos.</p></div><button data-route="configuracoes" class="btn '+(hasMaster?'ghost':'primary')+'">'+(hasMaster?'Revisar':'Configurar')+'</button></article><article class="'+(hasUsers?'done':'')+'"><b>'+(hasUsers?'✓':'2')+'</b><div><h2>Usuários</h2><p>Convide BKO, Supervisores e Promotores conforme os serviços contratados.</p></div><button data-route="configuracoes" class="btn ghost">Gerenciar</button></article><article><b>3</b><div><h2>Entrada das fotos</h2><p>'+(state.services.field_enabled?'CIA Campo já está habilitado. O CSV também pode ser usado como complemento.':'Este Ambiente usa CSV para entrada das fotos de execução.')+'</p></div><button data-route="configuracoes" class="btn ghost">Ver entrada</button></article></div><div class="onboarding-footer"><button id="finishWelcome" class="public-primary-btn">Entrar no CIA</button></div></main></div>';
+  bindGlobalNav();
+  document.getElementById('finishWelcome').onclick=()=>{history.replaceState({},'',location.pathname+'#configuracoes');location.hash='configuracoes';render()};
+}
+async function loadCommercial(){
+  const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'list_commercial'}});
+  if(error||data?.error)throw new Error(data?.error||error.message);
+  state.commercial=data.environments||[];
+}
+function commercialPage(){
+  app.innerHTML='<div class="page-shell">'+appHeader('ambientes')+'<main class="page-main commercial-page"><div class="page-heading"><div><span>AMBIENTES</span><h1>Clientes e contratos</h1><p>Acompanhe os Ambientes criados pela landing e controle o estado comercial sem sair do CIA.</p></div><button id="refreshCommercial" class="btn ghost">Atualizar</button></div><div id="commercialBody"><div class="loading-card">Carregando Ambientes...</div></div></main></div>';
+  bindGlobalNav();
+  const draw=async()=>{
+    const body=document.getElementById('commercialBody');
+    try{await loadCommercial()}catch(err){body.innerHTML='<div class="access-denied"><b>Não foi possível carregar</b><span>'+esc(err.message)+'</span></div>';return}
+    const rows=state.commercial;
+    body.innerHTML='<section class="commercial-summary"><article><span>Ambientes</span><b>'+rows.length+'</b></article><article><span>Em avaliação</span><b>'+rows.filter(x=>x.status==='trialing').length+'</b></article><article><span>Ativos</span><b>'+rows.filter(x=>x.status==='active').length+'</b></article><article><span>Suspensos</span><b>'+rows.filter(x=>x.status==='suspended').length+'</b></article></section><section class="commercial-list">'+(rows.map(x=>'<article class="commercial-row"><div class="commercial-company"><span class="status-chip '+x.status+'">'+statusCommercial(x.status)+'</span><h3>'+esc(x.workspace?.name||x.request?.company_name||'Ambiente')+'</h3><p>'+esc(x.request?.company_name||'')+'</p></div><div><small>PLANO</small><b>'+esc(x.plan?.name||x.plan_code)+'</b><span>'+((x.plan?.field_enabled)?'BKO + Campo':'BKO')+'</span></div><div><small>ADMIN</small><b>'+esc(x.request?.admin_name||'—')+'</b><span>'+esc(x.request?.admin_email||'—')+'</span></div><div><small>AVALIAÇÃO</small><b>'+ (x.trial_ends_at?date(x.trial_ends_at):'—') +'</b><span>'+esc(x.billing_provider||'manual')+'</span></div><div class="commercial-actions">'+(x.status!=='active'?'<button data-sub-action="active" data-ws="'+x.workspace_id+'" class="btn primary">Ativar</button>':'')+(x.status!=='suspended'?'<button data-sub-action="suspended" data-ws="'+x.workspace_id+'" class="btn ghost">Suspender</button>':'')+(x.status==='suspended'?'<button data-sub-action="trialing" data-ws="'+x.workspace_id+'" class="btn ghost">Reabrir avaliação</button>':'')+'</div></article>').join('')||'<div class="empty">Nenhum Ambiente comercial criado pela landing ainda.</div>')+'</section>';
+    body.querySelectorAll('[data-sub-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;const {data,error}=await supabase.functions.invoke('environment-admin',{body:{action:'set_subscription_status',target_workspace_id:b.dataset.ws,status:b.dataset.subAction}});if(error||data?.error){toast(data?.error||error.message,true);b.disabled=false;return}toast('Status comercial atualizado');draw()});
+  };
+  document.getElementById('refreshCommercial').onclick=draw;draw();
+}
+function statusCommercial(v){return ({trialing:'Em avaliação',active:'Ativo',suspended:'Suspenso',cancelled:'Cancelado',past_due:'Pagamento pendente',pending_activation:'Aguardando ativação'})[v]||v}
 function reports(){
   const analyzed=analyzedRows(),problems=problemRows(),approval=analyzed.length?Math.round(analyzed.filter(x=>x.status==='approved').length/analyzed.length*100):0;
   const regions=aggregateBy('region'),networks=aggregateBy('network'),stores=aggregateBy('store'),tasks=aggregateBy('task'),reasons=reasonBreakdown();
@@ -715,6 +749,7 @@ function render(){
   if(route==='relatorios'){if(canReport()){reports();return}routeName();accessDenied('Relatórios indisponíveis','Sua função não possui acesso aos relatórios deste Ambiente.');return}
   if(route==='configuracoes'){if(canSettings()){settings();return}accessDenied('Configurações indisponíveis','Sua função não administra configurações deste Ambiente.');return}
   if(route==='perfil'){profile();return}
+  if(route==='ambientes'){if(canManageEnvironments()){commercialPage();return}accessDenied('Ambientes indisponíveis','Apenas o proprietário da plataforma pode acessar esta área.');return}
   if(canViewExecution()){review();return}
   if(canUseField()){location.hash='campo';return}
   if(canSettings()){location.hash='configuracoes';return}
