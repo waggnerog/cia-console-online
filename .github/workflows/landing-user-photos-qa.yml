@@ -1,0 +1,95 @@
+name: CIA Landing User Photos QA
+
+on:
+  push:
+    branches: ['design/cia-landing-user-photos-20261021']
+    paths: ['.github/workflows/landing-user-photos-qa.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate-landing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Start preview server
+        run: |
+          nohup npm run dev -- --host 127.0.0.1 > /tmp/vite-log.txt 2>&1 &
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:5173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/vite-log.txt
+          exit 1
+      - name: Inspect desktop tablet and mobile
+        run: |
+          mkdir -p qa-snapshots/photo-pass
+          node --input-type=module <<'NODE'
+          import {chromium} from 'playwright';
+          import fs from 'node:fs';
+          const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+          const settings=[{name:'desktop',width:1440,height:900},{name:'notebook',width:1024,height:800},{name:'mobile',width:390,height:844},{name:'small-mobile',width:360,height:800}];
+          const report=[];
+          const required=['cia-hero-supermercado.webp','cia-trade-marketing.webp','cia-auditoria-campo.webp','cia-facilities-servicos.webp','cia-franquias-redes.webp'];
+          let failed=false;
+          for(const cfg of settings){
+            const page=await browser.newPage({viewport:{width:cfg.width,height:cfg.height},deviceScaleFactor:1,isMobile:cfg.width<700,hasTouch:cfg.width<700});
+            const errors=[],requests=[];
+            page.on('pageerror',e=>errors.push(String(e)));
+            page.on('requestfailed',r=>requests.push(r.url()+': '+(r.failure()?.errorText||'')));
+            await page.goto('http://127.0.0.1:5173/',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForTimeout(1700);
+            const btn=page.getByText('Somente necessários',{exact:true}).first();
+            if(await btn.count()) await btn.click({timeout:2000}).catch(()=>{});
+            const h=await page.evaluate(()=>document.documentElement.scrollHeight);
+            for(let y=0;y<h;y+=600){await page.evaluate(v=>window.scrollTo(0,v),y);await page.waitForTimeout(90);}
+            await page.waitForTimeout(500);
+            const test=await page.evaluate(()=>{
+              const img=e=>e?{src:e.getAttribute('src'),loaded:e.complete&&e.naturalWidth>0,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}:null;
+              const rect=e=>e?{w:Math.round(e.getBoundingClientRect().width),h:Math.round(e.getBoundingClientRect().height)}:null;
+              return {viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+                hero:rect(document.querySelector('.cia-photo-hero')),
+                heroPhoto:img(document.querySelector('.cia-hero-backdrop img')),
+                cards:[...document.querySelectorAll('.usecase-editorial article')].map(e=>({box:rect(e),image:img(e.querySelector('.cia-editorial-photo')),figure:rect(e.querySelector('.cia-media-slot'))})),
+                previews:[...document.querySelectorAll('.cia-product-preview')].map(e=>({box:rect(e),image:img(e.querySelector('.cia-product-capture')),caption:e.querySelector('.cia-preview-footer')?.textContent.trim()}))
+              };
+            });
+            await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);
+            await page.screenshot({path:'qa-snapshots/photo-pass/'+cfg.name+'-top.jpg',type:'jpeg',quality:80,animations:'disabled'});
+            const a=page.locator('.human-audience').first();
+            if(await a.count()){await a.screenshot({path:'qa-snapshots/photo-pass/'+cfg.name+'-audience.jpg',type:'jpeg',quality:80,animations:'disabled'}).catch(()=>{});}
+            const product=page.locator('.human-product').first();
+            if(await product.count()){await product.screenshot({path:'qa-snapshots/photo-pass/'+cfg.name+'-product.jpg',type:'jpeg',quality:80,animations:'disabled'}).catch(()=>{});}
+            if(test.scrollWidth>cfg.width+1 || !test.heroPhoto?.loaded || test.cards.length!==4 || test.cards.some(x=>!x.image?.loaded||x.figure.w<180) || test.previews.length!==3 || test.previews.some(x=>!x.image?.loaded)||errors.length){failed=true;}
+            report.push({...cfg,...test,errors:errors.slice(0,10),requests:requests.slice(0,20)});
+            await page.close();
+          }
+          await browser.close();
+          fs.writeFileSync('qa-snapshots/photo-pass/audit.json',JSON.stringify(report,null,2));
+          console.log(JSON.stringify(report));
+          if(failed)process.exit(1);
+          NODE
+      - name: Preserve screenshots
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qa-snapshots/photo-pass || true
+          if ! git diff --cached --quiet; then
+            git commit -m "qa: capture CIA user-selected landing imagery [skip ci]"
+            git push origin HEAD:design/cia-landing-user-photos-20261021
+          fi
