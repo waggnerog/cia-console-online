@@ -1,0 +1,1407 @@
+{
+  "testedAt": "2026-10-21T19:09:12.612Z",
+  "url": "https://app.usecia.com/",
+  "cases": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900,
+      "title": "CIA | Execução à distância",
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "documentHeight": 9135,
+      "bodyScroll": 9135,
+      "header": {
+        "x": 60,
+        "y": 0,
+        "w": 1320,
+        "h": 76
+      },
+      "hero": {
+        "x": 60,
+        "y": 76,
+        "w": 1320,
+        "h": 722
+      },
+      "sections": [
+        {
+          "id": "",
+          "cls": "public-hero human-hero",
+          "rect": {
+            "x": 60,
+            "y": 76,
+            "w": 1320,
+            "h": 722
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-intro-band",
+          "rect": {
+            "x": 60,
+            "y": 798,
+            "w": 1320,
+            "h": 400
+          }
+        },
+        {
+          "id": "produto",
+          "cls": "public-section human-product",
+          "rect": {
+            "x": 60,
+            "y": 1198,
+            "w": 1320,
+            "h": 1394
+          }
+        },
+        {
+          "id": "demonstracao",
+          "cls": "public-section human-demo",
+          "rect": {
+            "x": 60,
+            "y": 2593,
+            "w": 1320,
+            "h": 854
+          }
+        },
+        {
+          "id": "para-quem",
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 3447,
+            "w": 1440,
+            "h": 1567
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-results",
+          "rect": {
+            "x": 60,
+            "y": 5014,
+            "w": 1320,
+            "h": 640
+          }
+        },
+        {
+          "id": "",
+          "cls": "brand-manifesto",
+          "rect": {
+            "x": 60,
+            "y": 5655,
+            "w": 1320,
+            "h": 564
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-security",
+          "rect": {
+            "x": 60,
+            "y": 6219,
+            "w": 1320,
+            "h": 510
+          }
+        },
+        {
+          "id": "servicos",
+          "cls": "public-section human-pricing",
+          "rect": {
+            "x": 60,
+            "y": 6729,
+            "w": 1320,
+            "h": 1066
+          }
+        },
+        {
+          "id": "faq-resumo",
+          "cls": "public-section human-faq",
+          "rect": {
+            "x": 60,
+            "y": 7795,
+            "w": 1320,
+            "h": 503
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-final-cta",
+          "rect": {
+            "x": 60,
+            "y": 8298,
+            "w": 1320,
+            "h": 506
+          }
+        }
+      ],
+      "images": [
+        {
+          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
+          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 649,
+          "naturalHeight": 974,
+          "rect": {
+            "x": 869,
+            "y": 227,
+            "w": 488,
+            "h": 435
+          }
+        },
+        {
+          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 108,
+            "y": 1820,
+            "w": 479,
+            "h": 299
+          }
+        },
+        {
+          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 651,
+            "y": 2038,
+            "w": 681,
+            "h": 425
+          }
+        },
+        {
+          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
+          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 649,
+          "naturalHeight": 433,
+          "rect": {
+            "x": 106,
+            "y": 4117,
+            "w": 521,
+            "h": 621
+          }
+        },
+        {
+          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
+          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 649,
+          "naturalHeight": 433,
+          "rect": {
+            "x": 687,
+            "y": 4070,
+            "w": 293,
+            "h": 293
+          }
+        },
+        {
+          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
+          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 649,
+          "naturalHeight": 433,
+          "rect": {
+            "x": 1041,
+            "y": 4070,
+            "w": 293,
+            "h": 293
+          }
+        },
+        {
+          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
+          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 649,
+          "naturalHeight": 866,
+          "rect": {
+            "x": 926,
+            "y": 4455,
+            "w": 408,
+            "h": 408
+          }
+        },
+        {
+          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 749,
+            "y": 5164,
+            "w": 608,
+            "h": 379
+          }
+        }
+      ],
+      "media": [
+        {
+          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
+          "rect": {
+            "x": 868,
+            "y": 226,
+            "w": 490,
+            "h": 437
+          },
+          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
+          "imgRect": {
+            "x": 869,
+            "y": 227,
+            "w": 488,
+            "h": 435
+          }
+        },
+        {
+          "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
+          "rect": {
+            "x": 107,
+            "y": 1819,
+            "w": 481,
+            "h": 301
+          },
+          "img": "/media/cia-execucao-real.jpg",
+          "imgRect": {
+            "x": 108,
+            "y": 1820,
+            "w": 479,
+            "h": 299
+          }
+        },
+        {
+          "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
+          "rect": {
+            "x": 650,
+            "y": 2037,
+            "w": 683,
+            "h": 427
+          },
+          "img": "/media/cia-ajuste-real.jpg",
+          "imgRect": {
+            "x": 651,
+            "y": 2038,
+            "w": 681,
+            "h": 425
+          }
+        },
+        {
+          "cls": "cia-media-slot cinema demo-main video-pending",
+          "rect": {
+            "x": 720,
+            "y": 2743,
+            "w": 638,
+            "h": 359
+          },
+          "imgRect": null
+        },
+        {
+          "cls": "cia-media-slot portrait  is-photographic media-kind-c",
+          "rect": {
+            "x": 105,
+            "y": 4116,
+            "w": 523,
+            "h": 623
+          },
+          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "imgRect": {
+            "x": 106,
+            "y": 4117,
+            "w": 521,
+            "h": 621
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-d",
+          "rect": {
+            "x": 686,
+            "y": 4069,
+            "w": 295,
+            "h": 295
+          },
+          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 687,
+            "y": 4070,
+            "w": 293,
+            "h": 293
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-e",
+          "rect": {
+            "x": 1040,
+            "y": 4069,
+            "w": 295,
+            "h": 295
+          },
+          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 1041,
+            "y": 4070,
+            "w": 293,
+            "h": 293
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-f",
+          "rect": {
+            "x": 925,
+            "y": 4454,
+            "w": 410,
+            "h": 410
+          },
+          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "imgRect": {
+            "x": 926,
+            "y": 4455,
+            "w": 408,
+            "h": 408
+          }
+        },
+        {
+          "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
+          "rect": {
+            "x": 748,
+            "y": 5163,
+            "w": 610,
+            "h": 381
+          },
+          "img": "/media/cia-relatorios-real.jpg",
+          "imgRect": {
+            "x": 749,
+            "y": 5164,
+            "w": 608,
+            "h": 379
+          }
+        }
+      ],
+      "grids": [
+        {
+          "cls": "human-hero-grid",
+          "rect": {
+            "x": 82,
+            "y": 168,
+            "w": 1276,
+            "h": 552
+          },
+          "cols": "714.234px 489.766px"
+        },
+        {
+          "cls": "human-feature-grid",
+          "rect": {
+            "x": 82,
+            "y": 1634,
+            "w": 1276,
+            "h": 855
+          },
+          "cols": "531.141px 360.422px 360.438px"
+        },
+        {
+          "cls": "demo-editorial-grid",
+          "rect": {
+            "x": 82,
+            "y": 2743,
+            "w": 1276,
+            "h": 594
+          },
+          "cols": "574.094px 637.891px"
+        },
+        {
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 3447,
+            "w": 1440,
+            "h": 1567
+          },
+          "cols": "none"
+        },
+        {
+          "cls": "results-stage",
+          "rect": {
+            "x": 82,
+            "y": 5163,
+            "w": 1276,
+            "h": 381
+          },
+          "cols": "576.906px 627.094px"
+        }
+      ],
+      "clipped": [],
+      "scrollAnchors": [
+        {
+          "label": "Ver o produto",
+          "target": "produto"
+        }
+      ],
+      "nav": [
+        {
+          "target": "produto",
+          "scrollY": 1075,
+          "hash": ""
+        },
+        {
+          "target": "para-quem",
+          "scrollY": 3114,
+          "hash": ""
+        },
+        {
+          "target": "planos",
+          "scrollY": 5981,
+          "hash": ""
+        },
+        {
+          "target": "faq",
+          "scrollY": 7617,
+          "hash": ""
+        }
+      ],
+      "errors": [],
+      "failed": [],
+      "httpErrors": []
+    },
+    {
+      "name": "laptop",
+      "width": 1024,
+      "height": 768,
+      "title": "CIA | Execução à distância",
+      "viewportWidth": 1024,
+      "documentWidth": 1024,
+      "documentHeight": 10073,
+      "bodyScroll": 10073,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "w": 1024,
+        "h": 76
+      },
+      "hero": {
+        "x": 0,
+        "y": 76,
+        "w": 1024,
+        "h": 628
+      },
+      "sections": [
+        {
+          "id": "",
+          "cls": "public-hero human-hero",
+          "rect": {
+            "x": 0,
+            "y": 76,
+            "w": 1024,
+            "h": 628
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-intro-band",
+          "rect": {
+            "x": 0,
+            "y": 704,
+            "w": 1024,
+            "h": 429
+          }
+        },
+        {
+          "id": "produto",
+          "cls": "public-section human-product",
+          "rect": {
+            "x": 0,
+            "y": 1133,
+            "w": 1024,
+            "h": 1889
+          }
+        },
+        {
+          "id": "demonstracao",
+          "cls": "public-section human-demo",
+          "rect": {
+            "x": 0,
+            "y": 3022,
+            "w": 1024,
+            "h": 787
+          }
+        },
+        {
+          "id": "para-quem",
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 3809,
+            "w": 1024,
+            "h": 1843
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-results",
+          "rect": {
+            "x": 0,
+            "y": 5652,
+            "w": 1024,
+            "h": 568
+          }
+        },
+        {
+          "id": "",
+          "cls": "brand-manifesto",
+          "rect": {
+            "x": 0,
+            "y": 6221,
+            "w": 1024,
+            "h": 510
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-security",
+          "rect": {
+            "x": 0,
+            "y": 6731,
+            "w": 1024,
+            "h": 668
+          }
+        },
+        {
+          "id": "servicos",
+          "cls": "public-section human-pricing",
+          "rect": {
+            "x": 0,
+            "y": 7399,
+            "w": 1024,
+            "h": 1057
+          }
+        },
+        {
+          "id": "faq-resumo",
+          "cls": "public-section human-faq",
+          "rect": {
+            "x": 0,
+            "y": 8456,
+            "w": 1024,
+            "h": 657
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-final-cta",
+          "rect": {
+            "x": 0,
+            "y": 9113,
+            "w": 1024,
+            "h": 500
+          }
+        }
+      ],
+      "images": [
+        {
+          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
+          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 563,
+          "naturalHeight": 844,
+          "rect": {
+            "x": 610,
+            "y": 223,
+            "w": 391,
+            "h": 349
+          }
+        },
+        {
+          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 183,
+            "y": 1656,
+            "w": 658,
+            "h": 411
+          }
+        },
+        {
+          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 183,
+            "y": 2482,
+            "w": 658,
+            "h": 411
+          }
+        },
+        {
+          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
+          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 563,
+          "naturalHeight": 375,
+          "rect": {
+            "x": 385,
+            "y": 4285,
+            "w": 593,
+            "h": 418
+          }
+        },
+        {
+          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
+          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 563,
+          "naturalHeight": 375,
+          "rect": {
+            "x": 46,
+            "y": 4903,
+            "w": 436,
+            "h": 436
+          }
+        },
+        {
+          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
+          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 563,
+          "naturalHeight": 375,
+          "rect": {
+            "x": 542,
+            "y": 4903,
+            "w": 436,
+            "h": 436
+          }
+        },
+        {
+          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
+          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 563,
+          "naturalHeight": 750,
+          "rect": {
+            "x": 978,
+            "y": 5466,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 508,
+            "y": 5802,
+            "w": 493,
+            "h": 307
+          }
+        }
+      ],
+      "media": [
+        {
+          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
+          "rect": {
+            "x": 609,
+            "y": 222,
+            "w": 393,
+            "h": 351
+          },
+          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
+          "imgRect": {
+            "x": 610,
+            "y": 223,
+            "w": 391,
+            "h": 349
+          }
+        },
+        {
+          "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
+          "rect": {
+            "x": 182,
+            "y": 1655,
+            "w": 660,
+            "h": 413
+          },
+          "img": "/media/cia-execucao-real.jpg",
+          "imgRect": {
+            "x": 183,
+            "y": 1656,
+            "w": 658,
+            "h": 411
+          }
+        },
+        {
+          "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
+          "rect": {
+            "x": 182,
+            "y": 2481,
+            "w": 660,
+            "h": 413
+          },
+          "img": "/media/cia-ajuste-real.jpg",
+          "imgRect": {
+            "x": 183,
+            "y": 2482,
+            "w": 658,
+            "h": 411
+          }
+        },
+        {
+          "cls": "cia-media-slot cinema demo-main video-pending",
+          "rect": {
+            "x": 496,
+            "y": 3172,
+            "w": 506,
+            "h": 285
+          },
+          "imgRect": null
+        },
+        {
+          "cls": "cia-media-slot portrait  is-photographic media-kind-c",
+          "rect": {
+            "x": 384,
+            "y": 4284,
+            "w": 595,
+            "h": 420
+          },
+          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "imgRect": {
+            "x": 385,
+            "y": 4285,
+            "w": 593,
+            "h": 418
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-d",
+          "rect": {
+            "x": 45,
+            "y": 4902,
+            "w": 438,
+            "h": 438
+          },
+          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 46,
+            "y": 4903,
+            "w": 436,
+            "h": 436
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-e",
+          "rect": {
+            "x": 541,
+            "y": 4902,
+            "w": 438,
+            "h": 438
+          },
+          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 542,
+            "y": 4903,
+            "w": 436,
+            "h": 436
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-f",
+          "rect": {
+            "x": 977,
+            "y": 5465,
+            "w": 2,
+            "h": 2
+          },
+          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "imgRect": {
+            "x": 978,
+            "y": 5466,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
+          "rect": {
+            "x": 507,
+            "y": 5801,
+            "w": 495,
+            "h": 309
+          },
+          "img": "/media/cia-relatorios-real.jpg",
+          "imgRect": {
+            "x": 508,
+            "y": 5802,
+            "w": 493,
+            "h": 307
+          }
+        }
+      ],
+      "grids": [
+        {
+          "cls": "human-hero-grid",
+          "rect": {
+            "x": 22,
+            "y": 168,
+            "w": 980,
+            "h": 458
+          },
+          "cols": "545.344px 392.641px"
+        },
+        {
+          "cls": "human-feature-grid",
+          "rect": {
+            "x": 22,
+            "y": 1496,
+            "w": 980,
+            "h": 1423
+          },
+          "cols": "484px 484px"
+        },
+        {
+          "cls": "demo-editorial-grid",
+          "rect": {
+            "x": 22,
+            "y": 3172,
+            "w": 980,
+            "h": 527
+          },
+          "cols": "435.547px 506.438px"
+        },
+        {
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 3809,
+            "w": 1024,
+            "h": 1843
+          },
+          "cols": "none"
+        },
+        {
+          "cls": "results-stage",
+          "rect": {
+            "x": 22,
+            "y": 5801,
+            "w": 980,
+            "h": 309
+          },
+          "cols": "445.25px 494.75px"
+        }
+      ],
+      "clipped": [],
+      "scrollAnchors": [
+        {
+          "label": "Ver o produto",
+          "target": "produto"
+        }
+      ],
+      "nav": [
+        {
+          "target": "produto",
+          "scrollY": 1022,
+          "hash": ""
+        },
+        {
+          "target": "para-quem",
+          "scrollY": 3347,
+          "hash": ""
+        },
+        {
+          "target": "planos",
+          "scrollY": 6485,
+          "hash": ""
+        },
+        {
+          "target": "faq",
+          "scrollY": 8255,
+          "hash": ""
+        }
+      ],
+      "errors": [],
+      "failed": [],
+      "httpErrors": []
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "title": "CIA | Execução à distância",
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "documentHeight": 13100,
+      "bodyScroll": 13100,
+      "header": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 76
+      },
+      "hero": {
+        "x": 0,
+        "y": 76,
+        "w": 390,
+        "h": 1048
+      },
+      "sections": [
+        {
+          "id": "",
+          "cls": "public-hero human-hero",
+          "rect": {
+            "x": 0,
+            "y": 76,
+            "w": 390,
+            "h": 1048
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-intro-band",
+          "rect": {
+            "x": 0,
+            "y": 1124,
+            "w": 390,
+            "h": 496
+          }
+        },
+        {
+          "id": "produto",
+          "cls": "public-section human-product",
+          "rect": {
+            "x": 0,
+            "y": 1620,
+            "w": 390,
+            "h": 1708
+          }
+        },
+        {
+          "id": "demonstracao",
+          "cls": "public-section human-demo",
+          "rect": {
+            "x": 0,
+            "y": 3328,
+            "w": 390,
+            "h": 965
+          }
+        },
+        {
+          "id": "para-quem",
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 4293,
+            "w": 390,
+            "h": 2768
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-results",
+          "rect": {
+            "x": 0,
+            "y": 7061,
+            "w": 390,
+            "h": 803
+          }
+        },
+        {
+          "id": "",
+          "cls": "brand-manifesto",
+          "rect": {
+            "x": 0,
+            "y": 7864,
+            "w": 390,
+            "h": 511
+          }
+        },
+        {
+          "id": "",
+          "cls": "public-section human-security",
+          "rect": {
+            "x": 0,
+            "y": 8375,
+            "w": 390,
+            "h": 738
+          }
+        },
+        {
+          "id": "servicos",
+          "cls": "public-section human-pricing",
+          "rect": {
+            "x": 0,
+            "y": 9113,
+            "w": 390,
+            "h": 2240
+          }
+        },
+        {
+          "id": "faq-resumo",
+          "cls": "public-section human-faq",
+          "rect": {
+            "x": 0,
+            "y": 11353,
+            "w": 390,
+            "h": 648
+          }
+        },
+        {
+          "id": "",
+          "cls": "human-final-cta",
+          "rect": {
+            "x": 0,
+            "y": 12001,
+            "w": 390,
+            "h": 500
+          }
+        }
+      ],
+      "images": [
+        {
+          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
+          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 390,
+          "naturalHeight": 585,
+          "rect": {
+            "x": 23,
+            "y": 722,
+            "w": 344,
+            "h": 307
+          }
+        },
+        {
+          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 48,
+            "y": 2326,
+            "w": 294,
+            "h": 183
+          }
+        },
+        {
+          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 48,
+            "y": 3015,
+            "w": 294,
+            "h": 183
+          }
+        },
+        {
+          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
+          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 390,
+          "naturalHeight": 260,
+          "rect": {
+            "x": 46,
+            "y": 5007,
+            "w": 298,
+            "h": 355
+          }
+        },
+        {
+          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
+          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 390,
+          "naturalHeight": 260,
+          "rect": {
+            "x": 46,
+            "y": 5578,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
+          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 390,
+          "naturalHeight": 260,
+          "rect": {
+            "x": 46,
+            "y": 6093,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
+          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "complete": true,
+          "naturalWidth": 390,
+          "naturalHeight": 520,
+          "rect": {
+            "x": 46,
+            "y": 6612,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
+          "complete": true,
+          "naturalWidth": 1440,
+          "naturalHeight": 900,
+          "rect": {
+            "x": 23,
+            "y": 7539,
+            "w": 344,
+            "h": 214
+          }
+        }
+      ],
+      "media": [
+        {
+          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
+          "rect": {
+            "x": 22,
+            "y": 721,
+            "w": 346,
+            "h": 309
+          },
+          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
+          "imgRect": {
+            "x": 23,
+            "y": 722,
+            "w": 344,
+            "h": 307
+          }
+        },
+        {
+          "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
+          "rect": {
+            "x": 47,
+            "y": 2325,
+            "w": 296,
+            "h": 185
+          },
+          "img": "/media/cia-execucao-real.jpg",
+          "imgRect": {
+            "x": 48,
+            "y": 2326,
+            "w": 294,
+            "h": 183
+          }
+        },
+        {
+          "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
+          "rect": {
+            "x": 47,
+            "y": 3014,
+            "w": 296,
+            "h": 185
+          },
+          "img": "/media/cia-ajuste-real.jpg",
+          "imgRect": {
+            "x": 48,
+            "y": 3015,
+            "w": 294,
+            "h": 183
+          }
+        },
+        {
+          "cls": "cia-media-slot cinema demo-main video-pending",
+          "rect": {
+            "x": 22,
+            "y": 3740,
+            "w": 346,
+            "h": 195
+          },
+          "imgRect": null
+        },
+        {
+          "cls": "cia-media-slot portrait  is-photographic media-kind-c",
+          "rect": {
+            "x": 45,
+            "y": 5006,
+            "w": 300,
+            "h": 357
+          },
+          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "imgRect": {
+            "x": 46,
+            "y": 5007,
+            "w": 298,
+            "h": 355
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-d",
+          "rect": {
+            "x": 45,
+            "y": 5577,
+            "w": 300,
+            "h": 300
+          },
+          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 46,
+            "y": 5578,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-e",
+          "rect": {
+            "x": 45,
+            "y": 6092,
+            "w": 300,
+            "h": 300
+          },
+          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "imgRect": {
+            "x": 46,
+            "y": 6093,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "cls": "cia-media-slot square  is-photographic media-kind-f",
+          "rect": {
+            "x": 45,
+            "y": 6611,
+            "w": 300,
+            "h": 300
+          },
+          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "imgRect": {
+            "x": 46,
+            "y": 6612,
+            "w": 298,
+            "h": 298
+          }
+        },
+        {
+          "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
+          "rect": {
+            "x": 22,
+            "y": 7538,
+            "w": 346,
+            "h": 216
+          },
+          "img": "/media/cia-relatorios-real.jpg",
+          "imgRect": {
+            "x": 23,
+            "y": 7539,
+            "w": 344,
+            "h": 214
+          }
+        }
+      ],
+      "grids": [
+        {
+          "cls": "human-hero-grid",
+          "rect": {
+            "x": 22,
+            "y": 130,
+            "w": 346,
+            "h": 916
+          },
+          "cols": "346px"
+        },
+        {
+          "cls": "human-feature-grid",
+          "rect": {
+            "x": 22,
+            "y": 2096,
+            "w": 346,
+            "h": 1128
+          },
+          "cols": "346px"
+        },
+        {
+          "cls": "demo-editorial-grid",
+          "rect": {
+            "x": 22,
+            "y": 3478,
+            "w": 346,
+            "h": 705
+          },
+          "cols": "346px"
+        },
+        {
+          "cls": "public-section human-audience",
+          "rect": {
+            "x": 0,
+            "y": 4293,
+            "w": 390,
+            "h": 2768
+          },
+          "cols": "none"
+        },
+        {
+          "cls": "results-stage",
+          "rect": {
+            "x": 22,
+            "y": 7210,
+            "w": 346,
+            "h": 544
+          },
+          "cols": "346px"
+        }
+      ],
+      "clipped": [
+        {
+          "tag": "DIV",
+          "cls": "hero-ghost-word",
+          "w": 659,
+          "right": 652
+        },
+        {
+          "tag": "DIV",
+          "cls": "final-cta-ghost",
+          "w": 629,
+          "right": 509
+        }
+      ],
+      "scrollAnchors": [
+        {
+          "label": "Ver o produto",
+          "target": "produto"
+        }
+      ],
+      "nav": [
+        {
+          "target": "produto",
+          "error": "locator.click: Timeout 4500ms exceeded.\nCall log:\n  - waiting for locator('[data-home-section=\"produto\"]').first()\n    - locator resolved to <button class=\"active\" data-home-section=\"produto\">Produto</button>\n  - attempting click action\n   "
+        },
+        {
+          "target": "para-quem",
+          "error": "locator.click: Timeout 4500ms exceeded.\nCall log:\n  - waiting for locator('[data-home-section=\"para-quem\"]').first()\n    - locator resolved to <button class=\"\" data-home-section=\"para-quem\">Para quem</button>\n  - attempting click action\n   "
+        },
+        {
+          "target": "planos",
+          "error": "locator.click: Timeout 4500ms exceeded.\nCall log:\n  - waiting for locator('[data-home-section=\"servicos\"]').first()\n    - locator resolved to <button class=\"\" data-home-section=\"servicos\">Planos</button>\n  - attempting click action\n    2 × "
+        },
+        {
+          "target": "faq",
+          "error": "locator.click: Timeout 4500ms exceeded.\nCall log:\n  - waiting for locator('[data-home-section=\"faq-resumo\"]').first()\n    - locator resolved to <button class=\"\" data-home-section=\"faq-resumo\">FAQ</button>\n  - attempting click action\n    2 ×"
+        }
+      ],
+      "errors": [],
+      "failed": [],
+      "httpErrors": []
+    }
+  ]
+}
