@@ -110,7 +110,7 @@ async function saveProfileName(displayName){
 async function loadCloudRows(){
   const {data,error}=await supabase
     .from('evidences')
-    .select('id,source,status,storage_path,external_url,captured_at,uploaded_at,metadata,current_revision,store:stores(name,code,network,region),task:photo_tasks(title),operation:operations(name,client_name)')
+    .select('id,source,status,storage_path,external_url,captured_at,uploaded_at,metadata,current_revision,promoter_id,supervisor_id,store:stores(id,name,code,network,region),task:photo_tasks(title),operation:operations(name,client_name)')
     .eq('workspace_id',state.membership.workspace_id)
     .order('uploaded_at',{ascending:false})
     .limit(500);
@@ -130,7 +130,11 @@ async function loadCloudRows(){
     return {
       id:row.id,client:row.operation?.client_name||'Cliente',operation:row.operation?.name||'Operação',
       store:row.store?.name||'Loja',code:row.store?.code||'',task:row.task?.title||row.metadata?.task||'Execução',
-      promoter:row.metadata?.promoter||'—',supervisor:row.metadata?.supervisor||'—',whatsapp:row.metadata?.whatsapp||row.metadata?.telefone||row.metadata?.phone||'',
+      promoter:(state.assignmentMap.get(String(row.store?.id))?.promoter?.full_name||row.metadata?.promoter||'—'),
+      supervisor:(state.assignmentMap.get(String(row.store?.id))?.supervisor?.full_name||row.metadata?.supervisor||'—'),
+      promoterContact:state.assignmentMap.get(String(row.store?.id))?.promoter||null,
+      supervisorContact:state.assignmentMap.get(String(row.store?.id))?.supervisor||null,
+      whatsapp:state.assignmentMap.get(String(row.store?.id))?.supervisor?.whatsapp||state.assignmentMap.get(String(row.store?.id))?.supervisor?.phone||'',
       network:row.store?.network||row.metadata?.network||'—',region:row.store?.region||row.metadata?.region||'—',source:row.source,status:row.status,
       captured_at:row.captured_at||row.uploaded_at,image_url:image||imgs[0],
       criteria:row.metadata?.criteria||{product:false,display:false,material:false,price:false,organization:false,quality:false},
@@ -141,7 +145,7 @@ async function loadCloudRows(){
 }
 async function saveCloudDecision(e,decision,reason='',comment=''){
   if(state.demo||String(e.id).startsWith('ev-')) return;
-  const review={workspace_id:state.membership.workspace_id,evidence_id:e.id,decision,reason:reason||null,comment:comment||null,criteria:e.criteria};
+  const review={workspace_id:state.membership.workspace_id,evidence_id:e.id,reviewer_id:state.user?.id||null,decision,reason:reason||null,comment:comment||null,criteria:e.criteria};
   const {error:rErr}=await supabase.from('evidence_reviews').insert(review); if(rErr) throw rErr;
   const {error:uErr}=await supabase.from('evidences').update({status:decision}).eq('id',e.id); if(uErr) throw uErr;
 }
