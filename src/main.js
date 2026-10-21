@@ -27,7 +27,7 @@ const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'E
 const saved=localStorage.getItem('cia-evidencias-demo');
 const DEV_DEMO=import.meta.env.DEV&&new URLSearchParams(location.search).get('demo')==='1';
 const initialRows=DEV_DEMO?(saved?JSON.parse(saved):makeRows()):[];
-const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[]};
+const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]||{}).id||null;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 let sessionGuardTimer=null;
@@ -998,12 +998,99 @@ function profile(){
   document.getElementById('updatePassword').onclick=async()=>{const password=document.getElementById('newPassword').value;if(password.length<8){toast('Use pelo menos 8 caracteres.',true);return}const {error}=await supabase.auth.updateUser({password});if(error){toast(error.message,true);return}document.getElementById('newPassword').value='';toast('Senha atualizada')};
   document.getElementById('logoutBtn').onclick=logoutUser;
 }
-function field(){
-  const stores=[['Vivo Shopping Ibirapuera','Vivo',4,2],['Fast Shop Morumbi','Fast Shop',5,0],['Claro Center Norte','Claro',3,0]];
-  app.innerHTML='<div class="field human-field"><header><div class="field-brand"><span>C</span><div><b>CIA Campo</b><small>Execução</small></div></div><i>'+initials(state.membership?.display_name||'P')+'</i></header><section class="field-hero"><div class="field-hero-word" aria-hidden="true">HOJE</div><small>TERÇA · 20 OUT</small><h1>Bom dia,<br><em>João.</em></h1><p>Sua rota tem 3 lojas e 12 fotos previstas. Faça o check-in, siga as tarefas e registre o que realmente aconteceu no PDV.</p></section><section class="field-stats"><div><span>LOJAS</span><b>3</b></div><div><span>FOTOS</span><b>12</b></div><div><span>CONCLUÍDAS</span><b>2</b></div></section><main><div class="route-title"><div><small>01 · ROTA</small><h2>Onde você vai hoje</h2></div><span>São Paulo</span></div>'+stores.map((s,i)=>'<article class="store '+(i===0?'current':'')+'"><strong>0'+(i+1)+'</strong><div><small>'+s[1]+'</small><h3>'+s[0]+'</h3><p>'+(i?3+i:'0,2')+' km · '+s[3]+'/'+s[2]+' tarefas concluídas</p><div class="bar"><i style="width:'+Math.round(s[3]/s[2]*100)+'%"></i></div></div><button data-store="'+i+'">'+(i===0?'Continuar →':'Abrir')+'</button></article>').join('')+'</main><button id="cameraFab" class="camera-fab"><span>＋</span> Nova foto de execução</button></div>';
-  document.querySelectorAll('[data-store],#cameraFab').forEach(b=>b.onclick=openVisit)
+
+function fieldDayKey(){
+  const timezone=state.workspace?.settings?.timezone||'America/Sao_Paulo';
+  return new Intl.DateTimeFormat('en-CA',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 }
-function openVisit(){let checked=false;const r=modal('<header><div><small>VIVO · SHOPPING IBIRAPUERA</small><h2>Visita em campo</h2></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>Registre sua chegada à loja.</span></div><button id="checkin" class="primary">Fazer check-in</button></div><div class="tasks">'+['Fachada da loja','Exposição Echo','Precificação','Material promocional'].map((t,i)=>'<article><strong>'+(i+1)+'</strong><div><b>'+t+'</b><small>'+(i===1?'3 fotos':'1 foto')+' obrigatória'+(i===1?'s':'')+'</small></div><button data-photo>Fotografar</button></article>').join('')+'</div><button id="checkout" class="checkout" disabled>Finalizar visita · Check-out</button></div>');r.querySelector('#checkin').onclick=e=>{checked=true;e.target.disabled=true;e.target.textContent='Check-in realizado';r.querySelector('#checkout').disabled=false;toast('Check-in registrado')};r.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{if(!checked){toast('Faça o check-in primeiro',true);return}const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';i.onchange=()=>{if(i.files?.[0]){b.textContent='Foto adicionada ✓';b.closest('article').classList.add('done');toast('Foto de execução adicionada')}};i.click()});r.querySelector('#checkout').onclick=()=>{toast('Visita finalizada');r.remove()}}
+async function loadFieldData(){
+  const day=fieldDayKey(),workspaceId=state.membership.workspace_id,userId=state.user?.id;
+  const {data:visits,error:vErr}=await supabase.from('visits')
+    .select('id,operation_id,store_id,scheduled_for,check_in_at,check_out_at,status,store:stores(id,name,code,network,region,address),operation:operations(id,name,client_name)')
+    .eq('workspace_id',workspaceId).eq('field_user_id',userId).eq('scheduled_for',day).order('created_at');
+  if(vErr)throw vErr;
+  const operationIds=[...new Set((visits||[]).map(v=>v.operation_id).filter(Boolean))];
+  const visitIds=(visits||[]).map(v=>v.id);
+  let tasks=[],evidences=[];
+  if(operationIds.length){
+    const {data,error}=await supabase.from('photo_tasks').select('id,operation_id,title,instructions,min_photos,max_photos,required,criteria').eq('workspace_id',workspaceId).eq('active',true).in('operation_id',operationIds).order('created_at');
+    if(error)throw error;tasks=data||[];
+  }
+  if(visitIds.length){
+    const {data,error}=await supabase.from('evidences').select('id,visit_id,photo_task_id,status,storage_path,captured_at').eq('workspace_id',workspaceId).in('visit_id',visitIds).order('captured_at');
+    if(error)throw error;evidences=data||[];
+  }
+  state.fieldTasks=new Map();
+  for(const t of tasks){if(!state.fieldTasks.has(t.operation_id))state.fieldTasks.set(t.operation_id,[]);state.fieldTasks.get(t.operation_id).push(t)}
+  state.fieldEvidences=evidences;
+  state.fieldVisits=(visits||[]).map(v=>{
+    const visitTasks=state.fieldTasks.get(v.operation_id)||[];
+    const visitEvidence=evidences.filter(e=>e.visit_id===v.id);
+    const required=visitTasks.reduce((sum,t)=>sum+(t.required?(t.min_photos||1):0),0);
+    return {...v,tasks:visitTasks,evidences:visitEvidence,requiredPhotos:required,photosDone:visitEvidence.length};
+  });
+  return state.fieldVisits;
+}
+function geoPosition(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){resolve({latitude:null,longitude:null});return}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude}),
+      ()=>resolve({latitude:null,longitude:null}),
+      {enableHighAccuracy:true,timeout:8000,maximumAge:60000}
+    );
+  });
+}
+function fieldStatusLabel(v){return ({planned:'Planejada',in_progress:'Em andamento',completed:'Concluída',cancelled:'Cancelada'})[v]||v}
+async function field(){
+  const display=state.membership?.display_name||state.user?.email?.split('@')[0]||'Promotor';
+  app.innerHTML='<div class="field human-field field-loading"><header><div class="field-brand"><span>C</span><div><b>CIA Campo</b><small>Execução</small></div></div><button id="fieldLogout" class="field-logout">Sair</button></header><main class="field-loading-state">Carregando sua agenda...</main></div>';
+  document.getElementById('fieldLogout').onclick=logoutUser;
+  try{await loadFieldData()}catch(err){app.querySelector('.field-loading-state').innerHTML='<b>Não foi possível carregar a agenda.</b><span>'+esc(err.message)+'</span>';return}
+  const visits=state.fieldVisits;
+  const photos=visits.reduce((s,v)=>s+v.requiredPhotos,0),done=visits.reduce((s,v)=>s+v.photosDone,0);
+  const day=new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'2-digit',month:'short'}).format(new Date()).replace(/^./,m=>m.toUpperCase());
+  if(!visits.length){
+    app.innerHTML='<div class="field human-field"><header><div class="field-brand"><span>C</span><div><b>CIA Campo</b><small>Execução</small></div></div><button id="fieldLogout" class="field-logout">Sair</button></header><section class="field-hero"><div class="field-hero-word" aria-hidden="true">HOJE</div><small>'+esc(day.toUpperCase())+'</small><h1>Olá,<br><em>'+esc(display.split(' ')[0])+'.</em></h1><p>Não há visitas agendadas para hoje neste Ambiente.</p></section><main class="field-empty"><span>AGENDA VAZIA</span><h2>Nenhuma loja para atender hoje.</h2><p>Quando o Admin programar uma visita, ela aparecerá aqui automaticamente com as tarefas e fotos obrigatórias.</p></main></div>';
+    document.getElementById('fieldLogout').onclick=logoutUser;return;
+  }
+  app.innerHTML='<div class="field human-field"><header><div class="field-brand"><span>C</span><div><b>CIA Campo</b><small>Execução</small></div></div><button id="fieldLogout" class="field-logout">Sair</button></header><section class="field-hero"><div class="field-hero-word" aria-hidden="true">HOJE</div><small>'+esc(day.toUpperCase())+'</small><h1>Olá,<br><em>'+esc(display.split(' ')[0])+'.</em></h1><p>Sua agenda tem '+visits.length+' visita'+(visits.length===1?'':'s')+' e '+photos+' foto'+(photos===1?'':'s')+' prevista'+(photos===1?'':'s')+'. Faça check-in, siga as tarefas e registre o que realmente aconteceu.</p></section><section class="field-stats"><div><span>VISITAS</span><b>'+visits.length+'</b></div><div><span>FOTOS</span><b>'+photos+'</b></div><div><span>ENVIADAS</span><b>'+done+'</b></div></section><main><div class="route-title"><div><small>01 · AGENDA</small><h2>Onde você vai hoje</h2></div><span>'+esc(state.workspace?.name||'Ambiente')+'</span></div>'+visits.map((v,i)=>{const pct=v.requiredPhotos?Math.min(100,Math.round(v.photosDone/v.requiredPhotos*100)):(v.status==='completed'?100:0);return '<article class="store '+(v.status==='in_progress'?'current':'')+'"><strong>0'+(i+1)+'</strong><div><small>'+esc(v.store?.network||v.operation?.client_name||'Operação')+' · '+fieldStatusLabel(v.status)+'</small><h3>'+esc(v.store?.name||'Loja')+'</h3><p>'+esc(v.operation?.name||'Operação')+' · '+v.photosDone+'/'+v.requiredPhotos+' fotos</p><div class="bar"><i style="width:'+pct+'%"></i></div></div><button data-field-visit="'+v.id+'">'+(v.status==='completed'?'Ver':'Abrir →')+'</button></article>'}).join('')+'</main></div>';
+  document.getElementById('fieldLogout').onclick=logoutUser;
+  document.querySelectorAll('[data-field-visit]').forEach(b=>b.onclick=()=>openFieldVisit(b.dataset.fieldVisit));
+}
+async function fieldCheckIn(visit){
+  const pos=await geoPosition(),now=new Date().toISOString();
+  const {error}=await supabase.from('visits').update({status:'in_progress',check_in_at:visit.check_in_at||now,check_in_latitude:pos.latitude,check_in_longitude:pos.longitude}).eq('id',visit.id);
+  if(error)throw error;
+}
+async function fieldUploadEvidence(visit,task,file){
+  const workspaceId=state.membership.workspace_id,userId=state.user.id;
+  const ext=(file.name.split('.').pop()||'jpg').replace(/[^a-z0-9]/gi,'').toLowerCase()||'jpg';
+  const path=workspaceId+'/'+userId+'/'+visit.id+'/'+task.id+'/'+crypto.randomUUID()+'.'+ext;
+  const {error:uploadError}=await supabase.storage.from('cia-evidencias').upload(path,file,{contentType:file.type||'image/jpeg',upsert:false});
+  if(uploadError)throw uploadError;
+  const assignment=state.assignmentMap.get(String(visit.store_id));
+  const payload={
+    workspace_id:workspaceId,operation_id:visit.operation_id,visit_id:visit.id,store_id:visit.store_id,photo_task_id:task.id,
+    field_user_id:userId,promoter_id:assignment?.promoter_id||null,supervisor_id:assignment?.supervisor_id||null,
+    source:'mobile_app',status:'pending',storage_path:path,original_file_name:file.name,captured_at:new Date().toISOString(),
+    metadata:{task:task.title,criteria:task.criteria||{},history:['Execução recebida via CIA Campo']}
+  };
+  const {error}=await supabase.from('evidences').insert(payload);if(error){await supabase.storage.from('cia-evidencias').remove([path]).catch(()=>{});throw error}
+}
+async function openFieldVisit(visitId){
+  let visit=state.fieldVisits.find(v=>v.id===visitId);if(!visit)return;
+  const draw=()=>{
+    const evidenceByTask=new Map();
+    for(const e of visit.evidences||[]){evidenceByTask.set(e.photo_task_id,(evidenceByTask.get(e.photo_task_id)||0)+1)}
+    const complete=visit.tasks.every(t=>!t.required||(evidenceByTask.get(t.id)||0)>=(t.min_photos||1));
+    const r=modal('<header><div><small>'+esc(visit.store?.network||visit.operation?.client_name||'VISITA')+' · '+esc(visit.store?.name||'LOJA')+'</small><h2>'+esc(visit.operation?.name||'Visita em campo')+'</h2><p class="modal-sub">'+fieldStatusLabel(visit.status)+(visit.check_in_at?' · check-in '+time(visit.check_in_at):'')+'</p></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>'+(visit.check_in_at?'Registrado em '+time(visit.check_in_at):'Registre sua chegada antes de fotografar.')+'</span></div><button id="fieldCheckin" class="primary" '+(visit.check_in_at?'disabled':'')+'>'+(visit.check_in_at?'Check-in realizado':'Fazer check-in')+'</button></div><div class="tasks">'+(visit.tasks.length?visit.tasks.map((t,i)=>{const n=evidenceByTask.get(t.id)||0,min=t.min_photos||1;return '<article class="'+(n>=min?'done':'')+'"><strong>'+(i+1)+'</strong><div><b>'+esc(t.title)+'</b><small>'+n+'/'+min+' foto'+(min===1?'':'s')+(t.required?' obrigatória'+(min===1?'':'s'):' opcional')+(t.instructions?' · '+esc(t.instructions):'')+'</small></div><button data-field-photo="'+t.id+'" '+(!visit.check_in_at||visit.status==='completed'?'disabled':'')+'>'+(n>=min?'Adicionar outra':'Fotografar')+'</button></article>'}).join(''):'<div class="field-no-tasks">Esta visita ainda não possui tarefas configuradas.</div>')+'</div><button id="fieldCheckout" class="checkout" '+(!visit.check_in_at||!complete||visit.status==='completed'?'disabled':'')+'>'+(visit.status==='completed'?'Visita finalizada':'Finalizar visita · Check-out')+'</button></div>');
+    r.querySelector('#fieldCheckin').onclick=async e=>{e.currentTarget.disabled=true;e.currentTarget.textContent='Registrando...';try{await fieldCheckIn(visit);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Check-in registrado');openFieldVisit(visitId)}catch(err){toast(err.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Fazer check-in'}};
+    r.querySelectorAll('[data-field-photo]').forEach(b=>b.onclick=()=>{const task=visit.tasks.find(t=>t.id===b.dataset.fieldPhoto);const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;b.disabled=true;b.textContent='Enviando...';try{await fieldUploadEvidence(visit,task,file);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Foto enviada para análise');openFieldVisit(visitId)}catch(err){toast(err.message,true);b.disabled=false;b.textContent='Fotografar'}};input.click()});
+    r.querySelector('#fieldCheckout').onclick=async e=>{e.currentTarget.disabled=true;e.currentTarget.textContent='Finalizando...';const pos=await geoPosition();const {error}=await supabase.from('visits').update({status:'completed',check_out_at:new Date().toISOString(),check_out_latitude:pos.latitude,check_out_longitude:pos.longitude}).eq('id',visit.id);if(error){toast(error.message,true);e.currentTarget.disabled=false;return}r.remove();await loadFieldData();toast('Visita finalizada');field()};
+  };
+  draw();
+}
 function accessDenied(title,message){
   app.innerHTML='<div class="page-shell">'+appHeader('')+'<main class="page-main"><div class="access-denied"><b>'+esc(title)+'</b><span>'+esc(message)+'</span><button data-route="perfil" class="btn ghost">Ver meu perfil</button></div></main></div>';bindGlobalNav();
 }
