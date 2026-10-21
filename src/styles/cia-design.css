@@ -3127,3 +3127,78 @@ body:not(.public-mode) .execution-empty .empty-actions{
     padding:28px 22px;
   }
 }
+
+
+/* CIA Campo operational states */
+.human-field .field-logout{
+  height:34px;
+  margin-left:auto;
+  padding:0 12px;
+  border:1px solid var(--cia-hairline);
+  border-radius:999px;
+  background:#fff;
+  color:var(--cia-muted);
+  font-size:9px;
+  font-weight:650;
+}
+.human-field .field-logout:hover{
+  color:var(--cia-red);
+  border-color:#e9cecb;
+  background:#fff8f7;
+}
+.human-field .field-loading-state{
+  min-height:calc(100dvh - 66px);
+  display:grid;
+  place-content:center;
+  gap:6px;
+  padding:28px;
+  text-align:center;
+  color:var(--cia-muted);
+  font-size:10px;
+}
+.human-field .field-loading-state b{
+  color:var(--cia-ink);
+  font-size:15px;
+}
+.human-field .field-loading-state span{
+  max-width:420px;
+  line-height:1.5;
+}
+.human-field .field-empty{
+  margin:18px;
+  min-height:340px;
+  padding:34px;
+  border:1px solid var(--cia-hairline);
+  border-radius:20px;
+  background:#fff;
+  display:grid;
+  align-content:center;
+  justify-items:start;
+}
+.human-field .field-empty>span{
+  font-size:8px;
+  letter-spacing:.13em;
+  font-weight:800;
+  color:var(--cia-violet);
+}
+.human-field .field-empty h2{
+  margin:7px 0 10px;
+  font-size:28px;
+  line-height:1;
+  letter-spacing:-.045em;
+}
+.human-field .field-empty p{
+  max-width:520px;
+  margin:0;
+  font-size:10px;
+  line-height:1.6;
+  color:var(--cia-muted);
+}
+.field-no-tasks{
+  padding:20px;
+  border:1px dashed var(--cia-hairline-strong);
+  border-radius:12px;
+  color:var(--cia-muted);
+  font-size:10px;
+  text-align:center;
+}
