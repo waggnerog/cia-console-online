@@ -27,6 +27,7 @@ const saved=localStorage.getItem('cia-evidencias-demo');
 const state={rows:saved?JSON.parse(saved):makeRows(),selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:true,field_enabled:false},subscription:null,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],publicPlans:[],commercial:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]).id;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
+let sessionGuardTimer=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const time=v=>new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date(v));
 const date=v=>new Intl.DateTimeFormat('pt-BR').format(new Date(v));
@@ -255,11 +256,42 @@ async function saveCloudDecision(e,decision,reason='',comment=''){
   const {error:rErr}=await supabase.from('evidence_reviews').insert(review); if(rErr) throw rErr;
   const {error:uErr}=await supabase.from('evidences').update({status:decision}).eq('id',e.id); if(uErr) throw uErr;
 }
+function deviceId(){
+  let id=localStorage.getItem('cia-device-id');
+  if(!id){id=crypto.randomUUID();localStorage.setItem('cia-device-id',id)}
+  return id;
+}
+async function enforceSingleSession({quiet=false}={}){
+  const {data,error}=await supabase.functions.invoke('session-gate',{body:{device_id:deviceId()}});
+  if(error)throw error;
+  if(!data?.ok){
+    if(sessionGuardTimer){clearInterval(sessionGuardTimer);sessionGuardTimer=null}
+    await supabase.auth.signOut({scope:'local'}).catch(()=>{});
+    state.membership=null;state.user=null;state.environments=[];state.subscription=null;
+    history.replaceState({},'',location.pathname+'#login');
+    await loadPublicPlans();
+    publicLogin();
+    const msg=document.getElementById('authMsg');
+    if(msg)msg.textContent='Este acesso foi encerrado porque esta conta entrou em outro dispositivo. Cada usuário do CIA possui apenas uma sessão ativa.';
+    return false;
+  }
+  if(!quiet&&data.replaced)toast('Novo acesso confirmado. A sessão anterior desta conta foi encerrada.');
+  return true;
+}
+function startSessionHeartbeat(){
+  if(sessionGuardTimer)clearInterval(sessionGuardTimer);
+  sessionGuardTimer=setInterval(async()=>{
+    try{await enforceSingleSession({quiet:true})}catch{}
+  },60000);
+}
 async function start(){
   if(!supabase){renderPublic();return}
   const {data:{session}}=await supabase.auth.getSession();
   if(!session){await loadPublicPlans();renderPublic();return}
   try{
+    const allowed=await enforceSingleSession();
+    if(!allowed)return;
+    startSessionHeartbeat();
     state.membership=await ensureWorkspace();
     await loadWorkspaceContext();
     await loadCloudRows();
@@ -267,7 +299,13 @@ async function start(){
     if(welcome&&hasRole('admin')){welcomeOnboarding();return}
     if(canUseField()&&!canViewExecution())location.hash='campo';
     render();
-  }catch(err){app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'}
+  }catch(err){
+    if(String(err?.message||'').toLowerCase().includes('permission denied')){
+      await enforceSingleSession({quiet:true}).catch(()=>{});
+      return;
+    }
+    app.innerHTML='<div class="fatal"><b>Não foi possível iniciar o CIA.</b><span>'+esc(err.message)+'</span></div>'
+  }
 }
 const roleLabel={owner:'Proprietário CIA',admin:'Admin',bko:'BKO',supervisor:'Supervisor',promoter:'Promotor',analyst:'BKO',field:'Promotor',viewer:'Supervisor'};
 function hasRole(...roles){return roles.includes(state.membership?.role)}
@@ -736,7 +774,7 @@ function profile(){
   bindGlobalNav();
   document.getElementById('saveProfile').onclick=async()=>{try{await saveProfileName(document.getElementById('profileName').value);toast('Perfil atualizado');render()}catch(err){toast(err.message,true)}};
   document.getElementById('updatePassword').onclick=async()=>{const password=document.getElementById('newPassword').value;if(password.length<8){toast('Use pelo menos 8 caracteres.',true);return}const {error}=await supabase.auth.updateUser({password});if(error){toast(error.message,true);return}document.getElementById('newPassword').value='';toast('Senha atualizada')};
-  document.getElementById('logoutBtn').onclick=async()=>{await supabase.auth.signOut();state.membership=null;state.user=null;state.environments=[];state.subscription=null;history.replaceState({},'',location.pathname);await loadPublicPlans();renderPublic()};
+  document.getElementById('logoutBtn').onclick=async()=>{if(sessionGuardTimer){clearInterval(sessionGuardTimer);sessionGuardTimer=null}await supabase.auth.signOut();state.membership=null;state.user=null;state.environments=[];state.subscription=null;history.replaceState({},'',location.pathname);await loadPublicPlans();renderPublic()};
 }
 function field(){const stores=[['Vivo Shopping Ibirapuera','Vivo',4,2],['Fast Shop Morumbi','Fast Shop',5,0],['Claro Center Norte','Claro',3,0]];app.innerHTML='<div class="field"><header><div class="field-brand"><span>C</span><b>CIA Campo</b></div><i>'+initials(state.membership?.display_name||'P')+'</i></header><section class="field-hero"><small>Terça, 20 de outubro</small><h1>Bom dia, João.</h1><p>Hoje você tem 3 lojas e 12 fotos de execução previstas.</p></section><section class="field-stats"><div><b>3</b><span>Lojas</span></div><div><b>12</b><span>Fotos</span></div><div><b>2</b><span>Concluídas</span></div></section><main><div class="route-title"><h2>Rota de hoje</h2><span>São Paulo</span></div>'+stores.map((s,i)=>'<article class="store"><strong>'+(i+1)+'</strong><div><small>'+s[1]+'</small><h3>'+s[0]+'</h3><p>'+(i?3+i:'0,2')+' km de distância</p><div class="bar"><i style="width:'+Math.round(s[3]/s[2]*100)+'%"></i></div><em>'+s[3]+'/'+s[2]+' tarefas concluídas</em></div><button data-store="'+i+'">'+(i===0?'Continuar':'Abrir')+'</button></article>').join('')+'</main><button id="cameraFab" class="camera-fab">＋ Nova foto de execução</button></div>';document.querySelectorAll('[data-store],#cameraFab').forEach(b=>b.onclick=openVisit)}
 function openVisit(){let checked=false;const r=modal('<header><div><small>VIVO · SHOPPING IBIRAPUERA</small><h2>Visita em campo</h2></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>Registre sua chegada à loja.</span></div><button id="checkin" class="primary">Fazer check-in</button></div><div class="tasks">'+['Fachada da loja','Exposição Echo','Precificação','Material promocional'].map((t,i)=>'<article><strong>'+(i+1)+'</strong><div><b>'+t+'</b><small>'+(i===1?'3 fotos':'1 foto')+' obrigatória'+(i===1?'s':'')+'</small></div><button data-photo>Fotografar</button></article>').join('')+'</div><button id="checkout" class="checkout" disabled>Finalizar visita · Check-out</button></div>');r.querySelector('#checkin').onclick=e=>{checked=true;e.target.disabled=true;e.target.textContent='Check-in realizado';r.querySelector('#checkout').disabled=false;toast('Check-in registrado')};r.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{if(!checked){toast('Faça o check-in primeiro',true);return}const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';i.onchange=()=>{if(i.files?.[0]){b.textContent='Foto adicionada ✓';b.closest('article').classList.add('done');toast('Foto de execução adicionada')}};i.click()});r.querySelector('#checkout').onclick=()=>{toast('Visita finalizada');r.remove()}}
