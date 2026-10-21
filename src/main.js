@@ -171,11 +171,11 @@ const CIA_EDITORIAL_MEDIA={
     focus:'center center',width:900
   },
   'E':{
-    photo:'1775178120132-f0ff7fd5cb40',
-    alt:'Profissional de limpeza realizando serviço em ambiente envidraçado',
-    caption:'Serviço executado. Validação à distância.',
-    credit:'jerry chen',
-    page:'https://unsplash.com/photos/worker-in-blue-uniform-cleans-window-with-spray-bottle-FyJqgxd5V1g',
+    photo:'1748347568194-c8cd8edd27da',
+    alt:'Técnico realizando manutenção de equipamentos industriais em instalação profissional',
+    caption:'Manutenção e serviços validados à distância.',
+    credit:'TECNIC Bioprocess Solutions',
+    page:'https://unsplash.com/photos/a-man-works-on-industrial-machinery-xWUNZVW5JOg',
     focus:'center center',width:900
   },
   'F':{
