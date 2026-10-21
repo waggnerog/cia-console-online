@@ -1,16 +1,16 @@
 {
-  "testedAt": "2026-10-21T19:09:12.612Z",
+  "testedAt": "2026-10-21T20:13:16.316Z",
   "url": "https://app.usecia.com/",
   "cases": [
     {
       "name": "desktop",
       "width": 1440,
       "height": 900,
-      "title": "CIA | Execução à distância",
+      "title": "CIA | Software de Trade Marketing e Execução no PDV em Tempo Real",
       "viewportWidth": 1440,
       "documentWidth": 1440,
-      "documentHeight": 9135,
-      "bodyScroll": 9135,
+      "documentHeight": 9282,
+      "bodyScroll": 9282,
       "header": {
         "x": 60,
         "y": 0,
@@ -19,19 +19,19 @@
       },
       "hero": {
         "x": 60,
-        "y": 76,
+        "y": 94,
         "w": 1320,
-        "h": 722
+        "h": 784
       },
       "sections": [
         {
           "id": "",
-          "cls": "public-hero human-hero",
+          "cls": "public-hero human-hero cia-photo-hero",
           "rect": {
             "x": 60,
-            "y": 76,
+            "y": 94,
             "w": 1320,
-            "h": 722
+            "h": 784
           }
         },
         {
@@ -39,9 +39,9 @@
           "cls": "human-intro-band",
           "rect": {
             "x": 60,
-            "y": 798,
+            "y": 878,
             "w": 1320,
-            "h": 400
+            "h": 462
           }
         },
         {
@@ -49,9 +49,9 @@
           "cls": "public-section human-product",
           "rect": {
             "x": 60,
-            "y": 1198,
+            "y": 1339,
             "w": 1320,
-            "h": 1394
+            "h": 1453
           }
         },
         {
@@ -59,9 +59,9 @@
           "cls": "public-section human-demo",
           "rect": {
             "x": 60,
-            "y": 2593,
+            "y": 2793,
             "w": 1320,
-            "h": 854
+            "h": 807
           }
         },
         {
@@ -69,9 +69,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3447,
+            "y": 3600,
             "w": 1440,
-            "h": 1567
+            "h": 1022
           }
         },
         {
@@ -79,9 +79,9 @@
           "cls": "public-section human-results",
           "rect": {
             "x": 60,
-            "y": 5014,
+            "y": 4622,
             "w": 1320,
-            "h": 640
+            "h": 754
           }
         },
         {
@@ -89,7 +89,7 @@
           "cls": "brand-manifesto",
           "rect": {
             "x": 60,
-            "y": 5655,
+            "y": 5377,
             "w": 1320,
             "h": 564
           }
@@ -99,7 +99,7 @@
           "cls": "public-section human-security",
           "rect": {
             "x": 60,
-            "y": 6219,
+            "y": 5941,
             "w": 1320,
             "h": 510
           }
@@ -109,9 +109,9 @@
           "cls": "public-section human-pricing",
           "rect": {
             "x": 60,
-            "y": 6729,
+            "y": 6451,
             "w": 1320,
-            "h": 1066
+            "h": 1325
           }
         },
         {
@@ -119,9 +119,9 @@
           "cls": "public-section human-faq",
           "rect": {
             "x": 60,
-            "y": 7795,
+            "y": 7776,
             "w": 1320,
-            "h": 503
+            "h": 669
           }
         },
         {
@@ -129,7 +129,7 @@
           "cls": "human-final-cta",
           "rect": {
             "x": 60,
-            "y": 8298,
+            "y": 8445,
             "w": 1320,
             "h": 506
           }
@@ -137,139 +137,123 @@
       ],
       "images": [
         {
-          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
-          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "alt": "",
+          "src": "https://app.usecia.com/media/cia-hero-supermercado.webp",
           "complete": true,
-          "naturalWidth": 649,
-          "naturalHeight": 974,
+          "naturalWidth": 1074,
+          "naturalHeight": 806,
           "rect": {
-            "x": 869,
-            "y": 227,
-            "w": 488,
-            "h": 435
+            "x": 60,
+            "y": 94,
+            "w": 1320,
+            "h": 784
           }
         },
         {
-          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "alt": "Tela real do CIA Execução com fila de análise, foto e contexto",
           "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 108,
-            "y": 1820,
+            "y": 2019,
             "w": 479,
             "h": 299
           }
         },
         {
-          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "alt": "Tela real do CIA com solicitação de ajuste e contato no WhatsApp",
           "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 651,
-            "y": 2038,
+            "y": 2201,
             "w": 681,
-            "h": 425
+            "h": 426
           }
         },
         {
-          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
-          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "alt": "Promotor de Trade Marketing fotografando uma exposição de produtos no ponto de venda",
+          "src": "https://app.usecia.com/media/cia-trade-marketing.webp",
           "complete": true,
-          "naturalWidth": 649,
-          "naturalHeight": 433,
+          "naturalWidth": 1122,
+          "naturalHeight": 1402,
           "rect": {
-            "x": 106,
-            "y": 4117,
-            "w": 521,
-            "h": 621
+            "x": 83,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
-          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
-          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "alt": "Loja de artigos esportivos com exposição padronizada de roupas, produtos e vitrines",
+          "src": "https://app.usecia.com/media/cia-franquias-redes.webp",
           "complete": true,
-          "naturalWidth": 649,
-          "naturalHeight": 433,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 687,
-            "y": 4070,
-            "w": 293,
-            "h": 293
+            "x": 406,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
-          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
-          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de manutenção executando um serviço técnico em espaço corporativo",
+          "src": "https://app.usecia.com/media/cia-facilities-servicos.webp",
           "complete": true,
-          "naturalWidth": 649,
-          "naturalHeight": 433,
+          "naturalWidth": 682,
+          "naturalHeight": 1038,
           "rect": {
-            "x": 1041,
-            "y": 4070,
-            "w": 293,
-            "h": 293
+            "x": 729,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
-          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
-          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de auditoria de campo analisando documentos técnicos e informações operacionais",
+          "src": "https://app.usecia.com/media/cia-auditoria-campo.webp",
           "complete": true,
-          "naturalWidth": 649,
-          "naturalHeight": 866,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 926,
-            "y": 4455,
-            "w": 408,
-            "h": 408
+            "x": 1052,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
-          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "alt": "Tela real dos Relatórios CIA com indicadores, causas e prioridades",
           "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
-            "x": 749,
-            "y": 5164,
-            "w": 608,
-            "h": 379
+            "x": 759,
+            "y": 4814,
+            "w": 598,
+            "h": 374
           }
         }
       ],
       "media": [
         {
-          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
-          "rect": {
-            "x": 868,
-            "y": 226,
-            "w": 490,
-            "h": 437
-          },
-          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
-          "imgRect": {
-            "x": 869,
-            "y": 227,
-            "w": 488,
-            "h": 435
-          }
-        },
-        {
           "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
           "rect": {
             "x": 107,
-            "y": 1819,
+            "y": 2018,
             "w": 481,
-            "h": 301
+            "h": 338
           },
           "img": "/media/cia-execucao-real.jpg",
           "imgRect": {
             "x": 108,
-            "y": 1820,
+            "y": 2019,
             "w": 479,
             "h": 299
           }
@@ -278,23 +262,23 @@
           "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
           "rect": {
             "x": 650,
-            "y": 2037,
+            "y": 2200,
             "w": 683,
-            "h": 427
+            "h": 464
           },
           "img": "/media/cia-ajuste-real.jpg",
           "imgRect": {
             "x": 651,
-            "y": 2038,
+            "y": 2201,
             "w": 681,
-            "h": 425
+            "h": 426
           }
         },
         {
           "cls": "cia-media-slot cinema demo-main video-pending",
           "rect": {
             "x": 720,
-            "y": 2743,
+            "y": 2943,
             "w": 638,
             "h": 359
           },
@@ -303,81 +287,81 @@
         {
           "cls": "cia-media-slot portrait  is-photographic media-kind-c",
           "rect": {
-            "x": 105,
-            "y": 4116,
-            "w": 523,
-            "h": 623
+            "x": 83,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           },
-          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "img": "/media/cia-trade-marketing.webp",
           "imgRect": {
-            "x": 106,
-            "y": 4117,
-            "w": 521,
-            "h": 621
+            "x": 83,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-d",
           "rect": {
-            "x": 686,
-            "y": 4069,
-            "w": 295,
-            "h": 295
+            "x": 406,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           },
-          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-franquias-redes.webp",
           "imgRect": {
-            "x": 687,
-            "y": 4070,
-            "w": 293,
-            "h": 293
+            "x": 406,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-e",
           "rect": {
-            "x": 1040,
-            "y": 4069,
-            "w": 295,
-            "h": 295
+            "x": 729,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           },
-          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-facilities-servicos.webp",
           "imgRect": {
-            "x": 1041,
-            "y": 4070,
-            "w": 293,
-            "h": 293
+            "x": 729,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-f",
           "rect": {
-            "x": 925,
-            "y": 4454,
-            "w": 410,
-            "h": 410
+            "x": 1052,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           },
-          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "img": "/media/cia-auditoria-campo.webp",
           "imgRect": {
-            "x": 926,
-            "y": 4455,
-            "w": 408,
-            "h": 408
+            "x": 1052,
+            "y": 4043,
+            "w": 305,
+            "h": 229
           }
         },
         {
           "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
           "rect": {
-            "x": 748,
-            "y": 5163,
-            "w": 610,
-            "h": 381
+            "x": 758,
+            "y": 4813,
+            "w": 600,
+            "h": 412
           },
           "img": "/media/cia-relatorios-real.jpg",
           "imgRect": {
-            "x": 749,
-            "y": 5164,
-            "w": 608,
-            "h": 379
+            "x": 759,
+            "y": 4814,
+            "w": 598,
+            "h": 374
           }
         }
       ],
@@ -385,20 +369,20 @@
         {
           "cls": "human-hero-grid",
           "rect": {
-            "x": 82,
-            "y": 168,
-            "w": 1276,
-            "h": 552
+            "x": 142,
+            "y": 204,
+            "w": 810,
+            "h": 598
           },
-          "cols": "714.234px 489.766px"
+          "cols": "810px"
         },
         {
           "cls": "human-feature-grid",
           "rect": {
             "x": 82,
-            "y": 1634,
+            "y": 1775,
             "w": 1276,
-            "h": 855
+            "h": 914
           },
           "cols": "531.141px 360.422px 360.438px"
         },
@@ -406,9 +390,9 @@
           "cls": "demo-editorial-grid",
           "rect": {
             "x": 82,
-            "y": 2743,
+            "y": 2943,
             "w": 1276,
-            "h": 594
+            "h": 547
           },
           "cols": "574.094px 637.891px"
         },
@@ -416,9 +400,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3447,
+            "y": 3600,
             "w": 1440,
-            "h": 1567
+            "h": 1022
           },
           "cols": "none"
         },
@@ -426,9 +410,9 @@
           "cls": "results-stage",
           "rect": {
             "x": 82,
-            "y": 5163,
+            "y": 4771,
             "w": 1276,
-            "h": 381
+            "h": 495
           },
           "cols": "576.906px 627.094px"
         }
@@ -436,29 +420,29 @@
       "clipped": [],
       "scrollAnchors": [
         {
-          "label": "Ver o produto",
+          "label": "Ver como funciona",
           "target": "produto"
         }
       ],
       "nav": [
         {
           "target": "produto",
-          "scrollY": 1075,
+          "scrollY": 1198,
           "hash": ""
         },
         {
           "target": "para-quem",
-          "scrollY": 3114,
+          "scrollY": 3260,
           "hash": ""
         },
         {
           "target": "planos",
-          "scrollY": 5981,
+          "scrollY": 5878,
           "hash": ""
         },
         {
           "target": "faq",
-          "scrollY": 7617,
+          "scrollY": 7577,
           "hash": ""
         }
       ],
@@ -470,11 +454,11 @@
       "name": "laptop",
       "width": 1024,
       "height": 768,
-      "title": "CIA | Execução à distância",
+      "title": "CIA | Software de Trade Marketing e Execução no PDV em Tempo Real",
       "viewportWidth": 1024,
       "documentWidth": 1024,
-      "documentHeight": 10073,
-      "bodyScroll": 10073,
+      "documentHeight": 10359,
+      "bodyScroll": 10359,
       "header": {
         "x": 0,
         "y": 0,
@@ -482,20 +466,20 @@
         "h": 76
       },
       "hero": {
-        "x": 0,
-        "y": 76,
-        "w": 1024,
-        "h": 628
+        "x": 18,
+        "y": 94,
+        "w": 988,
+        "h": 606
       },
       "sections": [
         {
           "id": "",
-          "cls": "public-hero human-hero",
+          "cls": "public-hero human-hero cia-photo-hero",
           "rect": {
-            "x": 0,
-            "y": 76,
-            "w": 1024,
-            "h": 628
+            "x": 18,
+            "y": 94,
+            "w": 988,
+            "h": 606
           }
         },
         {
@@ -503,9 +487,9 @@
           "cls": "human-intro-band",
           "rect": {
             "x": 0,
-            "y": 704,
+            "y": 700,
             "w": 1024,
-            "h": 429
+            "h": 471
           }
         },
         {
@@ -513,9 +497,9 @@
           "cls": "public-section human-product",
           "rect": {
             "x": 0,
-            "y": 1133,
+            "y": 1171,
             "w": 1024,
-            "h": 1889
+            "h": 1994
           }
         },
         {
@@ -523,7 +507,7 @@
           "cls": "public-section human-demo",
           "rect": {
             "x": 0,
-            "y": 3022,
+            "y": 3165,
             "w": 1024,
             "h": 787
           }
@@ -533,9 +517,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3809,
+            "y": 3952,
             "w": 1024,
-            "h": 1843
+            "h": 1639
           }
         },
         {
@@ -543,9 +527,9 @@
           "cls": "public-section human-results",
           "rect": {
             "x": 0,
-            "y": 5652,
+            "y": 5591,
             "w": 1024,
-            "h": 568
+            "h": 646
           }
         },
         {
@@ -553,7 +537,7 @@
           "cls": "brand-manifesto",
           "rect": {
             "x": 0,
-            "y": 6221,
+            "y": 6237,
             "w": 1024,
             "h": 510
           }
@@ -563,9 +547,9 @@
           "cls": "public-section human-security",
           "rect": {
             "x": 0,
-            "y": 6731,
+            "y": 6747,
             "w": 1024,
-            "h": 668
+            "h": 712
           }
         },
         {
@@ -573,9 +557,9 @@
           "cls": "public-section human-pricing",
           "rect": {
             "x": 0,
-            "y": 7399,
+            "y": 7459,
             "w": 1024,
-            "h": 1057
+            "h": 1216
           }
         },
         {
@@ -583,9 +567,9 @@
           "cls": "public-section human-faq",
           "rect": {
             "x": 0,
-            "y": 8456,
+            "y": 8675,
             "w": 1024,
-            "h": 657
+            "h": 724
           }
         },
         {
@@ -593,7 +577,7 @@
           "cls": "human-final-cta",
           "rect": {
             "x": 0,
-            "y": 9113,
+            "y": 9399,
             "w": 1024,
             "h": 500
           }
@@ -601,164 +585,148 @@
       ],
       "images": [
         {
-          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
-          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "alt": "",
+          "src": "https://app.usecia.com/media/cia-hero-supermercado.webp",
           "complete": true,
-          "naturalWidth": 563,
-          "naturalHeight": 844,
+          "naturalWidth": 1074,
+          "naturalHeight": 806,
           "rect": {
-            "x": 610,
-            "y": 223,
-            "w": 391,
-            "h": 349
+            "x": 18,
+            "y": 94,
+            "w": 988,
+            "h": 606
           }
         },
         {
-          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "alt": "Tela real do CIA Execução com fila de análise, foto e contexto",
           "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
-            "x": 183,
-            "y": 1656,
-            "w": 658,
-            "h": 411
+            "x": 168,
+            "y": 1760,
+            "w": 688,
+            "h": 430
           }
         },
         {
-          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "alt": "Tela real do CIA com solicitação de ajuste e contato no WhatsApp",
           "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
-            "x": 183,
-            "y": 2482,
-            "w": 658,
-            "h": 411
+            "x": 168,
+            "y": 2569,
+            "w": 688,
+            "h": 430
           }
         },
         {
-          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
-          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "alt": "Promotor de Trade Marketing fotografando uma exposição de produtos no ponto de venda",
+          "src": "https://app.usecia.com/media/cia-trade-marketing.webp",
           "complete": true,
-          "naturalWidth": 563,
-          "naturalHeight": 375,
+          "naturalWidth": 1122,
+          "naturalHeight": 1402,
           "rect": {
-            "x": 385,
-            "y": 4285,
-            "w": 593,
-            "h": 418
+            "x": 23,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           }
         },
         {
-          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
-          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "alt": "Loja de artigos esportivos com exposição padronizada de roupas, produtos e vitrines",
+          "src": "https://app.usecia.com/media/cia-franquias-redes.webp",
           "complete": true,
-          "naturalWidth": 563,
-          "naturalHeight": 375,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 46,
-            "y": 4903,
-            "w": 436,
-            "h": 436
+            "x": 520,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           }
         },
         {
-          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
-          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de manutenção executando um serviço técnico em espaço corporativo",
+          "src": "https://app.usecia.com/media/cia-facilities-servicos.webp",
           "complete": true,
-          "naturalWidth": 563,
-          "naturalHeight": 375,
+          "naturalWidth": 682,
+          "naturalHeight": 1038,
           "rect": {
-            "x": 542,
-            "y": 4903,
-            "w": 436,
-            "h": 436
+            "x": 23,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           }
         },
         {
-          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
-          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de auditoria de campo analisando documentos técnicos e informações operacionais",
+          "src": "https://app.usecia.com/media/cia-auditoria-campo.webp",
           "complete": true,
-          "naturalWidth": 563,
-          "naturalHeight": 750,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 978,
-            "y": 5466,
-            "w": 0,
-            "h": 0
+            "x": 520,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           }
         },
         {
-          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "alt": "Tela real dos Relatórios CIA com indicadores, causas e prioridades",
           "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 508,
-            "y": 5802,
+            "y": 5761,
             "w": 493,
-            "h": 307
+            "h": 308
           }
         }
       ],
       "media": [
         {
-          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
-          "rect": {
-            "x": 609,
-            "y": 222,
-            "w": 393,
-            "h": 351
-          },
-          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
-          "imgRect": {
-            "x": 610,
-            "y": 223,
-            "w": 391,
-            "h": 349
-          }
-        },
-        {
           "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
           "rect": {
-            "x": 182,
-            "y": 1655,
-            "w": 660,
-            "h": 413
+            "x": 167,
+            "y": 1759,
+            "w": 690,
+            "h": 468
           },
           "img": "/media/cia-execucao-real.jpg",
           "imgRect": {
-            "x": 183,
-            "y": 1656,
-            "w": 658,
-            "h": 411
+            "x": 168,
+            "y": 1760,
+            "w": 688,
+            "h": 430
           }
         },
         {
           "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
           "rect": {
-            "x": 182,
-            "y": 2481,
-            "w": 660,
-            "h": 413
+            "x": 167,
+            "y": 2568,
+            "w": 690,
+            "h": 468
           },
           "img": "/media/cia-ajuste-real.jpg",
           "imgRect": {
-            "x": 183,
-            "y": 2482,
-            "w": 658,
-            "h": 411
+            "x": 168,
+            "y": 2569,
+            "w": 688,
+            "h": 430
           }
         },
         {
           "cls": "cia-media-slot cinema demo-main video-pending",
           "rect": {
             "x": 496,
-            "y": 3172,
+            "y": 3315,
             "w": 506,
             "h": 285
           },
@@ -767,81 +735,81 @@
         {
           "cls": "cia-media-slot portrait  is-photographic media-kind-c",
           "rect": {
-            "x": 384,
-            "y": 4284,
-            "w": 595,
-            "h": 420
+            "x": 23,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           },
-          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "img": "/media/cia-trade-marketing.webp",
           "imgRect": {
-            "x": 385,
-            "y": 4285,
-            "w": 593,
-            "h": 418
+            "x": 23,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-d",
           "rect": {
-            "x": 45,
-            "y": 4902,
-            "w": 438,
-            "h": 438
+            "x": 520,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           },
-          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-franquias-redes.webp",
           "imgRect": {
-            "x": 46,
-            "y": 4903,
-            "w": 436,
-            "h": 436
+            "x": 520,
+            "y": 4409,
+            "w": 481,
+            "h": 361
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-e",
           "rect": {
-            "x": 541,
-            "y": 4902,
-            "w": 438,
-            "h": 438
+            "x": 23,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           },
-          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-facilities-servicos.webp",
           "imgRect": {
-            "x": 542,
-            "y": 4903,
-            "w": 436,
-            "h": 436
+            "x": 23,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-f",
           "rect": {
-            "x": 977,
-            "y": 5465,
-            "w": 2,
-            "h": 2
+            "x": 520,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           },
-          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "img": "/media/cia-auditoria-campo.webp",
           "imgRect": {
-            "x": 978,
-            "y": 5466,
-            "w": 0,
-            "h": 0
+            "x": 520,
+            "y": 4973,
+            "w": 481,
+            "h": 361
           }
         },
         {
           "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
           "rect": {
             "x": 507,
-            "y": 5801,
+            "y": 5760,
             "w": 495,
-            "h": 309
+            "h": 346
           },
           "img": "/media/cia-relatorios-real.jpg",
           "imgRect": {
             "x": 508,
-            "y": 5802,
+            "y": 5761,
             "w": 493,
-            "h": 307
+            "h": 308
           }
         }
       ],
@@ -849,20 +817,20 @@
         {
           "cls": "human-hero-grid",
           "rect": {
-            "x": 22,
-            "y": 168,
-            "w": 980,
-            "h": 458
+            "x": 79,
+            "y": 176,
+            "w": 810,
+            "h": 448
           },
-          "cols": "545.344px 392.641px"
+          "cols": "810px"
         },
         {
           "cls": "human-feature-grid",
           "rect": {
             "x": 22,
-            "y": 1496,
+            "y": 1600,
             "w": 980,
-            "h": 1423
+            "h": 1461
           },
           "cols": "484px 484px"
         },
@@ -870,7 +838,7 @@
           "cls": "demo-editorial-grid",
           "rect": {
             "x": 22,
-            "y": 3172,
+            "y": 3315,
             "w": 980,
             "h": 527
           },
@@ -880,9 +848,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 3809,
+            "y": 3952,
             "w": 1024,
-            "h": 1843
+            "h": 1639
           },
           "cols": "none"
         },
@@ -890,9 +858,9 @@
           "cls": "results-stage",
           "rect": {
             "x": 22,
-            "y": 5801,
+            "y": 5740,
             "w": 980,
-            "h": 309
+            "h": 387
           },
           "cols": "445.25px 494.75px"
         }
@@ -900,29 +868,29 @@
       "clipped": [],
       "scrollAnchors": [
         {
-          "label": "Ver o produto",
+          "label": "Ver como funciona",
           "target": "produto"
         }
       ],
       "nav": [
         {
           "target": "produto",
-          "scrollY": 1022,
+          "scrollY": 1057,
           "hash": ""
         },
         {
           "target": "para-quem",
-          "scrollY": 3347,
+          "scrollY": 3454,
           "hash": ""
         },
         {
           "target": "planos",
-          "scrollY": 6485,
+          "scrollY": 6557,
           "hash": ""
         },
         {
           "target": "faq",
-          "scrollY": 8255,
+          "scrollY": 8443,
           "hash": ""
         }
       ],
@@ -934,11 +902,11 @@
       "name": "mobile",
       "width": 390,
       "height": 844,
-      "title": "CIA | Execução à distância",
+      "title": "CIA | Software de Trade Marketing e Execução no PDV em Tempo Real",
       "viewportWidth": 390,
       "documentWidth": 390,
-      "documentHeight": 13100,
-      "bodyScroll": 13100,
+      "documentHeight": 13383,
+      "bodyScroll": 13383,
       "header": {
         "x": 0,
         "y": 0,
@@ -946,20 +914,20 @@
         "h": 76
       },
       "hero": {
-        "x": 0,
-        "y": 76,
-        "w": 390,
-        "h": 1048
+        "x": 12,
+        "y": 88,
+        "w": 366,
+        "h": 702
       },
       "sections": [
         {
           "id": "",
-          "cls": "public-hero human-hero",
+          "cls": "public-hero human-hero cia-photo-hero",
           "rect": {
-            "x": 0,
-            "y": 76,
-            "w": 390,
-            "h": 1048
+            "x": 12,
+            "y": 88,
+            "w": 366,
+            "h": 702
           }
         },
         {
@@ -967,9 +935,9 @@
           "cls": "human-intro-band",
           "rect": {
             "x": 0,
-            "y": 1124,
+            "y": 790,
             "w": 390,
-            "h": 496
+            "h": 521
           }
         },
         {
@@ -977,9 +945,9 @@
           "cls": "public-section human-product",
           "rect": {
             "x": 0,
-            "y": 1620,
+            "y": 1311,
             "w": 390,
-            "h": 1708
+            "h": 2033
           }
         },
         {
@@ -987,9 +955,9 @@
           "cls": "public-section human-demo",
           "rect": {
             "x": 0,
-            "y": 3328,
+            "y": 3344,
             "w": 390,
-            "h": 965
+            "h": 963
           }
         },
         {
@@ -997,9 +965,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 4293,
+            "y": 4307,
             "w": 390,
-            "h": 2768
+            "h": 2471
           }
         },
         {
@@ -1007,9 +975,9 @@
           "cls": "public-section human-results",
           "rect": {
             "x": 0,
-            "y": 7061,
+            "y": 6779,
             "w": 390,
-            "h": 803
+            "h": 925
           }
         },
         {
@@ -1017,7 +985,7 @@
           "cls": "brand-manifesto",
           "rect": {
             "x": 0,
-            "y": 7864,
+            "y": 7704,
             "w": 390,
             "h": 511
           }
@@ -1027,9 +995,9 @@
           "cls": "public-section human-security",
           "rect": {
             "x": 0,
-            "y": 8375,
+            "y": 8215,
             "w": 390,
-            "h": 738
+            "h": 794
           }
         },
         {
@@ -1037,9 +1005,9 @@
           "cls": "public-section human-pricing",
           "rect": {
             "x": 0,
-            "y": 9113,
+            "y": 9009,
             "w": 390,
-            "h": 2240
+            "h": 2464
           }
         },
         {
@@ -1047,9 +1015,9 @@
           "cls": "public-section human-faq",
           "rect": {
             "x": 0,
-            "y": 11353,
+            "y": 11473,
             "w": 390,
-            "h": 648
+            "h": 805
           }
         },
         {
@@ -1057,172 +1025,156 @@
           "cls": "human-final-cta",
           "rect": {
             "x": 0,
-            "y": 12001,
+            "y": 12278,
             "w": 390,
-            "h": 500
+            "h": 506
           }
         }
       ],
       "images": [
         {
-          "alt": "Profissional repondo produtos frescos em um supermercado — execução em campo",
-          "src": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=720&q=80",
+          "alt": "",
+          "src": "https://app.usecia.com/media/cia-hero-supermercado.webp",
           "complete": true,
-          "naturalWidth": 390,
-          "naturalHeight": 585,
+          "naturalWidth": 1074,
+          "naturalHeight": 806,
           "rect": {
-            "x": 23,
-            "y": 722,
-            "w": 344,
-            "h": 307
+            "x": 12,
+            "y": 88,
+            "w": 366,
+            "h": 702
           }
         },
         {
-          "alt": "Prévia real da interface CIA Execução, com fila de fotos, análise visual e contexto de loja",
+          "alt": "Tela real do CIA Execução com fila de análise, foto e contexto",
           "src": "https://app.usecia.com/media/cia-execucao-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 48,
-            "y": 2326,
+            "y": 2128,
             "w": 294,
-            "h": 183
+            "h": 184
           }
         },
         {
-          "alt": "Prévia do CIA solicitando ajuste: seleção de Promotor ou Supervisor, motivo e mensagem preparada para WhatsApp",
+          "alt": "Tela real do CIA com solicitação de ajuste e contato no WhatsApp",
           "src": "https://app.usecia.com/media/cia-ajuste-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 48,
-            "y": 3015,
+            "y": 2997,
             "w": 294,
-            "h": 183
+            "h": 184
           }
         },
         {
-          "alt": "Profissional organizando mercadorias nas prateleiras de uma loja — merchandising em execução",
-          "src": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=720&q=80",
+          "alt": "Promotor de Trade Marketing fotografando uma exposição de produtos no ponto de venda",
+          "src": "https://app.usecia.com/media/cia-trade-marketing.webp",
           "complete": true,
-          "naturalWidth": 390,
-          "naturalHeight": 260,
+          "naturalWidth": 1122,
+          "naturalHeight": 1402,
           "rect": {
-            "x": 46,
-            "y": 5007,
-            "w": 298,
-            "h": 355
+            "x": 23,
+            "y": 4870,
+            "w": 344,
+            "h": 258
           }
         },
         {
-          "alt": "Interior organizado de cafeteria com balcão e equipe, representando o padrão de uma franquia",
-          "src": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=720&q=80",
+          "alt": "Loja de artigos esportivos com exposição padronizada de roupas, produtos e vitrines",
+          "src": "https://app.usecia.com/media/cia-franquias-redes.webp",
           "complete": true,
-          "naturalWidth": 390,
-          "naturalHeight": 260,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 46,
-            "y": 5578,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 5371,
+            "w": 344,
+            "h": 258
           }
         },
         {
-          "alt": "Técnico realizando manutenção de equipamentos industriais em instalação profissional",
-          "src": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de manutenção executando um serviço técnico em espaço corporativo",
+          "src": "https://app.usecia.com/media/cia-facilities-servicos.webp",
           "complete": true,
-          "naturalWidth": 390,
-          "naturalHeight": 260,
+          "naturalWidth": 682,
+          "naturalHeight": 1038,
           "rect": {
-            "x": 46,
-            "y": 6093,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 5809,
+            "w": 344,
+            "h": 258
           }
         },
         {
-          "alt": "Corredor de centro de distribuição com caixas e estruturas de armazenamento — ambiente de auditoria",
-          "src": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=720&q=80",
+          "alt": "Profissionais de auditoria de campo analisando documentos técnicos e informações operacionais",
+          "src": "https://app.usecia.com/media/cia-auditoria-campo.webp",
           "complete": true,
-          "naturalWidth": 390,
-          "naturalHeight": 520,
+          "naturalWidth": 1170,
+          "naturalHeight": 780,
           "rect": {
-            "x": 46,
-            "y": 6612,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 6247,
+            "w": 344,
+            "h": 258
           }
         },
         {
-          "alt": "Prévia da tela real de Relatórios CIA com indicadores, causa e prioridade operacional",
+          "alt": "Tela real dos Relatórios CIA com indicadores, causas e prioridades",
           "src": "https://app.usecia.com/media/cia-relatorios-real.jpg",
           "complete": true,
           "naturalWidth": 1440,
           "naturalHeight": 900,
           "rect": {
             "x": 23,
-            "y": 7539,
+            "y": 7345,
             "w": 344,
-            "h": 214
+            "h": 215
           }
         }
       ],
       "media": [
         {
-          "cls": "cia-media-slot hero-media primary-media is-photographic media-kind-01",
-          "rect": {
-            "x": 22,
-            "y": 721,
-            "w": 346,
-            "h": 309
-          },
-          "img": "https://images.unsplash.com/photo-1774978612809-b11695740f7a?auto=format&fit=crop&w=1440&q=84",
-          "imgRect": {
-            "x": 23,
-            "y": 722,
-            "w": 344,
-            "h": 307
-          }
-        },
-        {
           "cls": "cia-media-slot wide  cia-product-preview preview-kind-a",
           "rect": {
             "x": 47,
-            "y": 2325,
+            "y": 2127,
             "w": 296,
-            "h": 185
+            "h": 219
           },
           "img": "/media/cia-execucao-real.jpg",
           "imgRect": {
             "x": 48,
-            "y": 2326,
+            "y": 2128,
             "w": 294,
-            "h": 183
+            "h": 184
           }
         },
         {
           "cls": "cia-media-slot strip  cia-product-preview preview-kind-b",
           "rect": {
             "x": 47,
-            "y": 3014,
+            "y": 2996,
             "w": 296,
-            "h": 185
+            "h": 219
           },
           "img": "/media/cia-ajuste-real.jpg",
           "imgRect": {
             "x": 48,
-            "y": 3015,
+            "y": 2997,
             "w": 294,
-            "h": 183
+            "h": 184
           }
         },
         {
           "cls": "cia-media-slot cinema demo-main video-pending",
           "rect": {
             "x": 22,
-            "y": 3740,
+            "y": 3755,
             "w": 346,
             "h": 195
           },
@@ -1231,81 +1183,81 @@
         {
           "cls": "cia-media-slot portrait  is-photographic media-kind-c",
           "rect": {
-            "x": 45,
-            "y": 5006,
-            "w": 300,
-            "h": 357
+            "x": 23,
+            "y": 4870,
+            "w": 344,
+            "h": 258
           },
-          "img": "https://images.unsplash.com/photo-1774978612572-9ad8abb3027f?auto=format&fit=crop&w=1040&q=84",
+          "img": "/media/cia-trade-marketing.webp",
           "imgRect": {
-            "x": 46,
-            "y": 5007,
-            "w": 298,
-            "h": 355
+            "x": 23,
+            "y": 4870,
+            "w": 344,
+            "h": 258
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-d",
           "rect": {
-            "x": 45,
-            "y": 5577,
-            "w": 300,
-            "h": 300
+            "x": 23,
+            "y": 5371,
+            "w": 344,
+            "h": 258
           },
-          "img": "https://images.unsplash.com/photo-1770012117416-110a6c84809d?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-franquias-redes.webp",
           "imgRect": {
-            "x": 46,
-            "y": 5578,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 5371,
+            "w": 344,
+            "h": 258
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-e",
           "rect": {
-            "x": 45,
-            "y": 6092,
-            "w": 300,
-            "h": 300
+            "x": 23,
+            "y": 5809,
+            "w": 344,
+            "h": 258
           },
-          "img": "https://images.unsplash.com/photo-1748347568194-c8cd8edd27da?auto=format&fit=crop&w=900&q=84",
+          "img": "/media/cia-facilities-servicos.webp",
           "imgRect": {
-            "x": 46,
-            "y": 6093,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 5809,
+            "w": 344,
+            "h": 258
           }
         },
         {
           "cls": "cia-media-slot square  is-photographic media-kind-f",
           "rect": {
-            "x": 45,
-            "y": 6611,
-            "w": 300,
-            "h": 300
+            "x": 23,
+            "y": 6247,
+            "w": 344,
+            "h": 258
           },
-          "img": "https://images.unsplash.com/photo-1777026321659-64941fb943dd?auto=format&fit=crop&w=1000&q=84",
+          "img": "/media/cia-auditoria-campo.webp",
           "imgRect": {
-            "x": 46,
-            "y": 6612,
-            "w": 298,
-            "h": 298
+            "x": 23,
+            "y": 6247,
+            "w": 344,
+            "h": 258
           }
         },
         {
           "cls": "cia-media-slot dashboard dashboard-media cia-product-preview preview-kind-g",
           "rect": {
             "x": 22,
-            "y": 7538,
+            "y": 7344,
             "w": 346,
-            "h": 216
+            "h": 250
           },
           "img": "/media/cia-relatorios-real.jpg",
           "imgRect": {
             "x": 23,
-            "y": 7539,
+            "y": 7345,
             "w": 344,
-            "h": 214
+            "h": 215
           }
         }
       ],
@@ -1313,20 +1265,20 @@
         {
           "cls": "human-hero-grid",
           "rect": {
-            "x": 22,
-            "y": 130,
-            "w": 346,
-            "h": 916
+            "x": 36,
+            "y": 158,
+            "w": 318,
+            "h": 590
           },
-          "cols": "346px"
+          "cols": "318px"
         },
         {
           "cls": "human-feature-grid",
           "rect": {
             "x": 22,
-            "y": 2096,
+            "y": 1845,
             "w": 346,
-            "h": 1128
+            "h": 1395
           },
           "cols": "346px"
         },
@@ -1334,9 +1286,9 @@
           "cls": "demo-editorial-grid",
           "rect": {
             "x": 22,
-            "y": 3478,
+            "y": 3494,
             "w": 346,
-            "h": 705
+            "h": 703
           },
           "cols": "346px"
         },
@@ -1344,9 +1296,9 @@
           "cls": "public-section human-audience",
           "rect": {
             "x": 0,
-            "y": 4293,
+            "y": 4307,
             "w": 390,
-            "h": 2768
+            "h": 2471
           },
           "cols": "none"
         },
@@ -1354,20 +1306,14 @@
           "cls": "results-stage",
           "rect": {
             "x": 22,
-            "y": 7210,
+            "y": 6928,
             "w": 346,
-            "h": 544
+            "h": 666
           },
           "cols": "346px"
         }
       ],
       "clipped": [
-        {
-          "tag": "DIV",
-          "cls": "hero-ghost-word",
-          "w": 659,
-          "right": 652
-        },
         {
           "tag": "DIV",
           "cls": "final-cta-ghost",
@@ -1377,7 +1323,7 @@
       ],
       "scrollAnchors": [
         {
-          "label": "Ver o produto",
+          "label": "Ver como funciona",
           "target": "produto"
         }
       ],
