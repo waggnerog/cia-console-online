@@ -48,3 +48,13 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: npx expo export --platform android --output-dir dist-ci
+
+      - name: Upload Play assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: cia-campo-play-assets
+          path: |
+            apps/cia-campo/store/play-icon-512.png
+            apps/cia-campo/store/feature-graphic-1024x500.png
+            apps/cia-campo/store/screenshot-*.png
+          if-no-files-found: error
