@@ -60,7 +60,17 @@ export type Membership = {
 export type QueueItem =
   | {
       id: string;
-      kind: 'checkin' | 'checkout';
+      kind: 'checkin';
+      createdAt: string;
+      userId: string;
+      visitId: string;
+      workspaceId: string;
+      latitude: number | null;
+      longitude: number | null;
+    }
+  | {
+      id: string;
+      kind: 'checkout';
       createdAt: string;
       userId: string;
       visitId: string;
