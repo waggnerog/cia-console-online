@@ -13,10 +13,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: 'com.usecia.campo',
     versionCode: 1,
-    adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#FFFFFF'
-    },
     permissions: [
       'android.permission.CAMERA',
       'android.permission.ACCESS_COARSE_LOCATION',
@@ -34,7 +30,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         cameraPermission:
           'O CIA Campo usa a câmera somente quando você registra uma evidência solicitada na visita.',
-        photosPermission: false,
         microphonePermission: false
       }
     ],
