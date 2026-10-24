@@ -35,7 +35,10 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --json > audit.json || true
+
+      - name: Enforce security gate
+        run: node scripts/security-gate.mjs audit.json
 
       - name: Verify Expo dependency alignment
         run: npx expo install --check
