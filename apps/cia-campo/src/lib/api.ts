@@ -263,13 +263,20 @@ export async function checkIn(
     longitude: pos.longitude
   };
 
+  await enqueue(item);
+
   if (!(await isOnline())) {
-    await enqueue(item);
     return { queued: true, at };
   }
 
-  await executeCheckIn(item, userId);
-  return { queued: false, at };
+  try {
+    await syncQueue();
+  } catch {
+    return { queued: true, at };
+  }
+
+  const stillQueued = (await readQueue()).some((queued) => queued.id === item.id);
+  return { queued: stillQueued, at };
 }
 
 async function executeCheckIn(
@@ -370,8 +377,13 @@ export async function queueEvidence(args: {
   await enqueue(item);
 
   if (await isOnline()) {
-    await syncQueue();
-    return { queued: false };
+    try {
+      await syncQueue();
+    } catch {
+      return { queued: true };
+    }
+    const stillQueued = (await readQueue()).some((queued) => queued.id === item.id);
+    return { queued: stillQueued };
   }
 
   return { queued: true };
@@ -482,8 +494,13 @@ export async function checkOut(
   await enqueue(item);
 
   if (await isOnline()) {
-    await syncQueue();
-    return { queued: false, at };
+    try {
+      await syncQueue();
+    } catch {
+      return { queued: true, at };
+    }
+    const stillQueued = (await readQueue()).some((queued) => queued.id === item.id);
+    return { queued: stillQueued, at };
   }
 
   return { queued: true, at };
