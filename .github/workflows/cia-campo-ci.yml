@@ -34,6 +34,9 @@ jobs:
       - name: Install
         run: npm install --no-audit --no-fund
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Verify Expo dependency alignment
         run: npx expo install --check
 
@@ -48,6 +51,25 @@ jobs:
           EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: npx expo export --platform android --output-dir dist-ci
+
+      - name: Generate native Android project
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Compile Android release bundle
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: cd android && ./gradlew bundleRelease --no-daemon
+
+      - name: Upload Android compile artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cia-campo-android-release-compile
+          path: apps/cia-campo/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
 
       - name: Upload Play assets
         uses: actions/upload-artifact@v4
