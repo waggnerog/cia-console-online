@@ -33,8 +33,8 @@ Uso profissional / corporativo.
 
 ## Contato
 Site: https://app.usecia.com/
-Suporte: https://app.usecia.com/#suporte
-Política de privacidade: https://app.usecia.com/#privacidade
+Suporte: https://app.usecia.com/suporte.html
+Política de privacidade: https://app.usecia.com/privacidade.html
 
 ## Observações para revisão
 - O app não permite cadastro público.
