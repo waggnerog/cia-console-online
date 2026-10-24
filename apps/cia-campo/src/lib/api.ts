@@ -394,7 +394,13 @@ async function executeEvidence(
   userId: string
 ) {
   if (item.userId !== userId) throw new Error('Evidência pertence a outro usuário.');
-  const path = `${item.workspaceId}/${userId}/${item.visitId}/${item.taskId}/${item.id}.jpg`;
+  const extension =
+    item.mimeType === 'image/png'
+      ? 'png'
+      : item.mimeType === 'image/webp'
+        ? 'webp'
+        : 'jpg';
+  const path = `${item.workspaceId}/${userId}/${item.visitId}/${item.taskId}/${item.id}.${extension}`;
 
   const { data: existing, error: existingError } = await supabase
     .from('evidences')
@@ -472,7 +478,7 @@ export async function checkOut(
     throw new Error('Esta visita não está disponível para check-out.');
   }
 
-  const queue = await readQueue();
+  const queue = (await readQueue()).filter((item) => item.userId === userId);
   if (!isVisitComplete(visit, queue)) {
     throw new Error('Conclua todas as fotos obrigatórias antes do check-out.');
   }
