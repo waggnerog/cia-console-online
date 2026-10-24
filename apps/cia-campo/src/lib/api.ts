@@ -1,13 +1,17 @@
 import * as Location from 'expo-location';
 import * as Network from 'expo-network';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { getDeviceId } from './device';
 import { deleteLocalEvidence } from './media';
 import { enqueue, readQueue, removeQueued } from './offlineQueue';
 import type { Evidence, FieldTask, Membership, QueueItem, Visit } from '../types';
 
+const ACTIVE_ENV_KEY = 'cia-campo:active-environment';
+
 export type Bootstrap = {
   membership: Membership;
+  environments: Membership[];
   visits: Visit[];
   services: { field_enabled: boolean };
 };
@@ -66,13 +70,19 @@ export async function bootstrap(): Promise<Bootstrap> {
     .order('created_at');
   if (membershipError) throw membershipError;
 
-  const membership = (memberships ?? []).find((x) =>
+  const environments = (memberships ?? []).filter((x) =>
     ['promoter', 'field'].includes(x.role)
-  ) as Membership | undefined;
+  ) as Membership[];
 
-  if (!membership) {
+  if (!environments.length) {
     throw new Error('Seu usuário não possui perfil de Promotor no CIA Campo.');
   }
+
+  const savedWorkspace = await AsyncStorage.getItem(ACTIVE_ENV_KEY);
+  const membership =
+    environments.find((x) => x.workspace_id === savedWorkspace) ?? environments[0]!;
+
+  await AsyncStorage.setItem(ACTIVE_ENV_KEY, membership.workspace_id);
 
   const { data: services, error: serviceError } = await supabase
     .from('environment_services')
@@ -85,6 +95,23 @@ export async function bootstrap(): Promise<Bootstrap> {
     throw new Error('O CIA Campo não está habilitado neste Ambiente.');
   }
 
+  const { data: subscription, error: subscriptionError } = await supabase
+    .from('environment_subscriptions')
+    .select('status,trial_ends_at')
+    .eq('workspace_id', membership.workspace_id)
+    .maybeSingle();
+  if (subscriptionError) throw subscriptionError;
+
+  if (subscription) {
+    const trialExpired =
+      subscription.status === 'trialing' &&
+      Boolean(subscription.trial_ends_at) &&
+      new Date(subscription.trial_ends_at).getTime() <= Date.now();
+    if (trialExpired || !['trialing', 'active'].includes(subscription.status)) {
+      throw new Error('O CIA Campo está suspenso neste Ambiente. Fale com o administrador.');
+    }
+  }
+
   const visits = await loadVisits(
     membership.workspace_id,
     user.id,
@@ -93,9 +120,14 @@ export async function bootstrap(): Promise<Bootstrap> {
 
   return {
     membership,
+    environments,
     visits,
     services: { field_enabled: Boolean(services.field_enabled) }
   };
+}
+
+export async function selectWorkspace(workspaceId: string) {
+  await AsyncStorage.setItem(ACTIVE_ENV_KEY, workspaceId);
 }
 
 export async function loadVisits(
