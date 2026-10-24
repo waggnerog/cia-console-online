@@ -462,8 +462,18 @@ async function executeEvidence(
     });
 
     if (insertError) {
-      await supabase.storage.from('cia-evidencias').remove([path]).catch(() => {});
-      throw insertError;
+      const { data: committed, error: verifyError } = await supabase
+        .from('evidences')
+        .select('id')
+        .eq('workspace_id', item.workspaceId)
+        .eq('storage_path', path)
+        .maybeSingle();
+
+      if (verifyError || !committed) {
+        // Keep the uploaded object for a safe retry. Deleting here could destroy
+        // a row that committed successfully while its response was lost.
+        throw insertError;
+      }
     }
   }
 
