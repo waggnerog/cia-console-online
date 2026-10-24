@@ -26,6 +26,7 @@ import {
   isVisitComplete,
   queueEvidence,
   requiredPhotoCount,
+  selectWorkspace,
   signIn,
   signOut,
   syncQueue
@@ -37,6 +38,7 @@ import { colors, radii } from './src/theme';
 
 type CachedField = {
   membership: Membership;
+  environments: Membership[];
   visits: Visit[];
   savedAt: string;
 };
@@ -231,12 +233,14 @@ function VisitCard({
 
 function AgendaScreen({
   membership,
+  environments,
   visits,
   queue,
   pending,
   refreshing,
   onRefresh,
   onOpen,
+  onSwitchEnvironment,
   onSync,
   onLogout
 }: {
@@ -247,6 +251,7 @@ function AgendaScreen({
   refreshing: boolean;
   onRefresh: () => Promise<void>;
   onOpen: (visit: Visit) => void;
+  onSwitchEnvironment: (workspaceId: string) => Promise<void>;
   onSync: () => Promise<void>;
   onLogout: () => Promise<void>;
 }) {
@@ -305,6 +310,31 @@ function AgendaScreen({
             <Text style={styles.statValue}>{required}</Text>
           </View>
         </View>
+
+        {environments.length > 1 && (
+          <View style={styles.environmentStrip}>
+            <Text style={styles.environmentLabel}>AMBIENTE</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.environmentChips}>
+                {environments.map((env) => {
+                  const active = env.workspace_id === membership.workspace_id;
+                  return (
+                    <Pressable
+                      key={env.workspace_id}
+                      disabled={active}
+                      onPress={() => onSwitchEnvironment(env.workspace_id)}
+                      style={[styles.environmentChip, active && styles.environmentChipActive]}
+                    >
+                      <Text style={[styles.environmentChipText, active && styles.environmentChipTextActive]}>
+                        {env.workspace?.name || 'Ambiente'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        )}
 
         {pending > 0 && (
           <Pressable onPress={onSync} style={styles.syncBanner}>
@@ -526,6 +556,7 @@ function VisitScreen({
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
+  const [environments, setEnvironments] = useState<Membership[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
@@ -556,6 +587,7 @@ export default function App() {
   const loadFresh = useCallback(async () => {
     const data = await bootstrap();
     setMembership(data.membership);
+    setEnvironments(data.environments);
     setVisits(data.visits);
     await saveCache(data.membership, data.visits);
     await refreshQueue();
@@ -611,6 +643,7 @@ export default function App() {
       setSession(nextSession);
       if (!nextSession) {
         setMembership(null);
+        setEnvironments([]);
         setVisits([]);
         setSelectedVisitId(null);
       }
@@ -702,6 +735,23 @@ export default function App() {
       );
     } finally {
       setRefreshing(false);
+    }
+  }
+
+  async function handleSwitchEnvironment(workspaceId: string) {
+    if (workspaceId === membership?.workspace_id) return;
+    setBusy(true);
+    try {
+      await selectWorkspace(workspaceId);
+      setSelectedVisitId(null);
+      await loadFresh();
+    } catch (error) {
+      Alert.alert(
+        'Não foi possível trocar de Ambiente',
+        error instanceof Error ? error.message : 'Tente novamente.'
+      );
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -854,12 +904,14 @@ export default function App() {
   return (
     <AgendaScreen
       membership={membership}
+      environments={environments}
       visits={visits}
       queue={queue}
       pending={queue.length}
       refreshing={refreshing}
       onRefresh={handleRefresh}
       onOpen={(visit) => setSelectedVisitId(visit.id)}
+      onSwitchEnvironment={handleSwitchEnvironment}
       onSync={handleSync}
       onLogout={handleLogout}
     />
@@ -990,6 +1042,37 @@ const styles = StyleSheet.create({
   stat: { flex: 1, paddingVertical: 18, alignItems: 'center' },
   statLabel: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.9 },
   statValue: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 4 },
+  environmentStrip: {
+    marginTop: 18,
+    paddingVertical: 14,
+    paddingLeft: 18,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.line
+  },
+  environmentLabel: {
+    color: colors.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    marginBottom: 10
+  },
+  environmentChips: { flexDirection: 'row', gap: 8, paddingRight: 18 },
+  environmentChip: {
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    paddingVertical: 9,
+    paddingHorizontal: 13
+  },
+  environmentChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft
+  },
+  environmentChipText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  environmentChipTextActive: { color: colors.primaryDark },
   syncBanner: {
     marginHorizontal: 18,
     marginTop: 18,
