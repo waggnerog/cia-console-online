@@ -31,12 +31,13 @@ import {
   signOut,
   syncQueue
 } from './src/lib/api';
-import { captureEvidence } from './src/lib/media';
+import { captureEvidence, deleteLocalEvidence } from './src/lib/media';
 import { readQueue } from './src/lib/offlineQueue';
 import type { Membership, QueueItem, Visit } from './src/types';
 import { colors, radii } from './src/theme';
 
 type CachedField = {
+  userId: string;
   membership: Membership;
   environments: Membership[];
   visits: Visit[];
@@ -572,12 +573,25 @@ export default function App() {
   );
 
   const refreshQueue = useCallback(async () => {
-    const next = await readQueue();
+    const {
+      data: { session: currentSession }
+    } = await supabase.auth.getSession();
+    const userId = currentSession?.user.id;
+    const next = userId
+      ? (await readQueue()).filter((item) => item.userId === userId)
+      : [];
     if (mounted.current) setQueue(next);
   }, []);
 
   const saveCache = useCallback(async (m: Membership, nextVisits: Visit[]) => {
+    const {
+      data: { session: currentSession }
+    } = await supabase.auth.getSession();
+    const userId = currentSession?.user.id;
+    if (!userId) return;
+
     const payload: CachedField = {
+      userId,
       membership: m,
       visits: nextVisits,
       savedAt: new Date().toISOString()
@@ -594,12 +608,12 @@ export default function App() {
     await refreshQueue();
   }, [refreshQueue, saveCache]);
 
-  const loadCached = useCallback(async () => {
+  const loadCached = useCallback(async (userId: string) => {
     const raw = await AsyncStorage.getItem(CACHE_KEY);
     if (!raw) return false;
     try {
       const cached = JSON.parse(raw) as CachedField;
-      if (!cached.membership || !Array.isArray(cached.visits)) return false;
+      if (cached.userId !== userId || !cached.membership || !Array.isArray(cached.visits)) return false;
       setMembership(cached.membership);
       setEnvironments([cached.membership]);
       setVisits(cached.visits);
@@ -628,7 +642,7 @@ export default function App() {
       await syncQueue().catch(() => ({ sent: 0, remaining: 0 }));
       await loadFresh();
     } catch (error) {
-      const usedCache = await loadCached();
+      const usedCache = await loadCached(currentSession.user.id);
       if (!usedCache) {
         Alert.alert('Não foi possível iniciar', error instanceof Error ? error.message : 'Tente novamente.');
       }
@@ -809,8 +823,9 @@ export default function App() {
     if (!task) return;
 
     setBusy(true);
+    let media: Awaited<ReturnType<typeof captureEvidence>> = null;
     try {
-      const media = await captureEvidence();
+      media = await captureEvidence();
       if (!media) return;
 
       const result = await queueEvidence({
@@ -831,6 +846,7 @@ export default function App() {
           : 'A evidência já está disponível para análise no CIA.'
       );
     } catch (error) {
+      if (media) await deleteLocalEvidence(media.uri).catch(() => {});
       Alert.alert('Não foi possível registrar a foto', error instanceof Error ? error.message : 'Tente novamente.');
     } finally {
       setBusy(false);
