@@ -39,7 +39,6 @@ import { colors, radii } from './src/theme';
 type CachedField = {
   userId: string;
   membership: Membership;
-  environments: Membership[];
   visits: Visit[];
   savedAt: string;
 };
@@ -262,7 +261,7 @@ function AgendaScreen({
 
   return (
     <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <View style={styles.loginBrand}>
           <View style={styles.smallLogo}>
@@ -404,7 +403,7 @@ function VisitScreen({
 
   return (
     <SafeAreaView style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backButton}>
           <Text style={styles.backText}>‹</Text>
