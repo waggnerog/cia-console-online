@@ -62,6 +62,7 @@ export type QueueItem =
       id: string;
       kind: 'checkin' | 'checkout';
       createdAt: string;
+      userId: string;
       visitId: string;
       workspaceId: string;
       latitude: number | null;
@@ -71,6 +72,7 @@ export type QueueItem =
       id: string;
       kind: 'evidence';
       createdAt: string;
+      userId: string;
       visitId: string;
       workspaceId: string;
       operationId: string;
