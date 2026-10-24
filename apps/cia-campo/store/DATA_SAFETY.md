@@ -41,7 +41,7 @@ O código atual não inclui SDK próprio de anúncios, analytics de terceiros ou
 O CIA Campo não foi desenhado para vender dados ou compartilhar dados com redes de publicidade. Dados operacionais são processados para prestar o serviço contratado e armazenados na infraestrutura de backend do CIA/Supabase conforme a política de privacidade.
 
 ## Exclusão
-Como o aplicativo não oferece criação pública de conta, o ciclo de conta é administrado pela organização cliente/administrador do CIA. Solicitações de privacidade devem seguir o canal informado na política publicada em https://app.usecia.com/#privacidade.
+Como o aplicativo não oferece criação pública de conta, o ciclo de conta é administrado pela organização cliente/administrador do CIA. Solicitações de privacidade devem seguir o canal informado na política publicada em https://app.usecia.com/privacidade.html.
 
 ## Permissões do Android
 - CAMERA
