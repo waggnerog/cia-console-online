@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+dist-ci/
+.env
+.env.local
+assets/*.png
+store/play-icon-512.png
+store/feature-graphic-1024x500.png
+store/screenshot-*.png
