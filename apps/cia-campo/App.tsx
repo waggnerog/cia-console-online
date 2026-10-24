@@ -31,7 +31,7 @@ import {
   syncQueue
 } from './src/lib/api';
 import { captureEvidence } from './src/lib/media';
-import { queueSize, readQueue } from './src/lib/offlineQueue';
+import { readQueue } from './src/lib/offlineQueue';
 import type { Membership, QueueItem, Visit } from './src/types';
 import { colors, radii } from './src/theme';
 
@@ -616,8 +616,17 @@ export default function App() {
       }
     });
 
+    return () => {
+      mounted.current = false;
+      auth.subscription.unsubscribe();
+    };
+  }, [initialize]);
+
+  useEffect(() => {
+    if (!session) return;
+
     const appListener = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && session) {
+      if (state === 'active') {
         void (async () => {
           await syncQueue().catch(() => null);
           await loadFresh().catch(() => null);
@@ -626,25 +635,27 @@ export default function App() {
     });
 
     const timer = setInterval(() => {
-      if (!session) return;
       void (async () => {
         try {
           await enforceSingleSession();
           await syncQueue();
           await refreshQueue();
         } catch {
-          // Keep cached work visible; auth state listener handles a revoked local session.
+          // Cached work remains available; a revoked session is handled by Supabase auth.
         }
       })();
     }, 60_000);
 
     return () => {
-      mounted.current = false;
-      auth.subscription.unsubscribe();
       appListener.remove();
       clearInterval(timer);
     };
-  }, [initialize, loadFresh, refreshQueue, session]);
+  }, [loadFresh, refreshQueue, session]);
+
+  useEffect(() => {
+    if (!membership) return;
+    void saveCache(membership, visits);
+  }, [membership, saveCache, visits]);
 
   async function handleLogin(email: string, password: string) {
     setBusy(true);
