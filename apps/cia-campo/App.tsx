@@ -245,6 +245,7 @@ function AgendaScreen({
   onLogout
 }: {
   membership: Membership;
+  environments: Membership[];
   visits: Visit[];
   queue: QueueItem[];
   pending: number;
@@ -600,6 +601,7 @@ export default function App() {
       const cached = JSON.parse(raw) as CachedField;
       if (!cached.membership || !Array.isArray(cached.visits)) return false;
       setMembership(cached.membership);
+      setEnvironments([cached.membership]);
       setVisits(cached.visits);
       await refreshQueue();
       return true;
