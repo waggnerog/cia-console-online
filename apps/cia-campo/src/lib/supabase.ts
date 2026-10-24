@@ -1,5 +1,5 @@
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
@@ -10,9 +10,18 @@ const key =
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   'sb_publishable_YzXtLMPE--5I7yvxkOgikQ_eYZ13h4V';
 
+const secureAuthStorage = {
+  getItem: (storageKey: string) => SecureStore.getItemAsync(storageKey),
+  setItem: (storageKey: string, value: string) =>
+    SecureStore.setItemAsync(storageKey, value, {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED
+    }),
+  removeItem: (storageKey: string) => SecureStore.deleteItemAsync(storageKey)
+};
+
 export const supabase = createClient(url, key, {
   auth: {
-    storage: AsyncStorage,
+    storage: secureAuthStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false
