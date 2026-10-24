@@ -35,6 +35,12 @@ export async function captureEvidence(): Promise<{
 
   let sourceUri = asset.uri;
   let mimeType = asset.mimeType || 'image/jpeg';
+  let extension =
+    mimeType === 'image/png'
+      ? 'png'
+      : mimeType === 'image/webp'
+        ? 'webp'
+        : 'jpg';
 
   try {
     const context = ImageManipulator.manipulate(asset.uri, {
@@ -48,19 +54,24 @@ export async function captureEvidence(): Promise<{
     });
     sourceUri = optimized.uri;
     mimeType = 'image/jpeg';
+    extension = 'jpg';
   } catch {
     // If optimization fails, preserve the original capture instead of losing evidence.
   }
 
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-  const target = DIR + fileName;
+  const generatedName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const target = DIR + generatedName;
 
   await FileSystem.copyAsync({ from: sourceUri, to: target });
+
+  const originalBase =
+    asset.fileName?.replace(/\.[^.]+$/, '').replace(/[^a-z0-9_-]+/gi, '-') ||
+    'evidencia';
 
   return {
     uri: target,
     mimeType,
-    fileName: asset.fileName?.replace(/\.[^.]+$/, '.jpg') || fileName
+    fileName: `${originalBase}.${extension}`
   };
 }
 
