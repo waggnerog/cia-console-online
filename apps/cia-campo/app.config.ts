@@ -9,7 +9,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'light',
-  newArchEnabled: true,
   assetBundlePatterns: ['**/*'],
   android: {
     package: 'com.usecia.campo',
