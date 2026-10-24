@@ -70,9 +70,26 @@ export async function bootstrap(): Promise<Bootstrap> {
     .order('created_at');
   if (membershipError) throw membershipError;
 
-  const environments = (memberships ?? []).filter((x) =>
-    ['promoter', 'field'].includes(x.role)
-  ) as Membership[];
+  const environments: Membership[] = (memberships ?? [])
+    .filter((row) => ['promoter', 'field'].includes(row.role))
+    .map((row) => {
+      const relatedWorkspace = Array.isArray(row.workspace)
+        ? (row.workspace[0] ?? null)
+        : (row.workspace ?? null);
+
+      return {
+        workspace_id: row.workspace_id,
+        role: row.role,
+        display_name: row.display_name ?? null,
+        workspace: relatedWorkspace
+          ? {
+              id: relatedWorkspace.id,
+              name: relatedWorkspace.name,
+              settings: relatedWorkspace.settings ?? null
+            }
+          : null
+      };
+    });
 
   if (!environments.length) {
     throw new Error('Seu usuário não possui perfil de Promotor no CIA Campo.');
