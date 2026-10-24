@@ -1,0 +1,52 @@
+name: CIA Campo CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/cia-campo-android
+    paths:
+      - "apps/cia-campo/**"
+      - ".github/workflows/cia-campo-ci.yml"
+  pull_request:
+    paths:
+      - "apps/cia-campo/**"
+      - ".github/workflows/cia-campo-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/cia-campo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/cia-campo/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify Expo dependency alignment
+        run: npx expo install --check
+
+      - name: Expo doctor
+        run: npx expo-doctor
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Export production bundle
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: npx expo export --platform android --output-dir dist-ci
