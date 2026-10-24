@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
     "build:android": "eas build --platform android --profile production",
-    "submit:android": "eas submit --platform android --profile production"
+    "submit:android": "eas submit --platform android --profile production",
+    "assets": "node scripts/generate-assets.mjs",
+    "postinstall": "npm run assets"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/react": "19.2.2",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "sharp": "0.35.5"
   }
 }
