@@ -256,6 +256,7 @@ export async function checkIn(
     id: `checkin:${visit.id}`,
     kind: 'checkin',
     createdAt: at,
+    userId,
     visitId: visit.id,
     workspaceId: visit.workspace_id,
     latitude: pos.latitude,
@@ -275,6 +276,7 @@ async function executeCheckIn(
   item: Extract<QueueItem, { kind: 'checkin' }>,
   userId: string
 ) {
+  if (item.userId !== userId) throw new Error('Operação pertence a outro usuário.');
   const { data, error } = await supabase
     .from('visits')
     .update({
@@ -322,12 +324,19 @@ export async function queueEvidence(args: {
     throw new Error('Faça check-in antes de registrar fotos.');
   }
 
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+  const userId = session?.user.id;
+  if (!userId) throw new Error('Sessão expirada.');
+
   const currentCount = visit.evidences.filter(
     (e) => e.photo_task_id === task.id
   ).length;
   const pendingCount = (await readQueue()).filter(
     (q) =>
       q.kind === 'evidence' &&
+      q.userId === userId &&
       q.visitId === visit.id &&
       q.taskId === task.id
   ).length;
@@ -346,6 +355,7 @@ export async function queueEvidence(args: {
     id,
     kind: 'evidence',
     createdAt: new Date().toISOString(),
+    userId,
     visitId: visit.id,
     workspaceId: visit.workspace_id,
     operationId: visit.operation_id,
@@ -371,6 +381,7 @@ async function executeEvidence(
   item: Extract<QueueItem, { kind: 'evidence' }>,
   userId: string
 ) {
+  if (item.userId !== userId) throw new Error('Evidência pertence a outro usuário.');
   const path = `${item.workspaceId}/${userId}/${item.visitId}/${item.taskId}/${item.id}.jpg`;
 
   const { data: existing, error: existingError } = await supabase
@@ -461,6 +472,7 @@ export async function checkOut(
     id: `checkout:${visit.id}`,
     kind: 'checkout',
     createdAt: at,
+    userId,
     visitId: visit.id,
     workspaceId: visit.workspace_id,
     latitude: pos.latitude,
@@ -481,6 +493,7 @@ async function executeCheckOut(
   item: Extract<QueueItem, { kind: 'checkout' }>,
   userId: string
 ) {
+  if (item.userId !== userId) throw new Error('Operação pertence a outro usuário.');
   const { data, error } = await supabase
     .from('visits')
     .update({
@@ -517,7 +530,16 @@ async function executeCheckOut(
 
 export async function syncQueue(): Promise<{ sent: number; remaining: number }> {
   if (!(await isOnline())) {
-    return { sent: 0, remaining: (await readQueue()).length };
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    const userId = session?.user.id;
+    return {
+      sent: 0,
+      remaining: userId
+        ? (await readQueue()).filter((item) => item.userId === userId).length
+        : 0
+    };
   }
 
   const {
@@ -527,7 +549,7 @@ export async function syncQueue(): Promise<{ sent: number; remaining: number }> 
   if (error) throw error;
   if (!user) throw new Error('Sessão expirada.');
 
-  const queue = await readQueue();
+  const queue = (await readQueue()).filter((item) => item.userId === user.id);
   let sent = 0;
 
   for (const item of queue) {
@@ -543,5 +565,8 @@ export async function syncQueue(): Promise<{ sent: number; remaining: number }> 
     }
   }
 
-  return { sent, remaining: (await readQueue()).length };
+  return {
+    sent,
+    remaining: (await readQueue()).filter((item) => item.userId === user.id).length
+  };
 }
