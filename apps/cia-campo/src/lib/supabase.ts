@@ -3,14 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-if (!url || !key) {
-  throw new Error(
-    'CIA Campo sem configuração do backend. Defina EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY.'
-  );
-}
+const url =
+  process.env.EXPO_PUBLIC_SUPABASE_URL ||
+  'https://naaqdwjtastjnckizfqd.supabase.co';
+const key =
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  'sb_publishable_YzXtLMPE--5I7yvxkOgikQ_eYZ13h4V';
 
 export const supabase = createClient(url, key, {
   auth: {
