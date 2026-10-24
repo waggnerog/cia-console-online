@@ -6,6 +6,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'cia-campo',
   scheme: 'ciacampo',
   version: '1.0.0',
+  icon: './assets/icon.png',
   orientation: 'portrait',
   userInterfaceStyle: 'light',
   newArchEnabled: true,
@@ -13,6 +14,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: 'com.usecia.campo',
     versionCode: 1,
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      monochromeImage: './assets/monochrome-icon.png',
+      backgroundColor: '#FFFFFF'
+    },
     permissions: [
       'android.permission.CAMERA',
       'android.permission.ACCESS_COARSE_LOCATION',
