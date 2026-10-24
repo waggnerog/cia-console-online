@@ -50,7 +50,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ]
   ],
   extra: {
-    privacyPolicyUrl: 'https://app.usecia.com/#privacidade',
-    supportUrl: 'https://app.usecia.com/#suporte'
+    privacyPolicyUrl: 'https://app.usecia.com/privacidade.html',
+    supportUrl: 'https://app.usecia.com/suporte.html'
   }
 });
