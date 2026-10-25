@@ -57,10 +57,27 @@ Uma versão só deve avançar para produção quando todos os itens abaixo estiv
 - [x] 4 screenshots geradas
 - [x] política de privacidade preparada
 - [x] documentação de Data Safety preparada
-- [ ] política de privacidade confirmada publicamente acessível em produção
+- [x] política de privacidade confirmada publicamente acessível em produção
 - [ ] Data Safety preenchido no Console
 - [ ] classificação de conteúdo
 - [ ] público-alvo
 - [ ] acesso ao app fornecido ao time de revisão (credencial de teste)
 - [ ] teste interno concluído
 - [ ] teste fechado/produção conforme elegibilidade da conta
+
+## Configuração e publicação — 25/10/2026
+
+- Proprietária Google: `wagner.costa@usecia.com`.
+- Estratégia autorizada: conta pessoal temporária; converter para organização após obtenção do D-U-N-S e verificação da empresa.
+- Nome público: CIA Gestão de Evidências. App: CIA Campo. Package obrigatório: `com.usecia.campo`.
+- Cadastro Google Play ainda não concluído: fluxo pessoal na etapa de perfil para pagamentos/identidade.
+- Login no Expo iniciado com a conta corporativa, mas a verificação Google por SMS permanece pendente.
+- `https://app.usecia.com/privacidade.html` e `https://app.usecia.com/suporte.html` publicadas e verificadas no navegador, com contato `wagner.costa@usecia.com`.
+- Fontes das páginas preservadas nesta branch; páginas estáticas também publicadas diretamente em `gh-pages`, sem merge em `main`.
+- Portal oficial D&B para desenvolvedores Google encaminha o Brasil para a CIAL Dun & Bradstreet. Consulta/solicitação ainda sem envio confirmado e sem protocolo.
+- Não criar uma segunda Conta Google nem enviar o AAB de compilação do CI.
+- Primeiro release: AAB novo assinado com credenciais de produção, trilha interna e rascunho, conforme `eas.json`.
+- Produção depende da validação do binário final, testes Android reais e acesso de revisão.
+
+Conversão futura: https://support.google.com/googleplay/android-developer/answer/16260648
+O Google orienta verificar o site, vincular perfil empresarial verificado e aguardar pelo menos 72 horas após a conversão antes de enviar novos apps.
