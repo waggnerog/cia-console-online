@@ -73,6 +73,17 @@ jobs:
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: cd android && ./gradlew bundleRelease --no-daemon
 
+      - name: Audit merged Android permissions
+        run: |
+          MANIFEST="$(find android/app/build/intermediates -type f -name AndroidManifest.xml -path '*release*' | grep -E 'merged_manifest|merged_manifests' | head -n 1)"
+          if [ -z "$MANIFEST" ]; then
+            echo "Merged release AndroidManifest.xml not found"
+            find android/app/build/intermediates -type f -name AndroidManifest.xml -print || true
+            exit 1
+          fi
+          echo "Auditing $MANIFEST"
+          node scripts/verify-android-permissions.mjs "$MANIFEST"
+
       - name: Upload Android compile artifact
         uses: actions/upload-artifact@v4
         with:
