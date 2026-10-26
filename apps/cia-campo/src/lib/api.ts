@@ -578,7 +578,19 @@ async function executeCheckOut(
   }
 }
 
-export async function syncQueue(): Promise<{ sent: number; remaining: number }> {
+let syncInFlight: Promise<{ sent: number; remaining: number }> | null = null;
+
+export function syncQueue(): Promise<{ sent: number; remaining: number }> {
+  if (syncInFlight) return syncInFlight;
+
+  syncInFlight = syncQueueInternal().finally(() => {
+    syncInFlight = null;
+  });
+
+  return syncInFlight;
+}
+
+async function syncQueueInternal(): Promise<{ sent: number; remaining: number }> {
   if (!(await isOnline())) {
     const {
       data: { session }
