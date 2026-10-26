@@ -38,7 +38,7 @@ A autorização deve continuar sendo garantida por RLS no Supabase. O app nunca 
 
 1. Copie `.env.example` para `.env.local`.
 2. Preencha a URL e a **publishable key** do Supabase.
-3. Instale dependências com `npm install --no-audit --no-fund`.
+3. Instale dependências de forma reprodutível com `npm ci --no-audit --no-fund`.
 4. Rode:
    - `npm run typecheck`
    - `npx expo install --check`
