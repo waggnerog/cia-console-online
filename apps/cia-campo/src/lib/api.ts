@@ -592,6 +592,10 @@ export async function syncQueue(): Promise<{ sent: number; remaining: number }> 
     };
   }
 
+  // Never send queued field operations before confirming that this is still
+  // the account's active device/session.
+  await enforceSingleSession();
+
   const {
     data: { user },
     error
