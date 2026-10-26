@@ -823,6 +823,7 @@ export default function App() {
 
     setBusy(true);
     let media: Awaited<ReturnType<typeof captureEvidence>> = null;
+    let acceptedForSync = false;
     try {
       media = await captureEvidence();
       if (!media) return;
@@ -834,6 +835,7 @@ export default function App() {
         mimeType: media.mimeType,
         originalFileName: media.fileName
       });
+      acceptedForSync = true;
 
       await refreshQueue();
       if (!result.queued) await loadFresh();
@@ -845,7 +847,11 @@ export default function App() {
           : 'A evidência já está disponível para análise no CIA.'
       );
     } catch (error) {
-      if (media) await deleteLocalEvidence(media.uri).catch(() => {});
+      // Once queueEvidence accepts the item, its local file belongs to the
+      // persistent offline queue and must survive unrelated UI/refresh errors.
+      if (media && !acceptedForSync) {
+        await deleteLocalEvidence(media.uri).catch(() => {});
+      }
       Alert.alert('Não foi possível registrar a foto', error instanceof Error ? error.message : 'Tente novamente.');
     } finally {
       setBusy(false);
