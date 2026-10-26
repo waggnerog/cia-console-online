@@ -10,7 +10,7 @@ Uma versão só deve avançar para produção quando todos os itens abaixo estiv
 - [x] bundle Android release compila nativamente
 - [x] pacote Android confirmado: com.usecia.campo
 - [x] targetSdk 36 confirmado no build nativo
-- [ ] package-lock.json versionado e CI migrado para npm ci
+- [x] package-lock.json versionado e CI migrado para npm ci
 - [ ] nenhum segredo no bundle final assinado
 - [ ] versionCode de produção confirmado/incrementado
 
@@ -70,7 +70,7 @@ Uma versão só deve avançar para produção quando todos os itens abaixo estiv
 - Proprietária Google: `wagner.costa@usecia.com`.
 - Estratégia autorizada: conta pessoal temporária; converter para organização após obtenção do D-U-N-S e verificação da empresa.
 - Nome público: CIA Gestão de Evidências. App: CIA Campo. Package obrigatório: `com.usecia.campo`.
-- Cadastro Google Play ainda não concluído: fluxo pessoal na etapa de perfil para pagamentos/identidade.
+- Conta Google Play Developer concluída e liberada em 26/10/2026 segundo confirmação do proprietário; criação/configuração do registro do app e App Signing ainda devem ser validadas antes do AAB final.
 - Login no Expo iniciado com a conta corporativa, mas a verificação Google por SMS permanece pendente.
 - `https://app.usecia.com/privacidade.html` e `https://app.usecia.com/suporte.html` publicadas e verificadas no navegador, com contato `wagner.costa@usecia.com`.
 - Fontes das páginas preservadas nesta branch; páginas estáticas também publicadas diretamente em `gh-pages`, sem merge em `main`.
