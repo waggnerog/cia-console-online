@@ -88,6 +88,36 @@ function evidenceCount(visit: Visit, taskId: string, queue: QueueItem[]) {
   );
 }
 
+function applyPendingVisitState(visits: Visit[], queue: QueueItem[]) {
+  return visits.map((visit) => {
+    const pendingCheckIn = queue.find(
+      (item) => item.kind === 'checkin' && item.visitId === visit.id
+    );
+    const pendingCheckOut = queue.find(
+      (item) => item.kind === 'checkout' && item.visitId === visit.id
+    );
+
+    if (pendingCheckOut) {
+      return {
+        ...visit,
+        status: 'completed' as const,
+        check_in_at: visit.check_in_at ?? pendingCheckIn?.createdAt ?? null,
+        check_out_at: pendingCheckOut.createdAt
+      };
+    }
+
+    if (pendingCheckIn) {
+      return {
+        ...visit,
+        status: 'in_progress' as const,
+        check_in_at: visit.check_in_at ?? pendingCheckIn.createdAt
+      };
+    }
+
+    return visit;
+  });
+}
+
 function LoginScreen({
   busy,
   onLogin
@@ -612,10 +642,11 @@ export default function App() {
     try {
       const cached = JSON.parse(raw) as CachedField;
       if (cached.userId !== userId || !cached.membership || !Array.isArray(cached.visits)) return false;
+      const pending = (await readQueue()).filter((item) => item.userId === userId);
       setMembership(cached.membership);
       setEnvironments([cached.membership]);
-      setVisits(cached.visits);
-      await refreshQueue();
+      setVisits(applyPendingVisitState(cached.visits, pending));
+      setQueue(pending);
       return true;
     } catch {
       return false;
