@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feat/cia-campo-android
     paths:
       - "apps/cia-campo/**"
       - ".github/workflows/cia-campo-ci.yml"
