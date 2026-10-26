@@ -21,7 +21,13 @@ const allowed = new Set([
   'android.permission.INTERNET'
 ]);
 
-const unexpected = permissions.filter((permission) => !allowed.has(permission));
+const internalReceiverPermission =
+  'com.usecia.campo.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION';
+
+const unexpected = permissions.filter(
+  (permission) =>
+    !allowed.has(permission) && permission !== internalReceiverPermission
+);
 
 console.log('Merged Android permissions:');
 for (const permission of permissions) console.log(`- ${permission}`);
