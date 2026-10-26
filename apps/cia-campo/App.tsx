@@ -22,7 +22,6 @@ import {
   bootstrap,
   checkIn,
   checkOut,
-  enforceSingleSession,
   isVisitComplete,
   queueEvidence,
   requiredPhotoCount,
@@ -685,7 +684,6 @@ export default function App() {
     const timer = setInterval(() => {
       void (async () => {
         try {
-          await enforceSingleSession();
           await syncQueue();
           await refreshQueue();
         } catch {
