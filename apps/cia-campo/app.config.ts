@@ -13,6 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: 'com.usecia.campo',
     versionCode: 1,
+    allowBackup: false,
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       monochromeImage: './assets/monochrome-icon.png',
