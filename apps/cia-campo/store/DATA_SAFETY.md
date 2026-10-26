@@ -26,6 +26,15 @@ Finalidade: registrar o contexto da visita.
 
 O app não coleta localização continuamente nem em segundo plano.
 
+### Identificadores técnicos de sessão e dispositivo
+- identificador aleatório gerado pelo próprio CIA Campo para reconhecer a instalação/dispositivo;
+- identificador da sessão autenticada;
+- user-agent e endereço IP observados no controle de sessão.
+
+Finalidade: segurança da conta, prevenção de compartilhamento indevido de acesso, detecção/substituição de sessão e proteção contra abuso.
+
+Esses dados não são usados para publicidade, perfil comportamental ou rastreamento entre aplicativos.
+
 ### Diagnóstico técnico
 O código atual não inclui SDK próprio de anúncios, analytics de terceiros ou rastreamento publicitário.
 
