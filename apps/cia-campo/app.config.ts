@@ -26,7 +26,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     blockedPermissions: [
       'android.permission.RECORD_AUDIO',
       'android.permission.ACCESS_BACKGROUND_LOCATION',
-      'android.permission.FOREGROUND_SERVICE_LOCATION'
+      'android.permission.FOREGROUND_SERVICE_LOCATION',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+      'android.permission.READ_MEDIA_IMAGES',
+      'android.permission.READ_MEDIA_VIDEO',
+      'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
+      'android.permission.USE_BIOMETRIC',
+      'android.permission.USE_FINGERPRINT',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.DUMP',
+      'android.permission.VIBRATE'
     ]
   },
   plugins: [
