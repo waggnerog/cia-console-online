@@ -20,3 +20,18 @@ Thumbs.db
 
 # Legacy artifacts (kept for reference)
 # legacy/
+
+# Private Android / Google Play credentials (managed remotely by EAS)
+credentials.json
+*.jks
+*.keystore
+*.p12
+*.p8
+*.pem
+service-account*.json
+google-service-account*.json
+play-service-account*.json
+
+# Release artifacts are distributed through EAS / Google Play
+*.aab
+*.apk

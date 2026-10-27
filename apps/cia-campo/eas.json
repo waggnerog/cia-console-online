@@ -18,6 +18,13 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "environment": "production",
+      "distribution": "store",
+      "credentialsSource": "remote",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://naaqdwjtastjnckizfqd.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_YzXtLMPE--5I7yvxkOgikQ_eYZ13h4V"
       }
     }
   },

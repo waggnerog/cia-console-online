@@ -71,7 +71,7 @@ Uma versão só deve avançar para produção quando todos os itens abaixo estiv
 - Estratégia autorizada: conta pessoal temporária; converter para organização após obtenção do D-U-N-S e verificação da empresa.
 - Nome público: CIA Gestão de Evidências. App: CIA Campo. Package obrigatório: `com.usecia.campo`.
 - Conta Google Play Developer concluída e liberada em 26/10/2026 segundo confirmação do proprietário; criação/configuração do registro do app e App Signing ainda devem ser validadas antes do AAB final.
-- Login no Expo iniciado com a conta corporativa, mas a verificação Google por SMS permanece pendente.
+- O acesso Expo deve ser confirmado em sessão autenticada; não inferir que um desafio de login anterior continua pendente.
 - `https://app.usecia.com/privacidade.html` e `https://app.usecia.com/suporte.html` publicadas e verificadas no navegador, com contato `wagner.costa@usecia.com`.
 - Fontes das páginas preservadas nesta branch; páginas estáticas também publicadas diretamente em `gh-pages`, sem merge em `main`.
 - Portal oficial D&B para desenvolvedores Google encaminha o Brasil para a CIAL Dun & Bradstreet. Consulta/solicitação ainda sem envio confirmado e sem protocolo.
@@ -81,3 +81,26 @@ Uma versão só deve avançar para produção quando todos os itens abaixo estiv
 
 Conversão futura: https://support.google.com/googleplay/android-developer/answer/16260648
 O Google orienta verificar o site, vincular perfil empresarial verificado e aguardar pelo menos 72 horas após a conversão antes de enviar novos apps.
+
+## Retomada técnica — 27/10/2026
+
+- PR #13 confirmado aberto e em draft, sem merge em `main`.
+- Candidato técnico validado: `83b169752313f38c360f39f797b4f8c5808f3ba4`;
+  CI `40345778664` concluído com sucesso nesse commit.
+- EAS CLI 26.0.0 instalado; `whoami` confirmou ausência de autenticação local.
+  O navegador conectado também exige que este chat seja aberto no contexto
+  de origem com a extensão conectada para permitir controle.
+- `app.config.ts` ainda não contém owner/projectId. Confirmar o projeto correto
+  na conta Expo autenticada antes de vincular; não reutilizar IDs de onboarding.
+- Perfil de produção preparado para credenciais remotas, ambiente production,
+  distribuição de loja e backend público de produção; validado pelo schema
+  oficial do EAS CLI 26.0.0.
+- Credenciais Android e binários de release protegidos por `.gitignore`.
+- Privacidade e suporte retornaram HTTP 200, com contato corporativo autorizado.
+- Supabase confirmado ativo. Nenhuma conta dedicada de revisão foi encontrada;
+  nenhum usuário Auth foi criado por escrita direta em tabelas internas.
+- Preparação de formulários, instruções de revisão, notas da versão e teste
+  físico em `PLAY_CONSOLE_PREPARATION.md`; formulários ainda não enviados.
+- Vínculo EAS, upload key, AAB oficial, App Signing, conta de revisão e trilha
+  interna ainda não foram confirmados. Não tratar esta preparação como
+  publicação concluída ou estado em que resta somente o teste físico.
