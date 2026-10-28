@@ -3,7 +3,8 @@ import type { ExpoConfig, ConfigContext } from 'expo/config';
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'CIA Campo',
-  slug: 'cia-campo',
+  slug: 'cia',
+  owner: 'waggnerogs-team',
   scheme: 'ciacampo',
   version: '1.0.0',
   icon: './assets/icon.png',
@@ -60,6 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ]
   ],
   extra: {
+    eas: { projectId: '8e01f0f1-7203-4c56-b43b-855d879eddbd' },
     privacyPolicyUrl: 'https://app.usecia.com/privacidade.html',
     supportUrl: 'https://app.usecia.com/suporte.html'
   }
