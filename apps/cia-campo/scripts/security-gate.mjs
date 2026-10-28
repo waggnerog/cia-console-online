@@ -3,6 +3,14 @@ import fs from 'node:fs/promises';
 const file = process.argv[2] || 'audit.json';
 const raw = await fs.readFile(file, 'utf8');
 const report = JSON.parse(raw);
+if (
+  report.error ||
+  !report.vulnerabilities ||
+  typeof report.vulnerabilities !== 'object' ||
+  Array.isArray(report.vulnerabilities)
+) {
+  throw new Error('Invalid npm audit report; refusing to pass the security gate.');
+}
 
 const ALLOWED_ADVISORIES = new Set([
   'GHSA-86w9-cpqp-85rv',
@@ -25,8 +33,14 @@ function advisoryIdsFor(packageName, seen = new Set()) {
       continue;
     }
 
+    // npm propagates the maximum severity to parent packages. A low advisory
+    // must not become high merely because the same parent also depends on an
+    // independently accepted high advisory.
+    if (!['high', 'critical'].includes(via.severity ?? vuln.severity)) continue;
+
     const haystack = [via.url, via.title, via.name].filter(Boolean).join(' ');
     const matches = haystack.match(/GHSA-[a-z0-9-]+/gi) ?? [];
+    if (!matches.length) ids.add('UNIDENTIFIED_HIGH_OR_CRITICAL_ADVISORY');
     for (const match of matches) ids.add(match);
   }
 

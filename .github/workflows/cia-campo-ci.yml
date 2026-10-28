@@ -43,7 +43,9 @@ jobs:
         run: npm audit --omit=dev --json > audit.json || true
 
       - name: Enforce security gate
-        run: node scripts/security-gate.mjs audit.json
+        run: |
+          node --test scripts/security-gate.test.mjs
+          node scripts/security-gate.mjs audit.json
 
       - name: Verify Expo dependency alignment
         run: npx expo install --check

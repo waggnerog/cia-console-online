@@ -33,3 +33,18 @@ A exceção é limitada aos IDs acima, somente enquanto forem alcançados pela c
 - a data de revisão for ultrapassada.
 
 Essas exceções não significam que o risco foi eliminado. Elas registram uma decisão temporária de cadeia de build enquanto não existe remediação upstream compatível.
+
+## Correção de classificação do gate — 28/10/2026
+
+O npm propaga para pacotes pais a maior severidade da árvore. O gate avalia
+agora a severidade de cada advisory, evitando tratar o alerta baixo
+GHSA-gcqx-w48m-w2h4 (deepmerge) como alto apenas porque o mesmo pai também
+herda o alerta alto já documentado do Zod. O advisory baixo não foi incluído
+na lista de exceções.
+
+Advisories altos/críticos desconhecidos, advisories altos sem identificação,
+relatórios de auditoria inválidos e exceções fora do prazo continuam bloqueados.
+Sete testes de integração cobrem essas regras e executam no CI antes do gate.
+As exceções upstream e o prazo de 15/11/2026 permanecem os mesmos.
+
+Fonte primária: https://github.com/advisories/GHSA-gcqx-w48m-w2h4
