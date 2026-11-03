@@ -974,7 +974,7 @@ export default function App() {
           onCancel={() => setClassificationTaskId(null)}
           onConfirm={value => { void handlePhoto(classificationTaskId, value); }}
         /> : null}
-        </>
+      </>
     );
   }
 

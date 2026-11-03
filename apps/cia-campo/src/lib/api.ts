@@ -1,4 +1,5 @@
 import type { Classification } from '../domain/photoClassification';
+import { readClassification } from '../domain/photoClassification';
 import * as Location from 'expo-location';
 import * as Network from 'expo-network';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -345,6 +346,9 @@ export async function queueEvidence(args: {
   originalFileName: string;
 }): Promise<{ queued: boolean }> {
   const { visit, task } = args;
+  if (!readClassification({ classification: args.classification })) {
+    throw new Error('Confira a categoria da foto antes de continuar.');
+  }
 
   if (visit.status !== 'in_progress' || !visit.check_in_at || visit.check_out_at) {
     throw new Error('Faça check-in antes de registrar fotos.');
