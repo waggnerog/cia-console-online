@@ -1,3 +1,5 @@
+import type { Classification } from '../domain/photoClassification';
+import { readClassification } from '../domain/photoClassification';
 import * as Location from 'expo-location';
 import * as Network from 'expo-network';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -190,7 +192,7 @@ export async function loadVisits(
   if (visitIds.length) {
     const { data, error } = await supabase
       .from('evidences')
-      .select('id,visit_id,photo_task_id,status,storage_path,captured_at')
+      .select('id,visit_id,photo_task_id,status,storage_path,captured_at,metadata')
       .eq('workspace_id', workspaceId)
       .in('visit_id', visitIds)
       .order('captured_at');
@@ -336,6 +338,7 @@ async function executeCheckIn(
 }
 
 export async function queueEvidence(args: {
+  classification: Classification;
   visit: Visit;
   task: FieldTask;
   localUri: string;
@@ -343,6 +346,9 @@ export async function queueEvidence(args: {
   originalFileName: string;
 }): Promise<{ queued: boolean }> {
   const { visit, task } = args;
+  if (!readClassification({ classification: args.classification })) {
+    throw new Error('Confira a categoria da foto antes de continuar.');
+  }
 
   if (visit.status !== 'in_progress' || !visit.check_in_at || visit.check_out_at) {
     throw new Error('Faça check-in antes de registrar fotos.');
@@ -388,6 +394,7 @@ export async function queueEvidence(args: {
     localUri: args.localUri,
     mimeType: args.mimeType,
     originalFileName: args.originalFileName,
+    classification: args.classification,
     capturedAt: new Date().toISOString()
   };
 
@@ -473,6 +480,7 @@ async function executeEvidence(
       captured_at: item.capturedAt,
       metadata: {
         history: ['Execução recebida via CIA Campo Android'],
+        ...(item.classification ? { classification: item.classification } : {}),
         client_operation_id: item.id,
         offline_queued_at: item.createdAt
       }

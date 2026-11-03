@@ -1,0 +1,23 @@
+name: Photo classification and BKO
+on:
+  pull_request:
+    paths: ['src/**', 'apps/cia-campo/src/domain/**', 'tests/**', 'package*.json', '.github/workflows/photo-classification-ci.yml']
+  push:
+    branches: [main]
+    paths: ['src/**', 'apps/cia-campo/src/domain/**', 'tests/**', 'package*.json']
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - name: Verify demo authentication fixture is absent from production
+        run: '! rg -l "demo-preview|demo@cia.local" dist/assets/*.js'

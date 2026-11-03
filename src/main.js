@@ -1,6 +1,10 @@
+import { applyClassificationQuery } from './photo-classification-query.js';
+import { catalog, classificationFromColumns, matchesClassification, normalize, readClassification, makeClassification } from '../apps/cia-campo/src/domain/photoClassification.js';
+import { classificationBadge, classificationContext, summarizeCategories, filterMarkup, bindFilters, pickClassification, openClassificationSettings, exportClassifiedRows } from './photo-classification-ui.js';
 import { createClient } from '@supabase/supabase-js';
 import './styles/evidencias.css';
 import './styles/cia-design.css';
+import './styles/photo-classification.css';
 
 const SB_URL = import.meta.env.VITE_SUPABASE_URL || 'https://naaqdwjtastjnckizfqd.supabase.co';
 const SB_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_YzXtLMPE--5I7yvxkOgikQ_eYZ13h4V';
@@ -27,7 +31,8 @@ const makeRows=()=>seed.map((r,i)=>({id:'ev-'+(i+1),client:'Amazon',operation:'E
 const saved=localStorage.getItem('cia-evidencias-demo');
 const DEV_DEMO=import.meta.env.DEV&&new URLSearchParams(location.search).get('demo')==='1';
 const initialRows=DEV_DEMO?(saved?JSON.parse(saved):makeRows()):[];
-const state={rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:false,field_enabled:false},subscription:null,subscriptionExpired:false,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],supportRequests:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
+let cloudLoadSequence=0;
+const state={photoTotal:0,categoryLoading:false,categoryError:'',photoFilters:{group:'all',category:'all',stage:'all'},rows:initialRows,selected:null,queue:'pending',search:'',source:'all',network:'all',zoom:1,rotation:0,mobile:'queue',membership:null,environments:[],user:null,workspace:{name:'Principal',settings:{timezone:'America/Sao_Paulo'}},services:{bko_enabled:false,field_enabled:false},subscription:null,subscriptionExpired:false,imports:[],masterImports:[],people:[],assignments:[],assignmentMap:new Map(),users:[],usage:null,publicPlans:[],commercial:[],supportRequests:[],fieldVisits:[],fieldTasks:new Map(),fieldEvidences:[]};
 state.selected=(state.rows.find(x=>x.status==='pending')||state.rows[0]||{}).id||null;
 const app=document.getElementById('app'), toastRoot=document.getElementById('toastRoot');
 let sessionGuardTimer=null;
@@ -35,7 +40,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const time=v=>new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(new Date(v));
 const date=v=>new Intl.DateTimeFormat('pt-BR').format(new Date(v));
 const persist=()=>{if(DEV_DEMO||state.demo)localStorage.setItem('cia-evidencias-demo',JSON.stringify(state.rows))};
-const current=()=>state.rows.find(x=>x.id===state.selected)||state.rows[0]||null;
+const current=()=>list().find(x=>x.id===state.selected)||list()[0]||null;
 function operationContext(){
   const rows=state.rows||[];
   if(!rows.length)return {client:state.workspace?.name||'Ambiente',operation:'Sem execuções',period:'Aguardando dados'};
@@ -60,10 +65,16 @@ async function logoutUser(){
   renderPublic();
 }
 function toast(msg,bad){const el=document.createElement('div');el.className='toast'+(bad?' bad':'');el.textContent=msg;toastRoot.append(el);setTimeout(()=>el.remove(),2400)}
-function list(){let a=state.rows.slice();if(state.queue!=='all')a=a.filter(x=>x.status===state.queue);if(state.search){const q=state.search.toLowerCase();a=a.filter(x=>[x.store,x.task,x.promoter,x.network].some(v=>String(v||'').toLowerCase().includes(q)))}if(state.source!=='all')a=a.filter(x=>x.source===state.source);if(state.network!=='all')a=a.filter(x=>x.network===state.network);return a}
-function metrics(){const c=s=>state.rows.filter(x=>x.status===s).length;return {all:state.rows.length,pending:c('pending'),approved:c('approved'),adjust:c('adjustment_requested'),rejected:c('rejected')}}
+function scopedRows(){
+  return state.rows.filter(x=>matchesClassification(x._metadata,state.photoFilters)
+    &&(state.source==='all'||x.source===state.source)
+    &&(state.network==='all'||x.network===state.network)
+    &&(!state.search||[x.store,x.task,x.promoter,x.network,readClassification(x._metadata)?.path,readClassification(x._metadata)?.note].some(v=>normalize(v).includes(normalize(state.search)))));
+}
+function list(){return scopedRows().filter(x=>state.queue==='all'||x.status===state.queue)}
+function metrics(){const rows=scopedRows(),c=s=>rows.filter(x=>x.status===s).length;return {all:rows.length,pending:c('pending'),approved:c('approved'),adjust:c('adjustment_requested'),rejected:c('rejected')}}
 function qcard(x){
-  return '<button class="qcard '+(x.id===state.selected?'selected':'')+'" data-id="'+x.id+'"><img src="'+x.image_url+'" alt=""><span><b>'+esc(x.store)+'</b><small>'+esc(x.task)+'</small><em>'+esc(x.promoter)+' · '+time(x.captured_at)+'</em><i>'+(x.source==='mobile_app'?'CIA Campo':'CSV')+'</i></span><strong class="queue-status '+x.status+'">'+statusLabel[x.status]+'</strong></button>';
+  return '<button class="qcard '+(x.id===state.selected?'selected':'')+'" data-id="'+x.id+'"><img src="'+x.image_url+'" alt=""><span><b>'+esc(x.store)+'</b><small>'+esc(x.task)+'</small>'+classificationBadge(x._metadata)+'<em>'+esc(x.promoter)+' · '+time(x.captured_at)+'</em><i>'+(x.source==='mobile_app'?'CIA Campo':'CSV')+'</i></span><strong class="queue-status '+x.status+'">'+statusLabel[x.status]+'</strong></button>';
 }
 function viewer(x){
   const actions=canAnalyze()
@@ -75,7 +86,7 @@ function analysis(x){
   return '<div class="analysis-scroll"><div class="analysis-title"><div><small>CONTEXTO DA EXECUÇÃO</small><b>Informações para decidir com segurança</b></div><span class="pill '+x.status+'">'+statusLabel[x.status]+'</span></div>'+
   '<section class="context-identity"><div class="context-eyebrow">LOJA</div><div class="store-identity"><div><b>'+esc(x.store)+'</b><span>'+esc(x.network)+' · '+esc(x.region||'—')+'</span></div><code>'+esc(x.code||'—')+'</code></div></section>'+
   '<section class="context-group"><h3>Execução</h3><div class="context-grid"><div><span>Tarefa</span><b>'+esc(x.task)+'</b></div><div><span>Cliente</span><b>'+esc(x.client)+'</b></div><div><span>Operação</span><b>'+esc(x.operation)+'</b></div><div><span>Capturada em</span><b>'+date(x.captured_at)+' · '+time(x.captured_at)+'</b></div><div><span>Origem</span><b>'+(x.source==='mobile_app'?'CIA Campo':'Importação CSV')+'</b></div></div></section>'+
-  '<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b><small>'+(contactPhone(x.promoterContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b><small>'+(contactPhone(x.supervisorContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div></div></section>'+
+  classificationContext(x._metadata)+'<section class="context-group"><h3>Equipe responsável</h3><div class="people-list"><div><span class="person-avatar">P</span><div><span>Promotor</span><b>'+esc(x.promoter)+'</b><small>'+(contactPhone(x.promoterContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div><div><span class="person-avatar">S</span><div><span>Supervisor</span><b>'+esc(x.supervisor)+'</b><small>'+(contactPhone(x.supervisorContact)?'WhatsApp cadastrado':'Contato não cadastrado')+'</small></div></div></div></section>'+
   '<details class="history-card"><summary>Histórico da execução <span>'+x.history.length+'</span></summary><ol>'+x.history.slice().reverse().map(h=>'<li>'+esc(h)+'</li>').join('')+'</ol></details></div>';
 }
 async function loadPublicPlans(){
@@ -405,6 +416,7 @@ async function ensureWorkspace(){
   state.environments=data.map(m=>({...m,workspace_name:m.workspace?.name||'Ambiente'}));
   const savedId=localStorage.getItem('cia-active-environment');
   const chosen=state.environments.find(x=>x.workspace_id===savedId)||state.environments[0];
+  state.photoFilters={group:'all',category:'all',stage:'all'};state.photoTotal=0;state.categoryLoading=false;state.categoryError='';state.search='';state.network='all';state.source='all';++cloudLoadSequence;
   localStorage.setItem('cia-active-environment',chosen.workspace_id);
   return chosen;
 }
@@ -412,6 +424,7 @@ async function switchEnvironment(workspaceId){
   const next=state.environments.find(x=>x.workspace_id===workspaceId);
   if(!next)return;
   state.membership=next;localStorage.setItem('cia-active-environment',workspaceId);
+  state.photoFilters={group:'all',category:'all',stage:'all'};state.search='';state.network='all';state.source='all';state.categoryError='';state.categoryLoading=false;++cloudLoadSequence;
   state.rows=[];state.selected=null;state.fieldVisits=[];state.fieldTasks=new Map();state.fieldEvidences=[];
   await loadWorkspaceContext();await loadCloudRows();render();
 }
@@ -446,6 +459,7 @@ async function loadWorkspaceContext(){
   }
 }
 async function saveWorkspaceSettings(nextSettings,name){
+  if(DEV_DEMO){state.workspace.settings={...state.workspace.settings,...nextSettings};return state.workspace}
   const workspaceId=state.membership.workspace_id;
   const payload={settings:{...(state.workspace.settings||{}),...nextSettings}};
   if(name)payload.name=name.trim();
@@ -457,14 +471,13 @@ async function saveProfileName(displayName){
   if(error)throw error;state.membership={...state.membership,...data};return data;
 }
 async function loadCloudRows(){
-  const {data,error}=await supabase
-    .from('evidences')
-    .select('id,source,status,storage_path,external_url,captured_at,uploaded_at,metadata,current_revision,promoter_id,supervisor_id,store:stores(id,name,code,network,region),task:photo_tasks(title),operation:operations(name,client_name)')
-    .eq('workspace_id',state.membership.workspace_id)
-    .order('uploaded_at',{ascending:false})
-    .limit(500);
+  const sequence=++cloudLoadSequence,workspaceId=state.membership.workspace_id;
+  let query=supabase.from('evidences').select('id,source,status,storage_path,external_url,captured_at,uploaded_at,metadata,current_revision,promoter_id,supervisor_id,store:stores(id,name,code,network,region),task:photo_tasks(title),operation:operations(name,client_name)',{count:'exact'}).eq('workspace_id',workspaceId);
+  query=applyClassificationQuery(query,state.photoFilters);
+  const {data,error,count}=await query.order('uploaded_at',{ascending:false}).order('id',{ascending:false}).limit(500);
+  if(sequence!==cloudLoadSequence||workspaceId!==state.membership?.workspace_id)return;
   if(error) throw error;
-  if(!data?.length){state.rows=[];state.selected=null;state.demo=false;return}
+  if(!data?.length){state.photoTotal=count||0;state.rows=[];state.selected=null;state.demo=false;return}
   const ids=data.map(r=>r.id);
   const {data:reviewRows,error:reviewErr}=await supabase.from('evidence_reviews').select('evidence_id,decision,reason,comment,created_at').in('evidence_id',ids).order('created_at',{ascending:false});
   if(reviewErr)throw reviewErr;
@@ -490,7 +503,8 @@ async function loadCloudRows(){
       history:row.metadata?.history||['Execução recebida'],reviews:reviewMap.get(row.id)||[],_metadata:row.metadata||{}
     }
   }));
-  state.rows=mapped;state.demo=false;state.selected=(mapped.find(x=>x.status==='pending')||mapped[0]).id;
+  if(sequence!==cloudLoadSequence||workspaceId!==state.membership?.workspace_id)return;
+  state.photoTotal=count??mapped.length;state.rows=mapped;state.demo=false;state.selected=(mapped.find(x=>x.status==='pending')||mapped[0]).id;
 }
 async function saveCloudDecision(e,decision,reason='',comment=''){
   if(state.demo||String(e.id).startsWith('ev-')) return;
@@ -527,6 +541,14 @@ function startSessionHeartbeat(){
   },60000);
 }
 async function start(){
+  if(DEV_DEMO){
+    state.demo=true;state.user={id:'demo-preview',email:'demo@cia.local'};state.membership={workspace_id:'demo',role:'admin',display_name:'Equipe CIA'};
+    state.workspace={id:'demo',name:'CIA · Demonstração',settings:{timezone:'America/Sao_Paulo'}};
+    state.environments=[{workspace_id:'demo',workspace_name:state.workspace.name,role:'admin'}];state.services={bko_enabled:true,field_enabled:true};
+    state.rows=makeRows();const ids=['trade.natural','trade.extra.table','trade.extra.endcap','trade.extra.island','trade.price','trade.material','training.product'];
+    state.photoTotal=state.rows.length;state.rows.forEach((r,i)=>{if(ids[i])r._metadata.classification=makeClassification(ids[i],i===2?'after':'record','',state.workspace.settings)});
+    render();return;
+  }
   if(!supabase){renderPublic();return}
   const {data:{session}}=await supabase.auth.getSession();
   if(!session){await loadPublicPlans();renderPublic();return}
@@ -552,7 +574,7 @@ async function start(){
 const roleLabel={owner:'Proprietário CIA',admin:'Admin',bko:'BKO',supervisor:'Supervisor',promoter:'Promotor',analyst:'BKO',field:'Promotor',viewer:'Supervisor'};
 function hasRole(...roles){return roles.includes(state.membership?.role)}
 function canViewExecution(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst','supervisor','viewer')}
-function canAnalyze(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst')}
+function canAnalyze(){return !state.categoryLoading&&!state.categoryError&&state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst')}
 function canReport(){return state.services?.bko_enabled&&hasRole('owner','admin','bko','analyst','supervisor','viewer')}
 function canSettings(){return hasRole('owner','admin','bko','analyst')}
 function canMaster(){return hasRole('owner','admin')}
@@ -585,8 +607,8 @@ function issueReason(row){
   const h=(row.history||[]).slice().reverse().find(x=>String(x).includes(':'));
   return h?String(h).split(':').slice(1).join(':').trim():'Sem motivo classificado';
 }
-function analyzedRows(){return state.rows.filter(r=>['approved','adjustment_requested','rejected'].includes(r.status))}
-function problemRows(){return state.rows.filter(r=>['adjustment_requested','rejected'].includes(r.status))}
+function analyzedRows(){return scopedRows().filter(r=>['approved','adjustment_requested','rejected'].includes(r.status))}
+function problemRows(){return scopedRows().filter(r=>['adjustment_requested','rejected'].includes(r.status))}
 function aggregateBy(key){
   const map=new Map();
   for(const row of analyzedRows()){
@@ -609,11 +631,27 @@ function barRows(rows,limit=7){
   const max=Math.max(1,...rows.slice(0,limit).map(x=>x.rate));
   return rows.slice(0,limit).map(x=>'<div class="dash-bar-row"><div class="dash-bar-label"><b>'+esc(x.label)+'</b><span>'+x.issues+' problema'+(x.issues===1?'':'s')+' em '+x.total+' análises</span></div><div class="dash-bar-track"><i class="'+riskTone(x.rate)+'" style="width:'+Math.max(4,Math.round(x.rate/max*100))+'%"></i></div><strong>'+x.rate+'%</strong></div>').join('');
 }
+function photoLoadNotice(){
+  if(state.categoryLoading)return '<div class="photo-filter-summary" role="status">Buscando fotos pela categoria e etapa…</div>';
+  if(state.categoryError)return '<div class="photo-filter-summary" role="alert">Não foi possível buscar as fotos: '+esc(state.categoryError)+' <button id="retryPhotoQuery" class="btn ghost">Tentar novamente</button></div>';
+  return '<div class="photo-filter-summary">'+state.rows.length+' de '+state.photoTotal+' fotos carregadas neste recorte'+(state.photoTotal>state.rows.length?' · 500 mais recentes; indicadores e exportação consideram as fotos carregadas.':' · indicadores e exportação consideram as fotos carregadas.')+'</div>';
+}
+async function refreshClassificationRows(){
+  if(DEV_DEMO){render();return}
+  state.categoryLoading=true;state.categoryError='';render();
+  try{await loadCloudRows()}catch(error){state.categoryError=error.message;state.rows=[];state.selected=null}
+  finally{state.categoryLoading=false;render()}
+}
+function bindPhotoFilters(){
+  bindFilters(state.photoFilters,refreshClassificationRows);
+  document.getElementById('retryPhotoQuery')?.addEventListener('click',refreshClassificationRows);
+  for(const id of ['photoGroup','photoCategory','photoStage','photoClear']){const el=document.getElementById(id);if(el&&state.categoryLoading)el.disabled=true}
+}
 function review(){
-  const k=metrics(),ctx=operationContext(),nets=[...new Set(state.rows.map(v=>v.network).filter(Boolean))];
-  const pendingCount=state.rows.filter(v=>v.status==='pending').length;
-  const resubmittedCount=state.rows.filter(v=>v.status==='resubmitted').length;
-  if(!state.rows.length){
+  const k=metrics(),ctx=operationContext(),nets=[...new Set([...state.rows.map(v=>v.network).filter(Boolean),...(state.network!=='all'?[state.network]:[])])];
+  const pendingCount=scopedRows().filter(v=>v.status==='pending').length;
+  const resubmittedCount=scopedRows().filter(v=>v.status==='resubmitted').length;
+  if(!state.rows.length&&Object.values(state.photoFilters).every(v=>v==='all')&&!state.categoryLoading&&!state.categoryError){
     app.innerHTML='<div class="shell execution-shell">'+appHeader('execucao')+
       '<section class="metrics"><div><span><small>Execuções</small><em>Total no período</em></span><b>0</b></div><div><span><small>A analisar</small><em>Aguardam decisão</em></span><b>0</b></div><div><span><small>Aprovadas</small><em>Execução validada</em></span><b>0</b></div><div><span><small>Com ajuste</small><em>Retorno ao campo</em></span><b>0</b></div><div><span><small>Reprovadas</small><em>Não aceitas</em></span><b>0</b></div><div><span><small>Taxa de aprovação</small><em>Aprovadas ÷ total</em></span><b>0%</b></div></section>'+
       '<section class="filters execution-toolbar"><div class="filter-context"><b>'+esc(state.workspace?.name||'Ambiente')+'</b><span>Nenhuma execução recebida</span></div></section>'+
@@ -622,13 +660,14 @@ function review(){
     document.getElementById('emptyImportBtn')?.addEventListener('click',openImport);
     return;
   }
-  const x=current(),a=list();
+  const a=list(),x=current();if(x)state.selected=x.id;
   app.innerHTML='<div class="shell execution-shell">'+appHeader('execucao')+
   '<section class="metrics"><div title="Total de execuções recebidas no período"><span><small>Execuções</small><em>Total no período</em></span><b>'+k.all+'</b></div><div title="Execuções que ainda precisam de decisão"><span><small>A analisar</small><em>Aguardam decisão</em></span><b>'+k.pending+'</b></div><div title="Execuções validadas como corretas"><span><small>Aprovadas</small><em>Execução validada</em></span><b>'+k.approved+'</b></div><div title="Execuções devolvidas ao campo para correção"><span><small>Com ajuste</small><em>Retorno ao campo</em></span><b>'+k.adjust+'</b></div><div title="Execuções não aceitas"><span><small>Reprovadas</small><em>Não aceitas</em></span><b>'+k.rejected+'</b></div><div title="Percentual de execuções aprovadas"><span><small>Taxa de aprovação</small><em>Aprovadas ÷ total</em></span><b>'+(k.all?Math.round(k.approved/k.all*100):0)+'%</b></div></section>'+
   '<section class="filters execution-toolbar"><div class="filter-context"><b>'+esc(ctx.client)+' · '+esc(ctx.operation)+'</b><span>'+esc(ctx.period)+'</span></div><input id="search" value="'+esc(state.search)+'" placeholder="Buscar loja, tarefa ou promotor"><select id="networkFilter"><option value="all">Todas as redes</option>'+nets.map(n=>'<option '+(state.network===n?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select><select id="sourceFilter"><option value="all">Todas as origens</option><option value="mobile_app" '+(state.source==='mobile_app'?'selected':'')+'>CIA Campo</option><option value="csv_import" '+(state.source==='csv_import'?'selected':'')+'>Importação CSV</option></select></section>'+
-  '<main class="workspace execution-workspace"><aside class="queue pane '+(state.mobile==='queue'?'active':'')+'"><div class="pane-title"><span>1 · FILA</span><b>O que precisa da sua atenção</b><small>Selecione uma execução para abrir a foto.</small></div><div class="queue-guide"><b>Fila de trabalho</b><span><i class="guide-dot pending"></i><strong>Pendentes</strong> ainda não foram analisadas.</span><span><i class="guide-dot resubmitted"></i><strong>Reenviadas</strong> voltaram após um ajuste.</span></div><div class="tabs"><button data-q="pending" class="'+(state.queue==='pending'?'active':'')+'">Pendentes <b>'+pendingCount+'</b></button><button data-q="resubmitted" class="'+(state.queue==='resubmitted'?'active':'')+'">Reenviadas <b>'+resubmittedCount+'</b></button><button data-q="all" class="'+(state.queue==='all'?'active':'')+'">Todas <b>'+state.rows.length+'</b></button></div><div class="queue-list">'+(a.map(qcard).join('')||'<div class="empty">Nenhuma execução neste filtro.</div>')+'</div></aside><section class="viewer pane '+(state.mobile==='viewer'?'active':'')+'">'+viewer(x)+'</section><aside class="analysis pane '+(state.mobile==='analysis'?'active':'')+'">'+analysis(x)+'</aside></main>'+
+  filterMarkup(state.workspace.settings,state.rows,state.photoFilters)+photoLoadNotice()+
+  '<main class="workspace execution-workspace"><aside class="queue pane '+(state.mobile==='queue'?'active':'')+'"><div class="pane-title"><span>1 · FILA</span><b>O que precisa da sua atenção</b><small>Selecione uma execução para abrir a foto.</small></div><div class="queue-guide"><b>Fila de trabalho</b><span><i class="guide-dot pending"></i><strong>Pendentes</strong> ainda não foram analisadas.</span><span><i class="guide-dot resubmitted"></i><strong>Reenviadas</strong> voltaram após um ajuste.</span></div><div class="tabs"><button data-q="pending" class="'+(state.queue==='pending'?'active':'')+'">Pendentes <b>'+pendingCount+'</b></button><button data-q="resubmitted" class="'+(state.queue==='resubmitted'?'active':'')+'">Reenviadas <b>'+resubmittedCount+'</b></button><button data-q="all" class="'+(state.queue==='all'?'active':'')+'">Todas <b>'+state.rows.length+'</b></button></div><div class="queue-list">'+(a.map(qcard).join('')||'<div class="empty">Nenhuma execução neste filtro.</div>')+'</div></aside><section class="viewer pane '+(state.mobile==='viewer'?'active':'')+'">'+(x?viewer(x):'<div class="photo-empty-view"><b>Nenhuma foto neste filtro</b><p>Ajuste os filtros para continuar a análise.</p></div>')+'</section><aside class="analysis pane '+(state.mobile==='analysis'?'active':'')+'">'+(x?analysis(x):'')+'</aside></main>'+
   '<nav class="mobile-nav"><button data-tab="queue" class="'+(state.mobile==='queue'?'active':'')+'">1 · Fila</button><button data-tab="viewer" class="'+(state.mobile==='viewer'?'active':'')+'">2 · Execução</button><button data-tab="analysis" class="'+(state.mobile==='analysis'?'active':'')+'">3 · Contexto</button></nav></div>';
-  bindGlobalNav();bindReview();
+  bindGlobalNav();bindReview();bindPhotoFilters();
 }
 function bindReview(){
   document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{state.queue=b.dataset.q;render()});
@@ -645,7 +684,7 @@ function navigate(d){const a=list();if(!a.length)return;let i=a.findIndex(x=>x.i
 function zoom(a){if(a==='in')state.zoom=Math.min(2.4,state.zoom+.15);if(a==='out')state.zoom=Math.max(.5,state.zoom-.15);if(a==='rotate')state.rotation=(state.rotation+90)%360;if(a==='fit'){state.zoom=1;state.rotation=0}render()}
 function nextOpen(){const n=state.rows.find(x=>x.status==='pending'||x.status==='resubmitted');if(n)state.selected=n.id}
 async function decision(a){
-  const x=current();
+  const x=current();if(!x)return;
   if(a==='approve'){
     try{await saveCloudDecision(x,'approved');x.status='approved';x.history.push('Execução aprovada');persist();nextOpen();toast('Execução aprovada');render()}catch(err){toast(err.message,true)}
     return;
@@ -768,9 +807,10 @@ async function importCsvToSupabase(rows,map,fileName){
   const byCode=new Map((storeRows||[]).map(s=>[norm(s.code),s]));
   const byName=new Map((storeRows||[]).map(s=>[norm(s.name),s]));
   const resolved=candidates.map(row=>{
+    let classification;try{classification=classificationFromColumns(map.category?row[map.category]:'',map.stage?row[map.stage]:'',map.note?row[map.note]:'',state.workspace.settings)}catch(error){throw new Error('Linha '+row.__row+': '+error.message)}
     const rawCode=map.code?row[map.code]:'',rawName=row[map.store];
     const store=(rawCode?byCode.get(norm(rawCode)):null)||byName.get(norm(rawName))||null;
-    return {row,store,error:store?'':'Loja não encontrada no Cadastro Mestre'};
+    return {row,store,classification,error:store?'':'Loja não encontrada no Cadastro Mestre'};
   });
   const valid=resolved.filter(x=>x.store);
   const unresolved=resolved.filter(x=>!x.store);
@@ -807,7 +847,7 @@ async function importCsvToSupabase(rows,map,fileName){
     if(taskErr)throw taskErr;(newTasks||[]).forEach(t=>tasksByTitle.set(t.title,t.id));
   }
 
-  const evidencePayload=valid.map(({row:r,store})=>{
+  const evidencePayload=valid.map(({row:r,store,classification})=>{
     const title=((map.task&&r[map.task])||'Foto de execução').trim();
     const rawDate=map.date?r[map.date]:'';
     const parsedDate=rawDate&&!Number.isNaN(Date.parse(rawDate))?new Date(rawDate).toISOString():null;
@@ -819,6 +859,7 @@ async function importCsvToSupabase(rows,map,fileName){
       metadata:{
         promoter:assignment?.promoter?.full_name||(map.promoter?r[map.promoter]||'—':'—'),
         supervisor:assignment?.supervisor?.full_name||(map.supervisor?r[map.supervisor]||'—':'—'),
+        ...(classification?{classification}:{}),
         network:store.network||'—',region:store.region||'—',csv_row:r.__row
       }
     }
@@ -843,29 +884,31 @@ function openImport(){
     task:['Tipo foto','Tarefa','Tipo de foto','Evidência'],
     url:['URL imagem','Link da foto','Foto URL','URL foto','Imagem'],
     network:['Rede','Canal'],
-    region:['Região','Regional','Cidade']
+    region:['Região','Regional','Cidade'],
+    category:['categoria_id','Categoria da foto','Categoria'],stage:['Etapa da foto','Etapa'],note:['Observação da foto','Observacao','Observação']
   };
   function autoMap(){for(const [k,a] of Object.entries(aliases))map[k]=guessHeader(headers,a)}
   function selectField(key,label,required=false){
     return '<div><label>'+label+(required?' *':'')+'</label><select data-map="'+key+'"><option value="">— Não mapear —</option>'+headers.map(h=>'<option value="'+esc(h)+'" '+(map[key]===h?'selected':'')+'>'+esc(h)+'</option>').join('')+'</select></div>';
   }
   function validateRows(){
-    let valid=0,badUrl=0,missing=0;const seen=new Set();let duplicates=0;
+    let valid=0,badUrl=0,missing=0,badCategory=0;const seen=new Set();let duplicates=0;
     for(const row of rows){
       const store=map.store?row[map.store]:'',url=map.url?row[map.url]:'';
       if(!store||!url){missing++;continue}
       try{new URL(url)}catch{badUrl++;continue}
+      try{classificationFromColumns(map.category?row[map.category]:'',map.stage?row[map.stage]:'',map.note?row[map.note]:'',state.workspace.settings)}catch{badCategory++;continue}
       const key=(map.code?row[map.code]:store)+'|'+url;
       if(seen.has(key))duplicates++;else seen.add(key);
       valid++;
     }
-    return {valid,badUrl,missing,duplicates};
+    return {valid,badUrl,missing,duplicates,badCategory};
   }
   function draw(){
     const b=r.querySelector('#importBody');
     if(step===1)b.innerHTML='<div class="stepper"><b>1 · Upload</b> → 2 · Mapeamento → 3 · Validação → 4 · Importar</div><div class="drop"><h3>Selecione seu CSV</h3><p>O arquivo deve conter os metadados e os links das fotos.</p><input id="csv" type="file" accept=".csv,text/csv"><button id="choose">Selecionar CSV</button></div>';
-    if(step===2)b.innerHTML='<div class="stepper">✓ Upload → <b>2 · Mapeamento</b> → 3 · Validação → 4 · Importar</div><p><b>'+esc(fileName)+'</b> · '+rows.length+' linhas</p><div class="mapping-form">'+selectField('store','Loja',true)+selectField('code','Código da loja')+selectField('promoter','Promotor')+selectField('supervisor','Supervisor')+selectField('phone','WhatsApp do supervisor')+selectField('date','Data da visita')+selectField('task','Tarefa')+selectField('url','Link da foto',true)+selectField('network','Rede')+selectField('region','Região')+'</div><button id="next" class="primary wide">Validar arquivo</button>';
-    if(step===3){const v=validateRows();b.innerHTML='<div class="stepper">✓ Upload → ✓ Mapeamento → <b>3 · Validação</b> → 4 · Importar</div><div class="validation"><div><b>'+v.valid+'</b><span>Linhas válidas</span></div><div><b>'+v.duplicates+'</b><span>Possíveis duplicidades</span></div><div><b>'+v.missing+'</b><span>Campos obrigatórios ausentes</span></div><div><b>'+v.badUrl+'</b><span>URLs inválidas</span></div></div><button id="next" class="primary wide" '+(!map.store||!map.url||!v.valid?'disabled':'')+'>Importar '+v.valid+' execuções</button>'}
+    if(step===2)b.innerHTML='<div class="stepper">✓ Upload → <b>2 · Mapeamento</b> → 3 · Validação → 4 · Importar</div><p><b>'+esc(fileName)+'</b> · '+rows.length+' linhas</p><div class="mapping-form">'+selectField('store','Loja',true)+selectField('code','Código da loja')+selectField('promoter','Promotor')+selectField('supervisor','Supervisor')+selectField('phone','WhatsApp do supervisor')+selectField('date','Data da visita')+selectField('task','Tarefa')+selectField('url','Link da foto',true)+selectField('network','Rede')+selectField('region','Região')+selectField('category','Categoria (ID ou nome)')+selectField('stage','Etapa')+selectField('note','Observação da foto')+'</div><p>Categoria, etapa e observação são opcionais. Use as categorias disponíveis neste Ambiente. Sem mapeamento, a foto entra como Sem categoria.</p><button id="next" class="primary wide">Validar arquivo</button>';
+    if(step===3){const v=validateRows();b.innerHTML='<div class="stepper">✓ Upload → ✓ Mapeamento → <b>3 · Validação</b> → 4 · Importar</div><div class="validation"><div><b>'+v.valid+'</b><span>Linhas válidas</span></div><div><b>'+v.duplicates+'</b><span>Possíveis duplicidades</span></div><div><b>'+v.missing+'</b><span>Campos obrigatórios ausentes</span></div><div><b>'+v.badUrl+'</b><span>URLs inválidas</span></div><div><b>'+v.badCategory+'</b><span>Categoria ou etapa inválida</span></div></div><button id="next" class="primary wide" '+(!map.store||!map.url||!v.valid||v.badCategory?'disabled':'')+'>Importar '+v.valid+' execuções</button>'}
     if(step===4)b.innerHTML='<div class="success"><div>✓</div><h3>Importação concluída</h3><p id="importResult">Processando...</p><button data-close class="primary">Ir para a fila</button></div>';
     b.querySelector('#choose')?.addEventListener('click',()=>b.querySelector('#csv').click());
     b.querySelector('#csv')?.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;fileName=f.name;rows=parseCSV(await f.text());headers=rows.length?Object.keys(rows[0]).filter(k=>k!=='__row'):[];autoMap();step=2;draw()});
@@ -945,11 +988,12 @@ function reports(){
   const topRegion=regions[0],topNetwork=networks[0],topReason=reasons[0],topStore=stores[0];
   const issueRate=analyzed.length?Math.round(problems.length/analyzed.length*100):0;
   const reportCtx=operationContext();
+  const categoryStats=summarizeCategories(analyzed);
   const priorityText=topRegion
     ? esc(topRegion.label)+' concentra a maior taxa de desvio, com '+topRegion.rate+'% das execuções analisadas exigindo atenção.'
     : 'Analise mais execuções para o CIA apontar onde a operação precisa agir primeiro.';
   app.innerHTML='<div class="page-shell report-shell">'+appHeader('relatorios')+
-  '<main class="page-main reports-page editorial-reports">'+
+  '<main class="page-main reports-page editorial-reports">'+filterMarkup(state.workspace.settings,state.rows,state.photoFilters)+photoLoadNotice()+'<div class="photo-filter-summary">'+scopedRows().length+' fotos nos filtros atuais · '+esc([state.search?'Busca: '+state.search:'',state.network!=='all'?'Rede: '+state.network:'',state.source!=='all'?'Origem: '+(state.source==='mobile_app'?'CIA Campo':'CSV'):''].filter(Boolean).join(' · '))+' · os indicadores abaixo consideram apenas as analisadas.</div><button id="exportClassifiedPhotos" class="btn ghost">Exportar fotos filtradas (CSV)</button>'+
     '<section class="report-masthead"><div class="report-ghost" aria-hidden="true">RESULTADO</div><div class="report-masthead-copy"><span>RELATÓRIOS · '+esc(reportCtx.period).toUpperCase()+'</span><h1>Onde a execução <em>precisa de atenção?</em></h1><p>O CIA transforma cada decisão tomada sobre as fotos em uma leitura gerencial: onde o padrão falha, por que falha e qual frente merece prioridade.</p></div><div class="report-masthead-meta"><small>BASE ANALISADA</small><b>'+analyzed.length+'</b><span>execuções concluídas</span></div></section>'+
     '<section class="report-kpis editorial-kpis">'+
       '<article><span>Aprovação</span><b>'+approval+'%</b><small>'+approvedCount+' execuções validadas</small></article>'+
@@ -972,9 +1016,10 @@ function reports(){
       '<article class="analysis-panel stores-panel"><header><div><span>05 · LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3><p>Ranking por taxa de problema.</p></div><strong>'+esc(topStore?.label||'—')+'</strong></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article>'+
       '<article class="analysis-panel task-panel"><header><div><span>06 · TAREFAS</span><h3>Tipos de execução com mais falhas</h3><p>Ajuda a identificar necessidade de instrução ou padrão melhor definido.</p></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article>'+
     '</section>'+
+    '<article class="analysis-panel photo-category-report"><header><div><span>CATEGORIAS</span><h3>Qualidade por tipo de registro</h3><p>Somente execuções analisadas nos filtros atuais. Fotos anteriores continuam em Sem categoria.</p></div></header><div class="hotspot-table"><div class="table-head"><span>Categoria</span><span>Análises</span><span>Aprovadas</span><span>Aprovação</span></div>'+(categoryStats.map(c=>'<div class="table-row"><b>'+esc(c.label)+'</b><span>'+c.total+'</span><span>'+c.approved+'</span><strong>'+Math.round(c.approved/c.total*100)+'%</strong></div>').join('')||'<p class="empty">Nenhuma análise para estes filtros.</p>')+'</div></article>'+
     '<section class="report-closing"><div><span>LEITURA GERENCIAL</span><h2>O relatório não termina no gráfico. Ele precisa dizer onde agir.</h2></div><p>Use os rankings para decidir se o próximo movimento é <b>cobrança de execução</b>, <b>treinamento</b>, <b>revisão de material</b> ou <b>acompanhamento de uma loja específica</b>.</p></section>'+
   '</main></div>';
-  bindGlobalNav();
+  bindGlobalNav();bindPhotoFilters();document.getElementById('exportClassifiedPhotos').onclick=()=>exportClassifiedRows(scopedRows());
 }
 function safeFileName(name){return String(name||'arquivo.csv').replace(/[^a-zA-Z0-9._-]+/g,'-')}
 function downloadMasterTemplate(){
@@ -1203,6 +1248,7 @@ function settings(){
   const sourceSummary=fieldOn&&bkoOn?'Fotos automáticas do CIA Campo + CSV disponível como alternativa':fieldOn?'Fotos automáticas pelo CIA Campo':'CSV é o canal de entrada das fotos';
   app.innerHTML='<div class="page-shell">'+appHeader('configuracoes')+'<main class="page-main settings-page"><div class="page-heading"><div><span>CONFIGURAÇÕES</span><h1>'+esc(state.workspace?.name||'Ambiente')+'</h1><p>Serviços, cadastros e acessos deste Ambiente. A rotina de análise continua separada destas configurações.</p></div><div class="environment-status"><span class="'+(bkoOn?'on':'off')+'">BKO '+(bkoOn?'ativo':'inativo')+'</span><span class="'+(fieldOn?'on':'off')+'">CIA Campo '+(fieldOn?'ativo':'inativo')+'</span></div></div>'+
   '<section class="settings-layout"><div class="settings-stack">'+
+  (canAdmin?'<article class="settings-card"><header><span>FOTOS COM CONTEXTO</span><h2>Categorias que acompanham sua operação</h2><p>Ative frentes de trabalho, personalize categorias e defina sugestões por tarefa. A mesma classificação chega aos filtros e relatórios do BKO.</p></header><button id="managePhotoCategories" class="btn primary">Configurar categorias</button></article>':'')+
   '<article class="settings-card service-overview"><header><span>SERVIÇOS CONTRATADOS</span><h2>Como este Ambiente recebe e analisa a execução</h2><p>Não existe escolha entre Campo e CSV. A disponibilidade é definida pelos serviços contratados.</p></header><div class="contracted-services"><div class="'+(bkoOn?'active':'inactive')+'"><span>BKO</span><b>'+(bkoOn?'Contratado':'Não contratado')+'</b><small>Análise remota, relatórios e importação CSV.</small></div><div class="'+(fieldOn?'active':'inactive')+'"><span>CIA CAMPO</span><b>'+(fieldOn?'Contratado':'Não contratado')+'</b><small>Check-in, tarefas e fotos feitas no PDV.</small></div></div><div class="flow-summary"><span>FLUXO DE FOTOS</span><b>'+sourceSummary+'</b><p>'+(fieldOn?'Quando a operação usa CIA Campo, as fotos entram automaticamente. O CSV continua disponível para contingência, legado ou complemento.':'Como este Ambiente não possui CIA Campo, a importação por CSV fica disponível no BKO como canal operacional.')+'</p></div>'+(isOwner?'<button id="editServices" class="btn ghost">Editar serviços contratados</button>':'')+'</article>'+
   (sub?'<article class="settings-card license-card"><header><span>PLANO E USO</span><h2>'+esc(sub.plan?.name||sub.plan_code)+'</h2><p>'+((sub.billing_interval==='annual')?'Contrato anual':'Contrato mensal')+' · '+esc(state.subscriptionExpired?'Avaliação encerrada':statusCommercial(sub.status))+'</p></header><div class="license-grid"><div><span>Acessos de gestão</span><b>'+managementUsed+' / '+managementLimit+'</b><i><em style="width:'+Math.min(100,managementLimit?managementUsed/managementLimit*100:0)+'%"></em></i></div><div><span>Acessos de campo</span><b>'+fieldUsed+' / '+fieldLimit+'</b><i><em style="width:'+Math.min(100,fieldLimit?fieldUsed/fieldLimit*100:0)+'%"></em></i></div><div><span>Fotos neste mês</span><b>'+new Intl.NumberFormat('pt-BR').format(photoUsed)+' / '+new Intl.NumberFormat('pt-BR').format(photoLimit)+'</b><i><em style="width:'+Math.min(100,photoLimit?photoUsed/photoLimit*100:0)+'%"></em></i></div></div><small class="license-note">Acessos são pessoais e intransferíveis. Uma conta mantém somente uma sessão ativa por vez.</small></article>':'')+
   
@@ -1216,6 +1262,7 @@ function settings(){
   (isOwner?'<article class="settings-card environments-card"><header><span>AMBIENTES CLIENTES</span><h2>Empresas cadastradas</h2><p>Ambiente é a unidade isolada de um cliente no CIA.</p></header><div class="environment-list">'+state.environments.map(e=>'<button data-env-open="'+e.workspace_id+'" class="'+(e.workspace_id===state.membership.workspace_id?'active':'')+'"><span><b>'+esc(e.workspace_name)+'</b><small>'+esc(roleLabel[e.role]||e.role)+'</small></span><strong>→</strong></button>').join('')+'</div><button id="createEnvironment" class="btn primary full">Cadastrar novo Ambiente</button></article>':'')+
   '</aside></section></main></div>';
   bindGlobalNav();
+  document.getElementById('managePhotoCategories')?.addEventListener('click',async()=>{try{await openClassificationSettings({modal,settings:state.workspace.settings,save:saveWorkspaceSettings,loadTasks:async()=>DEV_DEMO?[{id:'demo-task',title:'Ponta promocional',operationName:'Execução Echo'}]:(await loadFieldAdminData()).operations.filter(o=>o.active).flatMap(o=>o.tasks.filter(t=>t.active).map(t=>({...t,operationName:o.name}))),toast})}catch(error){toast(error.message,true)}});
   document.getElementById('editServices')?.addEventListener('click',openServiceEditor);
   document.getElementById('downloadMaster')?.addEventListener('click',downloadMasterTemplate);
   document.getElementById('uploadMaster')?.addEventListener('click',openMasterImport);
@@ -1327,7 +1374,8 @@ async function optimizeEvidenceImage(file){
     return new File([blob],base+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
   }catch{return file}
 }
-async function fieldUploadEvidence(visit,task,file){
+async function fieldUploadEvidence(visit,task,file,classification){
+  if(!classification)throw new Error('Categorize a foto antes de enviar.');
   const workspaceId=state.membership.workspace_id,userId=state.user.id;
   if(visit.status!=='in_progress'||!visit.check_in_at||visit.check_out_at)throw new Error('Faça check-in em uma visita em andamento antes de enviar fotos.');
   if(!task||!visit.tasks.some(t=>t.id===task.id))throw new Error('Tarefa não vinculada a esta visita.');
@@ -1343,7 +1391,7 @@ async function fieldUploadEvidence(visit,task,file){
     workspace_id:workspaceId,operation_id:visit.operation_id,visit_id:visit.id,store_id:visit.store_id,photo_task_id:task.id,
     field_user_id:userId,promoter_id:assignment?.promoter_id||null,supervisor_id:assignment?.supervisor_id||null,
     source:'mobile_app',status:'pending',storage_path:path,original_file_name:file.name,captured_at:new Date().toISOString(),
-    metadata:{task:task.title,criteria:task.criteria||{},history:['Execução recebida via CIA Campo'],original_bytes:originalSize,uploaded_bytes:uploadFile.size||0,optimized:(uploadFile!==file)}
+    metadata:{classification,task:task.title,criteria:task.criteria||{},history:['Execução recebida via CIA Campo'],original_bytes:originalSize,uploaded_bytes:uploadFile.size||0,optimized:(uploadFile!==file)}
   };
   const {error}=await supabase.from('evidences').insert(payload);if(error){await supabase.storage.from('cia-evidencias').remove([path]).catch(()=>{});throw error}
 }
@@ -1355,7 +1403,7 @@ async function openFieldVisit(visitId){
     const complete=visit.tasks.length>0&&visit.tasks.every(t=>!t.required||(evidenceByTask.get(t.id)||0)>=(t.min_photos||1));
     const r=modal('<header><div><small>'+esc(visit.store?.network||visit.operation?.client_name||'VISITA')+' · '+esc(visit.store?.name||'LOJA')+'</small><h2>'+esc(visit.operation?.name||'Visita em campo')+'</h2><p class="modal-sub">'+fieldStatusLabel(visit.status)+(visit.check_in_at?' · check-in '+time(visit.check_in_at):'')+'</p></div><button data-close>×</button></header><div class="modal-body"><div class="checkin"><div><b>Check-in</b><span>'+(visit.check_in_at?'Registrado em '+time(visit.check_in_at):'Registre sua chegada antes de fotografar.')+'</span></div><button id="fieldCheckin" class="primary" '+(visit.check_in_at?'disabled':'')+'>'+(visit.check_in_at?'Check-in realizado':'Fazer check-in')+'</button></div><div class="tasks">'+(visit.tasks.length?visit.tasks.map((t,i)=>{const n=evidenceByTask.get(t.id)||0,min=t.min_photos||1;return '<article class="'+(n>=min?'done':'')+'"><strong>'+(i+1)+'</strong><div><b>'+esc(t.title)+'</b><small>'+n+'/'+min+' foto'+(min===1?'':'s')+(t.required?' obrigatória'+(min===1?'':'s'):' opcional')+(t.instructions?' · '+esc(t.instructions):'')+'</small></div><button data-field-photo="'+t.id+'" '+(visit.status!=='in_progress'||!visit.check_in_at?'disabled':'')+'>'+(n>=min?'Adicionar outra':'Fotografar')+'</button></article>'}).join(''):'<div class="field-no-tasks">Esta visita ainda não possui tarefas configuradas.</div>')+'</div><button id="fieldCheckout" class="checkout" '+(visit.status!=='in_progress'||!visit.check_in_at||!complete?'disabled':'')+'>'+(visit.status==='completed'?'Visita finalizada':'Finalizar visita · Check-out')+'</button></div>');
     r.querySelector('#fieldCheckin').onclick=async e=>{e.currentTarget.disabled=true;e.currentTarget.textContent='Registrando...';try{await fieldCheckIn(visit);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Check-in registrado');openFieldVisit(visitId)}catch(err){toast(err.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Fazer check-in'}};
-    r.querySelectorAll('[data-field-photo]').forEach(b=>b.onclick=()=>{const task=visit.tasks.find(t=>t.id===b.dataset.fieldPhoto);const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;b.disabled=true;b.textContent='Enviando...';try{await fieldUploadEvidence(visit,task,file);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Foto enviada para análise');openFieldVisit(visitId)}catch(err){toast(err.message,true);b.disabled=false;b.textContent='Fotografar'}};input.click()});
+    r.querySelectorAll('[data-field-photo]').forEach(b=>b.onclick=()=>{const task=visit.tasks.find(t=>t.id===b.dataset.fieldPhoto);pickClassification({modal,task,settings:state.workspace.settings,onConfirm:classification=>{const input=document.createElement('input');input.type='file';input.accept='image/*';input.capture='environment';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;b.disabled=true;b.textContent='Enviando...';try{await fieldUploadEvidence(visit,task,file,classification);r.remove();await loadFieldData();visit=state.fieldVisits.find(v=>v.id===visitId);toast('Foto enviada para análise');openFieldVisit(visitId)}catch(err){toast(err.message,true);b.disabled=false;b.textContent='Fotografar'}};input.click()}})});
     r.querySelector('#fieldCheckout').onclick=async e=>{if(visit.status!=='in_progress'||!complete){toast('Conclua as fotos obrigatórias antes do check-out.',true);return}e.currentTarget.disabled=true;e.currentTarget.textContent='Finalizando...';try{const pos=await geoPosition();const {data,error}=await supabase.from('visits').update({status:'completed',check_out_at:new Date().toISOString(),check_out_latitude:pos.latitude,check_out_longitude:pos.longitude}).eq('workspace_id',state.membership.workspace_id).eq('field_user_id',state.user.id).eq('id',visit.id).eq('status','in_progress').is('check_out_at',null).select('id').maybeSingle();if(error)throw error;if(!data)throw new Error('Não foi possível confirmar esta visita. Atualize sua agenda.');r.remove();await loadFieldData();toast('Visita finalizada');field()}catch(err){toast(err.message,true);e.currentTarget.disabled=false;e.currentTarget.textContent='Finalizar visita · Check-out'}};
   };
   draw();

@@ -1,0 +1,313 @@
+.photo-filter-bar {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7ef;
+  flex-wrap: wrap;
+}
+.photo-filter-title {
+  margin-right: auto;
+  align-self: center;
+}
+.photo-filter-title b,
+.photo-filter-title small {
+  display: block;
+}
+.photo-filter-title b {
+  font-size: 14px;
+  color: #303a9e;
+}
+.photo-filter-title small {
+  font-size: 12px;
+  color: #707487;
+  margin-top: 4px;
+}
+.photo-filter-bar label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #707487;
+}
+.photo-filter-bar select {
+  min-height: 42px;
+  max-width: 290px;
+  padding: 9px 30px 9px 12px;
+  border: 1px solid #e5e7ef;
+  border-radius: 10px;
+  background: #f7f8fc;
+  font-size: 13px;
+  color: #171925;
+}
+.photo-category {
+  display: inline-block !important;
+  font-style: normal !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  background: #eef0ff !important;
+  color: #414bb1 !important;
+  padding: 5px 8px !important;
+  border-radius: 6px !important;
+  margin: 5px 0 !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+}
+.photo-category.unclassified {
+  background: #f1f3f8 !important;
+  color: #707487 !important;
+}
+.photo-context p {
+  font-size: 12px;
+  color: #707487;
+  line-height: 1.6;
+}
+.photo-note {
+  background: #f7f8fc;
+  padding: 12px;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+.photo-suggestion {
+  padding: 16px;
+  background: #eef0ff;
+  border: 1px solid #dce0ff;
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+.photo-suggestion small {
+  color: #5965d8;
+  font-size: 11px;
+  font-weight: 750;
+}
+.photo-suggestion b {
+  color: #303a9e;
+  font-size: 17px;
+}
+.photo-suggestion span {
+  font-size: 12px;
+  color: #707487;
+}
+.photo-group-chips,
+.photo-profile-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+}
+.photo-group-chips button,
+.photo-profile-buttons button {
+  border: 1px solid #e5e7ef;
+  background: #fff;
+  border-radius: 24px;
+  padding: 10px 14px;
+  font-size: 12px;
+  min-height: 44px;
+  color: #505466;
+}
+.photo-group-chips button.active {
+  background: #5965d8;
+  border-color: #5965d8;
+  color: #fff;
+}
+.photo-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+  margin-bottom: 20px;
+  padding: 2px;
+}
+.photo-option {
+  display: flex;
+  text-align: left;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #e5e7ef;
+  background: #fff;
+  border-radius: 12px;
+  min-height: 72px;
+}
+.photo-option b,
+.photo-option small {
+  display: block;
+}
+.photo-option b {
+  font-size: 13px;
+  color: #171925;
+}
+.photo-option small {
+  font-size: 11px;
+  color: #707487;
+  margin-top: 5px;
+}
+.photo-option i {
+  font-style: normal;
+  color: #707487;
+  font-size: 21px;
+}
+.photo-option.selected {
+  border-color: #5965d8;
+  background: #eef0ff;
+}
+.photo-option.selected i {
+  color: #5965d8;
+}
+.photo-picker .settings-field {
+  margin: 12px 0;
+}
+.photo-picker textarea,
+.photo-custom-form input,
+.photo-custom-form select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #171925;
+  font: inherit;
+}
+.photo-fronts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.photo-fronts label {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid #e5e7ef;
+  border-radius: 12px;
+}
+.photo-fronts b,
+.photo-fronts small {
+  display: block;
+}
+.photo-fronts b {
+  font-size: 13px;
+}
+.photo-fronts small {
+  font-size: 11px;
+  color: #707487;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+.photo-settings h3 {
+  margin: 24px 0 12px;
+  font-size: 16px;
+}
+.photo-settings p {
+  font-size: 12px;
+  color: #707487;
+  line-height: 1.6;
+}
+.photo-availability {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  max-height: 230px;
+  overflow: auto;
+  padding: 8px;
+  background: #f7f8fc;
+  border-radius: 12px;
+}
+.photo-availability label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 12px;
+}
+.photo-settings input[type="checkbox"] {
+  accent-color: #5965d8;
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.photo-custom-form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+.photo-custom-form label {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.photo-filter-bar button:disabled {
+  opacity: 0.4;
+}
+.photo-empty-view {
+  padding: 50px 25px;
+  text-align: center;
+  color: #707487;
+  align-self: center;
+}
+.photo-filter-summary {
+  padding: 10px 24px;
+  color: #707487;
+  font-size: 12px;
+  background: #f7f8fc;
+}
+.photo-settings #categorySettingsError {
+  color: #c23a4b;
+}
+body:not(.public-mode) .execution-shell:has(.photo-filter-bar) {
+  grid-template-rows: 68px 74px 52px auto auto minmax(0, 1fr) !important;
+}
+.photo-category-report {
+  margin-top: 20px;
+}
+.photo-category-report .table-row,
+.photo-category-report .table-head {
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+.photo-filter-bar + button {
+  margin: 12px 0;
+}
+.photo-picker button:focus-visible,
+.photo-settings button:focus-visible,
+.photo-filter-bar select:focus-visible {
+  outline: 3px solid #a4adfa;
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .photo-filter-bar {
+    padding: 14px;
+    gap: 10px;
+  }
+  .photo-filter-title {
+    width: 100%;
+  }
+  .photo-filter-bar label {
+    flex: 1;
+    min-width: 135px;
+  }
+  .photo-filter-bar select {
+    width: 100%;
+    max-width: none;
+  }
+  .photo-options,
+  .photo-fronts,
+  .photo-availability {
+    grid-template-columns: 1fr;
+  }
+  .photo-custom-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .photo-options {
+    max-height: 280px;
+  }
+  .photo-context .photo-category {
+    font-size: 13px !important;
+  }
+}

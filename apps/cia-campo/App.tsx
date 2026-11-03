@@ -34,6 +34,9 @@ import { captureEvidence, deleteLocalEvidence } from './src/lib/media';
 import { readQueue } from './src/lib/offlineQueue';
 import type { Membership, QueueItem, Visit } from './src/types';
 import { colors, radii } from './src/theme';
+import { PhotoClassificationSheet } from './src/components/PhotoClassificationSheet';
+import { readClassification, STAGES } from './src/domain/photoClassification';
+import type { Classification } from './src/domain/photoClassification';
 
 type CachedField = {
   userId: string;
@@ -517,6 +520,13 @@ function VisitScreen({
                     {count}/{min} foto{min === 1 ? '' : 's'} ·{' '}
                     {task.required ? 'obrigatória' : 'opcional'}
                   </Text>
+                  {[
+                    ...visit.evidences.filter(e => e.photo_task_id === task.id).map(e => readClassification(e.metadata)),
+                    ...queue.filter(q => q.kind === 'evidence' && q.visitId === visit.id && q.taskId === task.id)
+                      .map(q => q.kind === 'evidence' ? readClassification({ classification: q.classification }) : null)
+                  ].filter((c): c is Classification => Boolean(c)).slice(-2).map((c, i) => (
+                    <Text key={i} style={styles.taskMeta}>{c.path} · {STAGES.find(x => x.id === c.stage)?.label}</Text>
+                  ))}
                   {task.instructions ? (
                     <Text style={styles.taskInstructions}>{task.instructions}</Text>
                   ) : null}
@@ -584,6 +594,8 @@ function VisitScreen({
 }
 
 export default function App() {
+  const [classificationTaskId, setClassificationTaskId] = useState<string | null>(null);
+  const captureLock = useRef(false);
   const [session, setSession] = useState<Session | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [environments, setEnvironments] = useState<Membership[]>([]);
@@ -845,11 +857,13 @@ export default function App() {
     }
   }
 
-  async function handlePhoto(taskId: string) {
-    if (!selectedVisit) return;
+  async function handlePhoto(taskId: string, classification: Classification) {
+    if (!selectedVisit || captureLock.current) return;
     const task = selectedVisit.tasks.find((t) => t.id === taskId);
     if (!task) return;
 
+    captureLock.current = true;
+    setClassificationTaskId(null);
     setBusy(true);
     let media: Awaited<ReturnType<typeof captureEvidence>> = null;
     let acceptedForSync = false;
@@ -860,6 +874,7 @@ export default function App() {
       const result = await queueEvidence({
         visit: selectedVisit,
         task,
+        classification,
         localUri: media.uri,
         mimeType: media.mimeType,
         originalFileName: media.fileName
@@ -883,6 +898,7 @@ export default function App() {
       }
       Alert.alert('Não foi possível registrar a foto', error instanceof Error ? error.message : 'Tente novamente.');
     } finally {
+      captureLock.current = false;
       setBusy(false);
     }
   }
@@ -941,15 +957,24 @@ export default function App() {
 
   if (selectedVisit) {
     return (
-      <VisitScreen
-        visit={selectedVisit}
-        queue={queue}
-        busy={busy}
-        onBack={() => setSelectedVisitId(null)}
-        onCheckIn={handleCheckIn}
-        onPhoto={handlePhoto}
-        onCheckOut={handleCheckOut}
-      />
+      <>
+        <VisitScreen
+          visit={selectedVisit}
+          queue={queue}
+          busy={busy}
+          onBack={() => setSelectedVisitId(null)}
+          onCheckIn={handleCheckIn}
+          onPhoto={async taskId => setClassificationTaskId(taskId)}
+          onCheckOut={handleCheckOut}
+        />
+        {classificationTaskId && selectedVisit.tasks.find(t => t.id === classificationTaskId) ? <PhotoClassificationSheet
+          key={selectedVisit.id + classificationTaskId}
+          task={selectedVisit.tasks.find(t => t.id === classificationTaskId)!}
+          settings={membership.workspace?.settings}
+          onCancel={() => setClassificationTaskId(null)}
+          onConfirm={value => { void handlePhoto(classificationTaskId, value); }}
+        /> : null}
+      </>
     );
   }
 
