@@ -19,6 +19,21 @@ const esc = (value) =>
   );
 const option = (id, label, selected) =>
   `<option value="${esc(id)}" ${id === selected ? "selected" : ""}>${esc(label)}</option>`;
+function distinctLabel(category, options) {
+  const path=category.path || categoryPath(category);
+  const duplicate=options.some(other=>other.id!==category.id && normalize(other.path || categoryPath(other))===normalize(path));
+  return path+(duplicate?' · '+GROUPS.find(g=>g.id===category.group)?.label:'');
+}
+export function summarizeCategories(rows) {
+  const categories=new Map();
+  for(const row of rows){
+    const c=readClassification(row._metadata),id=c?.categoryId || 'uncategorized';
+    if(!categories.has(id))categories.set(id,{id,label:c?c.groupLabel+' · '+c.path:'Sem categoria',total:0,approved:0});
+    const summary=categories.get(id);summary.total++;
+    if(row.status==='approved')summary.approved++;
+  }
+  return [...categories.values()].sort((a,b)=>b.total-a.total);
+}
 export function classificationBadge(metadata) {
   const c = readClassification(metadata);
   return `<span class="photo-category ${c ? "" : "unclassified"}">${esc(c?.path || c?.label || "Sem categoria")}${c && c.stage !== "record" ? " · " + esc(STAGES.find((s) => s.id === c.stage)?.label) : ""}</span>`;
@@ -44,7 +59,7 @@ export function filterMarkup(settings, rows, filters) {
   const choices = [...categories.values()]
     .filter((c) => filters.group === "all" || c.group === filters.group)
     .sort((a, b) => a.path.localeCompare(b.path, "pt-BR"));
-  return `<section class="photo-filter-bar" aria-label="Filtros de categorização"><div class="photo-filter-title"><b>Fotos com contexto</b><small>Combine categoria e etapa do registro</small></div><label>Frente<select id="photoGroup">${option("all", "Todas as frentes", filters.group)}${GROUPS.map((g) => option(g.id, g.label, filters.group)).join("")}</select></label><label>Categoria<select id="photoCategory">${option("all", "Todas as categorias", filters.category)}${option("uncategorized", "Sem categoria", filters.category)}${choices.map((c) => option(c.id, c.path + (c.id === "trade.extra" ? " · todos os formatos" : ""), filters.category)).join("")}</select></label><label>Etapa<select id="photoStage">${option("all", "Todas as etapas", filters.stage)}${STAGES.map((s) => option(s.id, s.label, filters.stage)).join("")}</select></label><button id="photoClear" class="btn ghost" ${Object.values(filters).every((v) => v === "all") ? "disabled" : ""}>Limpar</button></section>`;
+  return `<section class="photo-filter-bar" aria-label="Filtros de categorização"><div class="photo-filter-title"><b>Fotos com contexto</b><small>Combine categoria e etapa do registro</small></div><label>Frente<select id="photoGroup">${option("all", "Todas as frentes", filters.group)}${GROUPS.map((g) => option(g.id, g.label, filters.group)).join("")}</select></label><label>Categoria<select id="photoCategory">${option("all", "Todas as categorias", filters.category)}${option("uncategorized", "Sem categoria", filters.category)}${choices.map((c) => option(c.id, distinctLabel(c, choices) + (c.id === "trade.extra" ? " · todos os formatos" : ""), filters.category)).join("")}</select></label><label>Etapa<select id="photoStage">${option("all", "Todas as etapas", filters.stage)}${STAGES.map((s) => option(s.id, s.label, filters.stage)).join("")}</select></label><button id="photoClear" class="btn ghost" ${Object.values(filters).every((v) => v === "all") ? "disabled" : ""}>Limpar</button></section>`;
 }
 export function bindFilters(filters, render) {
   for (const [id, key] of [
@@ -209,7 +224,7 @@ export async function openClassificationSettings({
       ? tasks
           .map(
             (t) =>
-              `<label class="settings-field">${esc(t.operationName)} · ${esc(t.title)}<select data-task-category="${esc(t.id)}">${option("", "Sugerir pelo nome da tarefa", draft.taskDefaults[t.id] || "")}${active.map((c) => option(c.id, categoryPath(c), draft.taskDefaults[t.id])).join("")}</select></label>`,
+              `<label class="settings-field">${esc(t.operationName)} · ${esc(t.title)}<select data-task-category="${esc(t.id)}">${option("", "Sugerir pelo nome da tarefa", draft.taskDefaults[t.id] || "")}${active.map((c) => option(c.id, distinctLabel(c, active), draft.taskDefaults[t.id])).join("")}</select></label>`,
           )
           .join("")
       : "<p>Nenhuma tarefa ativa neste Ambiente.</p>";

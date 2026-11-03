@@ -1,6 +1,6 @@
 import { applyClassificationQuery } from './photo-classification-query.js';
 import { catalog, classificationFromColumns, matchesClassification, normalize, readClassification, makeClassification } from '../apps/cia-campo/src/domain/photoClassification.js';
-import { classificationBadge, classificationContext, filterMarkup, bindFilters, pickClassification, openClassificationSettings, exportClassifiedRows } from './photo-classification-ui.js';
+import { classificationBadge, classificationContext, summarizeCategories, filterMarkup, bindFilters, pickClassification, openClassificationSettings, exportClassifiedRows } from './photo-classification-ui.js';
 import { createClient } from '@supabase/supabase-js';
 import './styles/evidencias.css';
 import './styles/cia-design.css';
@@ -987,7 +987,7 @@ function reports(){
   const topRegion=regions[0],topNetwork=networks[0],topReason=reasons[0],topStore=stores[0];
   const issueRate=analyzed.length?Math.round(problems.length/analyzed.length*100):0;
   const reportCtx=operationContext();
-  const categoryStats=new Map();for(const row of analyzed){const label=readClassification(row._metadata)?.path||'Sem categoria';if(!categoryStats.has(label))categoryStats.set(label,{label,total:0,approved:0});const c=categoryStats.get(label);c.total++;if(row.status==='approved')c.approved++}
+  const categoryStats=summarizeCategories(analyzed);
   const priorityText=topRegion
     ? esc(topRegion.label)+' concentra a maior taxa de desvio, com '+topRegion.rate+'% das execuções analisadas exigindo atenção.'
     : 'Analise mais execuções para o CIA apontar onde a operação precisa agir primeiro.';
@@ -1015,7 +1015,7 @@ function reports(){
       '<article class="analysis-panel stores-panel"><header><div><span>05 · LOJAS CRÍTICAS</span><h3>PDVs que merecem ação primeiro</h3><p>Ranking por taxa de problema.</p></div><strong>'+esc(topStore?.label||'—')+'</strong></header><div class="hotspot-table"><div class="table-head"><span>Loja</span><span>Análises</span><span>Problemas</span><span>Taxa</span></div>'+stores.slice(0,8).map(x=>'<div class="table-row"><b>'+esc(x.label)+'</b><span>'+x.total+'</span><span>'+x.issues+'</span><strong class="'+riskTone(x.rate)+'">'+x.rate+'%</strong></div>').join('')+'</div></article>'+
       '<article class="analysis-panel task-panel"><header><div><span>06 · TAREFAS</span><h3>Tipos de execução com mais falhas</h3><p>Ajuda a identificar necessidade de instrução ou padrão melhor definido.</p></div></header><div class="dash-bars compact">'+barRows(tasks,6)+'</div></article>'+
     '</section>'+
-    '<article class="analysis-panel photo-category-report"><header><div><span>CATEGORIAS</span><h3>Qualidade por tipo de registro</h3><p>Somente execuções analisadas nos filtros atuais. Fotos anteriores continuam em Sem categoria.</p></div></header><div class="hotspot-table"><div class="table-head"><span>Categoria</span><span>Análises</span><span>Aprovadas</span><span>Aprovação</span></div>'+([...categoryStats.values()].sort((a,b)=>b.total-a.total).map(c=>'<div class="table-row"><b>'+esc(c.label)+'</b><span>'+c.total+'</span><span>'+c.approved+'</span><strong>'+Math.round(c.approved/c.total*100)+'%</strong></div>').join('')||'<p class="empty">Nenhuma análise para estes filtros.</p>')+'</div></article>'+
+    '<article class="analysis-panel photo-category-report"><header><div><span>CATEGORIAS</span><h3>Qualidade por tipo de registro</h3><p>Somente execuções analisadas nos filtros atuais. Fotos anteriores continuam em Sem categoria.</p></div></header><div class="hotspot-table"><div class="table-head"><span>Categoria</span><span>Análises</span><span>Aprovadas</span><span>Aprovação</span></div>'+(categoryStats.map(c=>'<div class="table-row"><b>'+esc(c.label)+'</b><span>'+c.total+'</span><span>'+c.approved+'</span><strong>'+Math.round(c.approved/c.total*100)+'%</strong></div>').join('')||'<p class="empty">Nenhuma análise para estes filtros.</p>')+'</div></article>'+
     '<section class="report-closing"><div><span>LEITURA GERENCIAL</span><h2>O relatório não termina no gráfico. Ele precisa dizer onde agir.</h2></div><p>Use os rankings para decidir se o próximo movimento é <b>cobrança de execução</b>, <b>treinamento</b>, <b>revisão de material</b> ou <b>acompanhamento de uma loja específica</b>.</p></section>'+
   '</main></div>';
   bindGlobalNav();bindPhotoFilters();document.getElementById('exportClassifiedPhotos').onclick=()=>exportClassifiedRows(scopedRows());

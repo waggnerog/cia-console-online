@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { JSDOM } from "jsdom";
 import { build } from "vite";
 import {
+  summarizeCategories,
   classificationBadge,
   classificationContext,
   exportClassifiedRows,
@@ -262,4 +263,16 @@ test("BKO integration: filtering updates queue, totals, selected photo, empty st
   } finally {
     ui.window.close();
   }
+});
+
+
+test("same labels across business fronts keep distinct identities in reports and filters", () => {
+  const settings={photo_classification:{enabledGroups:['trade','audit'],custom:[{id:'custom.trade',label:'Inspeção',group:'trade'},{id:'custom.audit',label:'Inspeção',group:'audit'}]}};
+  const first=makeClassification('custom.trade','record','',settings),second=makeClassification('custom.audit','record','',settings);
+  const rows=[{status:'approved',_metadata:{classification:first}},{status:'rejected',_metadata:{classification:second}}];
+  const summary=summarizeCategories(rows);
+  assert.equal(summary.length,2);assert.notEqual(summary[0].id,summary[1].id);assert.notEqual(summary[0].label,summary[1].label);assert.equal(summary[0].approved,1);assert.equal(summary[1].approved,0);
+  document.querySelector('#app').innerHTML=filterMarkup(settings,rows,{group:'all',category:'all',stage:'all'});
+  const labels=[...document.querySelectorAll('#photoCategory option')].filter(o=>o.value.startsWith('custom.')).map(o=>o.textContent);
+  assert.equal(new Set(labels).size,2);
 });
