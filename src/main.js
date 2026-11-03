@@ -416,6 +416,7 @@ async function ensureWorkspace(){
   state.environments=data.map(m=>({...m,workspace_name:m.workspace?.name||'Ambiente'}));
   const savedId=localStorage.getItem('cia-active-environment');
   const chosen=state.environments.find(x=>x.workspace_id===savedId)||state.environments[0];
+  state.photoFilters={group:'all',category:'all',stage:'all'};state.photoTotal=0;state.categoryLoading=false;state.categoryError='';state.search='';state.network='all';state.source='all';++cloudLoadSequence;
   localStorage.setItem('cia-active-environment',chosen.workspace_id);
   return chosen;
 }
