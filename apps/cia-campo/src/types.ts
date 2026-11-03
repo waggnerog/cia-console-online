@@ -1,3 +1,4 @@
+import type { Classification, ClassificationConfig } from './domain/photoClassification';
 export type VisitStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
 
 export type FieldTask = {
@@ -18,6 +19,7 @@ export type Evidence = {
   status: string;
   storage_path: string | null;
   captured_at: string | null;
+  metadata?: { classification?: Classification };
 };
 
 export type Visit = {
@@ -53,7 +55,7 @@ export type Membership = {
   workspace: {
     id: string;
     name: string;
-    settings: { timezone?: string } | null;
+    settings: { timezone?: string; photo_classification?: Partial<ClassificationConfig> } | null;
   } | null;
 };
 
@@ -92,4 +94,6 @@ export type QueueItem =
       mimeType: string;
       originalFileName: string;
       capturedAt: string;
+      // Optional to allow already-persisted v1 photos to finish syncing.
+      classification?: Classification;
     };
